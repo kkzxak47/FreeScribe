@@ -24,7 +24,7 @@ import json
 import pyaudio
 import tkinter.messagebox as messagebox
 import datetime
-import whisper # python package is named openai-whisper
+from faster_whisper import WhisperModel
 import scrubadub
 import re
 import speech_recognition as sr # python package is named speechrecognition
@@ -43,16 +43,27 @@ import ctypes
 import sys
 from UI.DebugWindow import DualOutput
 import traceback
+import sys
+from utils.utils import window_has_running_instance, bring_to_front, close_mutex
 
 dual = DualOutput()
 sys.stdout = dual
 sys.stderr = dual
 
+APP_NAME = 'AI Medical Scribe'  # Application name
 
+# check if another instance of the application is already running.
+# if false, create a new instance of the application
+# if true, exit the current instance
+if not window_has_running_instance():
+    root = tk.Tk()
+    root.title(APP_NAME)
+else:
+    bring_to_front(APP_NAME)
+    sys.exit(0)
 
-# GUI Setup
-root = tk.Tk()
-root.title("AI Medical Scribe")
+# Register the close_mutex function to be called on exit
+atexit.register(close_mutex)
 
 # settings logic
 app_settings = SettingsWindow()
@@ -167,6 +178,7 @@ def toggle_pause():
         elif current_view == "minimal":
             pause_button.config(text="⏸️", bg=DEFAULT_BUTTON_COLOUR)
     
+SILENCE_WARNING_LENGTH = 10 # seconds, warn the user after 10s of no input something might be wrong
 
 def record_audio():
     global is_paused, frames, audio_queue
@@ -183,43 +195,69 @@ def record_audio():
         messagebox.showerror("Audio Error", f"Please check your microphone settings under whisper settings. Error opening audio stream: {e}")
         return
 
-    
-    current_chunk = []
-    silent_duration = 0
-    record_duration = 0
-    minimum_silent_duration = int(app_settings.editable_settings["Real Time Silence Length"])
-    minimum_audio_duration = int(app_settings.editable_settings["Real Time Audio Length"])
-    
-    while is_recording:
-        if not is_paused:
-            data = stream.read(CHUNK, exception_on_overflow=False)
-            frames.append(data)
-            # Check for silence
-            audio_buffer = np.frombuffer(data, dtype=np.int16).astype(np.float32) / 32768
-            if is_silent(audio_buffer, app_settings.editable_settings["Silence cut-off"]):
-                silent_duration += CHUNK / RATE
-            else:
-                current_chunk.append(data)
-                silent_duration = 0
-            
-            record_duration += CHUNK / RATE
-            
-            # If the current_chunk has at least 5 seconds of audio and 1 second of silence at the end
-            if record_duration >= minimum_audio_duration and silent_duration >= minimum_silent_duration:
-                if app_settings.editable_settings["Real Time"] and current_chunk:
-                    audio_queue.put(b''.join(current_chunk))
-                current_chunk = []
-                silent_duration = 0
-                record_duration = 0
+    try:
 
-    # Send any remaining audio chunk when recording stops
-    if current_chunk:
-        audio_queue.put(b''.join(current_chunk))
+        current_chunk = []
+        silent_duration = 0
+        silent_warning_duration = 0
+        record_duration = 0
+        minimum_silent_duration = int(app_settings.editable_settings["Real Time Silence Length"])
+        minimum_audio_duration = int(app_settings.editable_settings["Real Time Audio Length"])
+        
+        while is_recording:
+            if not is_paused:
+                data = stream.read(CHUNK, exception_on_overflow=False)
+                frames.append(data)
+                # Check for silence
+                audio_buffer = np.frombuffer(data, dtype=np.int16).astype(np.float32) / 32768
+                if is_silent(audio_buffer, app_settings.editable_settings["Silence cut-off"]):
+                    silent_duration += CHUNK / RATE
+                    silent_warning_duration += CHUNK / RATE
+                else:
+                    current_chunk.append(data)
+                    silent_duration = 0
+                    silent_warning_duration = 0
+                
+                record_duration += CHUNK / RATE
 
-    stream.stop_stream()
-    stream.close()
-    audio_queue.put(None)
+                # Check if we need to warn if silence is long than warn time
+                check_silence_warning(silent_warning_duration)
 
+                # If the current_chunk has at least 5 seconds of audio and 1 second of silence at the end
+                if record_duration >= minimum_audio_duration and silent_duration >= minimum_silent_duration:
+                    if app_settings.editable_settings["Real Time"] and current_chunk:
+                        audio_queue.put(b''.join(current_chunk))
+                    current_chunk = []
+                    silent_duration = 0
+                    record_duration = 0
+
+        # Send any remaining audio chunk when recording stops
+        if current_chunk:
+            audio_queue.put(b''.join(current_chunk))
+    except Exception as e:
+        # Log the error message
+        # TODO System logger
+        # For now general catch on any problems
+        print(f"An error occurred: {e}")
+    finally:
+        stream.stop_stream()
+        stream.close()
+        audio_queue.put(None)
+
+        # If the warning bar is displayed, remove it
+        if window.warning_bar is not None:
+            window.destroy_warning_bar()
+
+def check_silence_warning(silence_duration):
+    """Check if silence warning should be displayed."""
+
+    # Check if we need to warn if silence is long than warn time
+    if silence_duration >= SILENCE_WARNING_LENGTH and window.warning_bar is None:
+        
+        window.create_warning_bar(f"No audio input detected for {SILENCE_WARNING_LENGTH} seconds. Please check your microphone input device in whisper settings and adjust your microphone cutoff level in advanced settings.")
+    elif silence_duration <= SILENCE_WARNING_LENGTH and window.warning_bar is not None:
+        # If the warning bar is displayed, remove it
+        window.destroy_warning_bar()
 
 def is_silent(data, threshold=0.01):
     """Check if audio chunk is silent"""
@@ -255,9 +293,10 @@ def realtime_text():
                             update_gui("Local Whisper model not loaded. Please check your settings.")
                             break
 
-                        result = stt_local_model.transcribe(audio_buffer, fp16=False)
+                        result = faster_whisper_transcribe(audio_buffer)
+
                         if not local_cancel_flag and not is_audio_processing_realtime_canceled.is_set():
-                            update_gui(result['text'])
+                            update_gui(result)
                     else:
                         print("Remote Real Time Whisper")
                         if frames:
@@ -309,10 +348,10 @@ def save_audio():
             wf.writeframes(b''.join(frames))
         frames = []  # Clear recorded data
 
-        if app_settings.editable_settings["Real Time"] == True and is_audio_processing_realtime_canceled.is_set() is False:
-            send_and_receive()
-        elif app_settings.editable_settings["Real Time"] == False and is_audio_processing_whole_canceled.is_set() is False:
-            threaded_send_audio_to_server()
+    if app_settings.editable_settings["Real Time"] == True and is_audio_processing_realtime_canceled.is_set() is False:
+        send_and_receive()
+    elif app_settings.editable_settings["Real Time"] == False and is_audio_processing_whole_canceled.is_set() is False:
+        threaded_send_audio_to_server()
 
 def toggle_recording():
     global is_recording, recording_thread, DEFAULT_BUTTON_COLOUR, audio_queue, current_view, REALTIME_TRANSCRIBE_THREAD_ID
@@ -409,6 +448,7 @@ def disable_recording_ui_elements():
     upload_button.config(state='disabled')
     response_display.scrolled_text.configure(state='disabled')
     timestamp_listbox.config(state='disabled')
+    clear_button.config(state='disabled')
 
 def enable_recording_ui_elements():
     window.enable_settings_menu()
@@ -417,6 +457,7 @@ def enable_recording_ui_elements():
     toggle_button.config(state='normal')
     upload_button.config(state='normal')
     timestamp_listbox.config(state='normal')
+    clear_button.config(state='normal')
     
 
 def cancel_processing():
@@ -566,8 +607,9 @@ def send_audio_to_server():
             uploaded_file_path = None
 
             # Transcribe the audio file using the loaded model
-            result = stt_local_model.transcribe(file_to_send)
-            transcribed_text = result["text"]
+            result = faster_whisper_transcribe(file_to_send)
+
+            transcribed_text = result
 
             # done with file clean up
             if os.path.exists(file_to_send) and delete_file is True:
@@ -1187,7 +1229,12 @@ def _load_stt_model_thread():
     print(f"Loading STT model: {model}")
     try:
         # Load the specified Whisper model
-        stt_local_model = whisper.load_model(model)
+        device_type = "cpu"
+        if app_settings.editable_settings[SettingsKeys.WHISPER_ARCHITECTURE.value] == "CUDA (Nvidia GPU)":
+            device_type = "cuda"
+
+        stt_local_model = WhisperModel(model, device=device_type)
+
         print("STT model loaded successfully.")
     except Exception as e:
         # Log the error message
@@ -1198,6 +1245,13 @@ def _load_stt_model_thread():
         stt_loading_window.destroy()
         print("Closing STT loading window.")
 
+def faster_whisper_transcribe(audio):
+    segments, info = stt_local_model.transcribe(audio, language="en")
+    result = ""
+    for segment in segments:
+        result += segment.text + " "
+
+    return result
 
 # Configure grid weights for scalability
 root.grid_columnconfigure(0, weight=1, minsize= 10)

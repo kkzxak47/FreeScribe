@@ -81,8 +81,8 @@ class SettingsWindowUI:
         """
         self.settings_window = tk.Toplevel()
         self.settings_window.title("Settings")
-        self.settings_window.geometry("600x450")  # Set initial window size
-        self.settings_window.minsize(600, 500)    # Set minimum window size
+        self.settings_window.geometry("700x400")  # Set initial window size
+        self.settings_window.minsize(700, 400)    # Set minimum window size
         self.settings_window.resizable(True, True)
         self.settings_window.grab_set()
         self.settings_window.iconbitmap(get_file_path('assets','logo.ico'))
@@ -181,7 +181,7 @@ class SettingsWindowUI:
         # create the whisper model dropdown slection
         tk.Label(left_frame, text="Whisper Model").grid(row=3, column=0, padx=0, pady=5, sticky="w")
         whisper_models_drop_down_options = ["medium", "small", "tiny", "tiny.en", "base", "base.en", "small.en", "medium.en", "large"]
-        self.whisper_models_drop_down = ttk.Combobox(left_frame, values=whisper_models_drop_down_options, width=13)
+        self.whisper_models_drop_down = ttk.Combobox(left_frame, values=whisper_models_drop_down_options, width=20)
         self.whisper_models_drop_down.grid(row=3, column=1, padx=0, pady=5, sticky="w")
 
         try:
@@ -198,6 +198,22 @@ class SettingsWindowUI:
         self.settings.editable_settings_entries["Current Mic"] = microphone_select
         
         left_row += 1
+
+        # Whisper Architecture Dropdown
+        self.whisper_architecture_label = tk.Label(right_frame, text=SettingsKeys.WHISPER_ARCHITECTURE.value)
+        self.whisper_architecture_label.grid(row=right_row, column=0, padx=0, pady=5, sticky="w")
+        whisper_architecture_options = self.settings.get_available_architectures()
+        self.whisper_architecture_dropdown = ttk.Combobox(right_frame, values=whisper_architecture_options, width=20, state="readonly")
+        if self.settings.editable_settings[SettingsKeys.WHISPER_ARCHITECTURE.value] in whisper_architecture_options:
+            self.whisper_architecture_dropdown.current(whisper_architecture_options.index(self.settings.editable_settings[SettingsKeys.WHISPER_ARCHITECTURE.value]))
+        else:
+            # Default cpu
+            self.whisper_architecture_dropdown.set("CPU")
+        
+        self.whisper_architecture_dropdown.grid(row=right_row, column=1, padx=0, pady=5, sticky="w")
+        self.settings.editable_settings_entries[SettingsKeys.WHISPER_ARCHITECTURE.value] = self.whisper_architecture_dropdown
+
+        right_row += 1
 
         # set the state of the whisper settings based on the SettingsKeys.LOCAL_WHISPER.value checkbox once all widgets are created
         self.toggle_remote_whisper_settings()
@@ -230,6 +246,9 @@ class SettingsWindowUI:
         right_frame = ttk.Frame(self.llm_settings_frame)
         right_frame.grid(row=0, column=1, padx=10, pady=5, sticky="nw")
 
+        self.llm_settings_frame.columnconfigure(0, weight=1)
+        self.llm_settings_frame.columnconfigure(1, weight=1)
+
         left_row = 0
         right_row = 0
 
@@ -243,9 +262,10 @@ class SettingsWindowUI:
         left_row += 1
 
         #6. GPU OR CPU SELECTION (Right Column)
-        tk.Label(left_frame, text="Local Architecture").grid(row=left_row, column=0, padx=0, pady=5, sticky="w")
+        self.local_architecture_label = tk.Label(left_frame, text="Local Architecture")
+        self.local_architecture_label.grid(row=left_row, column=0, padx=0, pady=5, sticky="w")
         architecture_options = self.settings.get_available_architectures()
-        self.architecture_dropdown = ttk.Combobox(left_frame, values=architecture_options, width=15, state="readonly")
+        self.architecture_dropdown = ttk.Combobox(left_frame, values=architecture_options, width=20, state="readonly")
         if self.settings.editable_settings["Architecture"] in architecture_options:
             self.architecture_dropdown.current(architecture_options.index(self.settings.editable_settings["Architecture"]))
         else:
@@ -254,12 +274,18 @@ class SettingsWindowUI:
 
         self.architecture_dropdown.grid(row=left_row, column=1, padx=0, pady=5, sticky="w")
 
+        # hide architecture dropdown if architecture only has one option
+        if len(architecture_options) == 1:
+            self.local_architecture_label.grid_forget()
+            self.architecture_dropdown.grid_forget()
+
+
         left_row += 1
 
         # 5. Models (Left Column)
         tk.Label(left_frame, text="Models").grid(row=left_row, column=0, padx=0, pady=5, sticky="w")
         models_drop_down_options = []
-        self.models_drop_down = ttk.Combobox(left_frame, values=models_drop_down_options, width=15, state="readonly")
+        self.models_drop_down = ttk.Combobox(left_frame, values=models_drop_down_options, width=20, state="readonly")
         self.models_drop_down.grid(row=left_row, column=1, padx=0, pady=5, sticky="w")
         self.models_drop_down.bind('<<ComboboxSelected>>', self.on_model_selection_change)
         thread = threading.Thread(target=self.settings.update_models_dropdown, args=(self.models_drop_down,))
@@ -554,6 +580,7 @@ class SettingsWindowUI:
 
         # save the old whisper model to compare with the new model later
         old_local_whisper = self.settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value]
+        old_whisper_architecture = self.settings.editable_settings[SettingsKeys.WHISPER_ARCHITECTURE.value]
         old_model = self.settings.editable_settings["Whisper Model"]
 
         self.settings.save_settings(
@@ -581,9 +608,11 @@ class SettingsWindowUI:
         # loading the model after the window is closed to prevent the window from freezing
         # if Local Whisper is selected, compare the old model with the new model and reload the model if it has changed
         if self.settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value] and (
-                old_local_whisper != self.settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value] or old_model !=
-                self.settings.editable_settings["Whisper Model"]):
+                old_local_whisper != self.settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value] or 
+                old_model !=self.settings.editable_settings["Whisper Model"] or 
+                self.settings.editable_settings[SettingsKeys.WHISPER_ARCHITECTURE.value] != old_whisper_architecture):
             self.root.event_generate("<<LoadSttModel>>")
+
 
     def reset_to_default(self):
         """
@@ -605,7 +634,7 @@ class SettingsWindowUI:
         # 1. LLM Preset (Left Column)
         tk.Label(frame, text="Settings Presets:").grid(row=row, column=0, padx=0, pady=5, sticky="w")
         llm_preset_options = ["Local AI", "ClinicianFocus Toolbox", "Custom"]
-        self.llm_preset_dropdown = ttk.Combobox(frame, values=llm_preset_options, width=15, state="readonly")
+        self.llm_preset_dropdown = ttk.Combobox(frame, values=llm_preset_options, width=20, state="readonly")
         if self.settings.editable_settings["Preset"] in llm_preset_options:
             self.llm_preset_dropdown.current(llm_preset_options.index(self.settings.editable_settings["Preset"]))
         else:
@@ -658,7 +687,7 @@ class SettingsWindowUI:
         """
         tk.Label(frame, text=label).grid(row=row_idx, column=0, padx=0, pady=5, sticky="w")
         value = self.settings.editable_settings[setting_name]
-        entry = tk.Entry(frame)
+        entry = tk.Entry(frame, width=25)
         entry.insert(0, str(value))
         entry.grid(row=row_idx, column=1, padx=0, pady=5, sticky="w")
         self.settings.editable_settings_entries[setting_name] = entry
