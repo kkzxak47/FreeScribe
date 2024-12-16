@@ -29,11 +29,31 @@ import threading
 from UI.Widgets.MicrophoneSelector import MicrophoneState
 from utils.ip_utils import is_valid_url
 from enum import Enum
+import multiprocessing
 
 class SettingsKeys(Enum):
     LOCAL_WHISPER = "Built-in Speech2Text"
     WHISPER_ENDPOINT = "Speech2Text (Whisper) Endpoint"
     WHISPER_SERVER_API_KEY = "Speech2Text (Whisper) API Key"
+    WHISPER_ARCHITECTURE = "Speech2Text (Whisper) Architecture"
+    WHISPER_CPU_COUNT = "Speech2Text (Whisper) CPU Thread Count"
+    WHISPER_COMPUTE_TYPE = "Speech2Text (Whisper) Compute Type"
+    WHISPER_BEAM_SIZE = "Speech2Text (Whisper) Beam Size"
+    WHISPER_VAD_FILTER = "Use Speech2Text (Whisper) VAD Filter"
+
+
+class Architectures(Enum):
+    CPU = ("CPU", "cpu")
+    CUDA = ("CUDA (Nvidia GPU)", "cuda")
+
+    @property
+    def label(self):
+        return self._value_[0]
+
+    @property
+    def architecture_value(self):
+        return self._value_[1]
+
 
 
 class FeatureToggle:
@@ -100,8 +120,10 @@ class SettingsWindow():
             "BlankSpace", # Represents the SettingsKeys.LOCAL_WHISPER.value checkbox that is manually placed
             "Real Time",
             "BlankSpace", # Represents the model dropdown that is manually placed
+            "BlankSpace", # Represents the mic dropdown
             SettingsKeys.WHISPER_ENDPOINT.value,
             SettingsKeys.WHISPER_SERVER_API_KEY.value,
+            "BlankSpace", # Represents the architecture dropdown that is manually placed
             "S2T Server Self-Signed Certificates",
         ]
 
@@ -136,6 +158,10 @@ class SettingsWindow():
 
         self.adv_whisper_settings = [
             "Real Time Audio Length",
+            SettingsKeys.WHISPER_BEAM_SIZE.value,
+            SettingsKeys.WHISPER_CPU_COUNT.value,
+            SettingsKeys.WHISPER_VAD_FILTER.value,
+            SettingsKeys.WHISPER_COMPUTE_TYPE.value,
         ]
 
 
@@ -144,8 +170,8 @@ class SettingsWindow():
         ]
 
         self.editable_settings = {
-            "Model": "gpt-4",
-            "Model Endpoint": "https://api.openai.com/v1/",
+            "Model": "gemma2:2b-instruct-q8_0",
+            "Model Endpoint": "https://localhost:3334/v1",
             "Use Local LLM": True,
             "Architecture": "CPU",
             "use_story": False,
@@ -172,6 +198,11 @@ class SettingsWindow():
             SettingsKeys.LOCAL_WHISPER.value: True,
             SettingsKeys.WHISPER_ENDPOINT.value: "https://localhost:2224/whisperaudio",
             SettingsKeys.WHISPER_SERVER_API_KEY.value: "",
+            SettingsKeys.WHISPER_ARCHITECTURE.value: "CPU",
+            SettingsKeys.WHISPER_BEAM_SIZE.value: 5,
+            SettingsKeys.WHISPER_CPU_COUNT.value: multiprocessing.cpu_count(),
+            SettingsKeys.WHISPER_VAD_FILTER.value: False,
+            SettingsKeys.WHISPER_COMPUTE_TYPE.value: "float16",
             "Whisper Model": "small.en",
             "Current Mic": "None",
             "Real Time": True,
@@ -551,10 +582,28 @@ class SettingsWindow():
         Returns:
             list: A list of available architectures for the user to choose from.
         """
-        architectures = ["CPU"]  # CPU is always available as fallback
+        architectures = [Architectures.CPU.label]  # CPU is always available as fallback
 
         # Check for NVIDIA support
         if os.path.isfile(get_file_path(self.STATE_FILES_DIR, self.NVIDIA_INSTALL_FILE)):
-            architectures.append("CUDA (Nvidia GPU)")
+            architectures.append(Architectures.CUDA.label)
 
         return architectures
+
+    def update_whisper_model(self):
+        # save the old whisper model to compare with the new model later
+        old_local_whisper = self.editable_settings[SettingsKeys.LOCAL_WHISPER.value]
+        old_whisper_architecture = self.editable_settings[SettingsKeys.WHISPER_ARCHITECTURE.value]
+        old_model = self.editable_settings["Whisper Model"]
+        old_cpu_count = self.editable_settings[SettingsKeys.WHISPER_CPU_COUNT.value]
+        old_compute_type = self.editable_settings[SettingsKeys.WHISPER_COMPUTE_TYPE.value]
+
+        # loading the model after the window is closed to prevent the window from freezing
+        # if Local Whisper is selected, compare the old model with the new model and reload the model if it has changed
+        if self.editable_settings[SettingsKeys.LOCAL_WHISPER.value] and (
+                old_local_whisper != self.editable_settings_entries[SettingsKeys.LOCAL_WHISPER.value].get() or 
+                old_model != self.editable_settings_entries["Whisper Model"].get() or 
+                old_whisper_architecture != self.editable_settings_entries[SettingsKeys.WHISPER_ARCHITECTURE.value].get() or 
+                old_cpu_count != self.editable_settings_entries[SettingsKeys.WHISPER_CPU_COUNT.value].get() or
+                old_compute_type != self.editable_settings_entries[SettingsKeys.WHISPER_COMPUTE_TYPE.value].get()):
+            self.main_window.root.event_generate("<<LoadSttModel>>")
