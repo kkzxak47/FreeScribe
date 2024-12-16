@@ -3,7 +3,6 @@ import os
 from typing import Optional, Dict, Any
 import threading
 from UI.LoadingWindow import LoadingWindow
-from UI.SettingsWindow import Architectures
 import tkinter.messagebox as messagebox
 
 class Model:
@@ -195,7 +194,7 @@ class ModelManager:
             """
             gpu_layers = 0
 
-            if app_settings.editable_settings["Architecture"] == Architectures.CUDA.label:
+            if app_settings.editable_settings["Architecture"] == "CUDA (Nvidia GPU)":
                 gpu_layers = -1
 
             model_to_use = "gemma-2-2b-it-Q8_0.gguf"
