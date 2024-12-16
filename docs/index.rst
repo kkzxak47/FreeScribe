@@ -6,9 +6,7 @@
 FreeScribe documentation
 ========================
 
-Add your content using ``reStructuredText`` syntax. See the
-`reStructuredText <https://www.sphinx-doc.org/en/master/usage/restructuredtext/index.html>`_
-documentation for details.
+This bage is currently work in progess. Please visit again soon.
 
 
 .. toctree::
