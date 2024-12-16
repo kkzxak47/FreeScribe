@@ -616,7 +616,7 @@ def send_audio_to_server():
 
             # Transcribe the audio file using the loaded model
             try:
-                result = faster_whisper_transcribe(audio_buffer)
+                result = faster_whisper_transcribe(file_to_send)
             except Exception as e:
                 result = f"An error occurred ({type(e).__name__}): {e}"
 
