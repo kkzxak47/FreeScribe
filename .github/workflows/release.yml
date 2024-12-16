@@ -26,6 +26,13 @@ jobs:
         run: |
           pip install --index-url https://abetlen.github.io/llama-cpp-python/whl/cu124 --extra-index-url https://pypi.org/simple llama-cpp-python==v0.2.90
 
+      - name: Instal CUDA drivers for NVIDIA install
+        run: |
+          pip install nvidia-cudnn-cu12==9.5.0.50
+          pip install nvidia-cuda-runtime-cu12==12.4.127
+          pip install nvidia-cuda-nvrtc-cu12==12.4.127
+          pip install nvidia-cublas-cu12==12.4.5.8
+
       - name: Install requirements
         run: |
           pip install -r client_requirements.txt
@@ -37,6 +44,10 @@ jobs:
       # Create CPU-only executable
       - name: Uninstall CUDA-enabled llama_cpp (if necessary) and install CPU-only llama_cpp
         run: |
+          pip uninstall nvidia-cudnn-cu12==9.5.0.50
+          pip uninstall nvidia-cuda-runtime-cu12==12.4.127
+          pip uninstall nvidia-cuda-nvrtc-cu12==12.4.127
+          pip uninstall nvidia-cublas-cu12==12.4.5.8
           pip uninstall -y llama-cpp-python
           pip install --index-url https://abetlen.github.io/llama-cpp-python/whl/cpu --extra-index-url https://pypi.org/simple llama-cpp-python==v0.2.90
 
