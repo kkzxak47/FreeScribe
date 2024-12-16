@@ -270,7 +270,7 @@ class SettingsWindowUI:
             self.architecture_dropdown.current(architecture_options.index(self.settings.editable_settings["Architecture"]))
         else:
             # Default cpu
-            self.architecture_dropdown.set(Architectures.CPU.label))
+            self.architecture_dropdown.set(Architectures.CPU.label)
 
         self.architecture_dropdown.grid(row=left_row, column=1, padx=0, pady=5, sticky="w")
 
@@ -571,17 +571,13 @@ class SettingsWindowUI:
         if self.get_selected_model() not in ["Loading models...", "Failed to load models"]:
             self.settings.editable_settings["Model"] = self.get_selected_model()
 
+        self.settings.update_whisper_model()
 
         self.settings.editable_settings["Pre-Processing"] = self.preprocess_text.get("1.0", "end-1c") # end-1c removes the trailing newline
         self.settings.editable_settings["Post-Processing"] = self.postprocess_text.get("1.0", "end-1c") # end-1c removes the trailing newline
 
         # save architecture
         self.settings.editable_settings["Architecture"] = self.architecture_dropdown.get()
-
-        # save the old whisper model to compare with the new model later
-        old_local_whisper = self.settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value]
-        old_whisper_architecture = self.settings.editable_settings[SettingsKeys.WHISPER_ARCHITECTURE.value]
-        old_model = self.settings.editable_settings["Whisper Model"]
 
         self.settings.save_settings(
             self.openai_api_key_entry.get(),
@@ -604,14 +600,6 @@ class SettingsWindowUI:
 
         if close_window:
             self.close_window()
-
-        # loading the model after the window is closed to prevent the window from freezing
-        # if Local Whisper is selected, compare the old model with the new model and reload the model if it has changed
-        if self.settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value] and (
-                old_local_whisper != self.settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value] or 
-                old_model !=self.settings.editable_settings["Whisper Model"] or 
-                self.settings.editable_settings[SettingsKeys.WHISPER_ARCHITECTURE.value] != old_whisper_architecture):
-            self.root.event_generate("<<LoadSttModel>>")
 
 
     def reset_to_default(self):

@@ -45,6 +45,12 @@ from UI.DebugWindow import DualOutput
 import traceback
 import sys
 from utils.utils import window_has_running_instance, bring_to_front, close_mutex
+import gc
+from pathlib import Path
+
+from WhisperModel import TranscribeError
+
+
 
 dual = DualOutput()
 sys.stdout = dual
@@ -292,8 +298,10 @@ def realtime_text():
                         if stt_local_model is None:
                             update_gui("Local Whisper model not loaded. Please check your settings.")
                             break
-
-                        result = faster_whisper_transcribe(audio_buffer)
+                        try:
+                            result = faster_whisper_transcribe(audio_buffer)
+                        except Exception as e:
+                            update_gui(f"\nError: {e}\n")
 
                         if not local_cancel_flag and not is_audio_processing_realtime_canceled.is_set():
                             update_gui(result)
@@ -607,7 +615,10 @@ def send_audio_to_server():
             uploaded_file_path = None
 
             # Transcribe the audio file using the loaded model
-            result = faster_whisper_transcribe(file_to_send)
+            try:
+                result = faster_whisper_transcribe(audio_buffer)
+            except Exception as e:
+                result = f"An error occurred ({type(e).__name__}): {e}"
 
             transcribed_text = result
 
@@ -1204,76 +1215,180 @@ def set_minimal_view():
     # root.attributes('-toolwindow', True)
 
 def copy_text(widget):
+    """
+    Copy text content from a tkinter widget to the system clipboard.
+
+    Args:
+        widget: A tkinter Text widget containing the text to be copied.
+    """
     text = widget.get("1.0", tk.END)
     pyperclip.copy(text)
 
 def add_placeholder(event, text_widget, placeholder_text="Text box"):
+    """
+    Add placeholder text to a tkinter Text widget when it's empty.
+
+    Args:
+        event: The event that triggered this function.
+        text_widget: The tkinter Text widget to add placeholder text to.
+        placeholder_text (str, optional): The placeholder text to display. Defaults to "Text box".
+    """
     if text_widget.get("1.0", "end-1c") == "":
         text_widget.insert("1.0", placeholder_text)
         text_widget.config(fg='grey')
 
 def remove_placeholder(event, text_widget, placeholder_text="Text box"):
+    """
+    Remove placeholder text from a tkinter Text widget when it gains focus.
+
+    Args:
+        event: The event that triggered this function.
+        text_widget: The tkinter Text widget to remove placeholder text from.
+        placeholder_text (str, optional): The placeholder text to remove. Defaults to "Text box".
+    """
     if text_widget.get("1.0", "end-1c") == placeholder_text:
         text_widget.delete("1.0", "end")
         text_widget.config(fg='black')
 
 def load_stt_model(event=None):
+    """
+    Initialize speech-to-text model loading in a separate thread.
+
+    Args:
+        event: Optional event parameter for binding to tkinter events.
+    """
     thread = threading.Thread(target=_load_stt_model_thread, daemon=True)
     thread.start()
 
 def _load_stt_model_thread():
+    """
+    Internal function to load the Whisper speech-to-text model.
+    
+    Creates a loading window and handles the initialization of the WhisperModel
+    with configured settings. Updates the global stt_local_model variable.
+    
+    Raises:
+        Exception: Any error that occurs during model loading is caught, logged,
+                  and displayed to the user via a message box.
+    """
     global stt_local_model
     model = app_settings.editable_settings["Whisper Model"].strip()
-    # Create a loading window to display the loading message
     stt_loading_window = LoadingWindow(root, "Speech to Text", "Loading Speech to Text. Please wait.")
     print(f"Loading STT model: {model}")
     try:
-        # Load the specified Whisper model
-        device_type = Architectures.CPU.value
-        if app_settings.editable_settings[SettingsKeys.WHISPER_ARCHITECTURE.value] == Architectures.CUDA.label:
-            device_type = Architectures.CUDA.value
+        unload_stt_model()
+        device_type = get_selected_whisper_architecture()
+        set_cuda_paths()
 
-        if device_type == Architectures.CUDA.value:
-            set_cuda_paths()
-
-        stt_local_model = WhisperModel(model, device=device_type)
+        stt_local_model = WhisperModel(
+            model, 
+            device=device_type,
+            cpu_threads=int(app_settings.editable_settings[SettingsKeys.WHISPER_CPU_COUNT.value]),
+            compute_type=app_settings.editable_settings[SettingsKeys.WHISPER_COMPUTE_TYPE.value],)
 
         print("STT model loaded successfully.")
     except Exception as e:
-        # Log the error message
-        print(f"An error occurred while loading STT: {e}")
+        print(f"An error occurred while loading STT {type(e).__name__}: {e}")
         stt_local_model = None
-        messagebox.showerror("Error", f"An error occurred while loading the STT model: {e}")
+        messagebox.showerror("Error", f"An error occurred while loading STT {type(e).__name__}: {e}")
     finally:
         stt_loading_window.destroy()
         print("Closing STT loading window.")
 
+def unload_stt_model():
+    """
+    Unload the speech-to-text model from memory.
+    
+    Cleans up the global stt_local_model instance and performs garbage collection
+    to free up system resources.
+    """
+    global stt_local_model
+    if stt_local_model is not None:
+        print("Unloading STT model from device.")
+        del stt_local_model
+        gc.collect()
+        stt_local_model = None
+        print("STT model unloaded successfully.")
+    else:
+        print("STT model is already unloaded.")
+
+def get_selected_whisper_architecture():
+    """
+    Determine the appropriate device architecture for the Whisper model.
+    
+    Returns:
+        str: The architecture value (CPU or CUDA) based on user settings.
+    """
+    device_type = Architectures.CPU.architecture_value
+    if app_settings.editable_settings[SettingsKeys.WHISPER_ARCHITECTURE.value] == Architectures.CUDA.label:
+        device_type = Architectures.CUDA.architecture_value
+
+    return device_type
+
 def faster_whisper_transcribe(audio):
+    """
+    Transcribe audio using the Faster Whisper model.
+    
+    Args:
+        audio: Audio data to transcribe.
+    
+    Returns:
+        str: Transcribed text or error message if transcription fails.
+        
+    Raises:
+        Exception: Any error during transcription is caught and returned as an error message.
+    """
     try:
-        segments, info = stt_local_model.transcribe(audio, language="en")
+        if stt_local_model is None:
+            load_stt_model()
+            raise TranscribeError("Speech2Text model not loaded. Please try again once loaded.")
+
+        # Validate beam_size
+        try:
+            beam_size = int(app_settings.editable_settings[SettingsKeys.WHISPER_BEAM_SIZE.value])
+            if beam_size <= 0:
+                raise ValueError(f"{SettingsKeys.WHISPER_BEAM_SIZE.value} must be greater than 0 in advanced settings")
+        except (ValueError, TypeError) as e:
+            return f"Invalid {SettingsKeys.WHISPER_BEAM_SIZE.value} parameter. Please go into the advanced settings and ensure you have a integer greater than 0: {str(e)}"
+
+        # Validate vad_filter
+        vad_filter = bool(app_settings.editable_settings[SettingsKeys.WHISPER_VAD_FILTER.value])
+
+        segments, info = stt_local_model.transcribe(
+            audio,
+            beam_size=beam_size,
+            vad_filter=vad_filter,
+        )
 
         return "".join(f"{segment.text} " for segment in segments)
     except Exception as e:
         error_message = f"Transcription failed: {str(e)}"
-        print(f"Error during transcription: {str(e)}")  # Log the error
-        return error_message
+        print(f"Error during transcription: {str(e)}")
+        raise TranscribeError(error_message)
 
 def set_cuda_paths():
-    nvidia_base_path = get_file_path('nvidia-drivers')  # Ensure this returns a Path object
+    """
+    Configure CUDA-related environment variables and paths.
     
-    # Use `Path` operators
+    Sets up the necessary environment variables for CUDA execution when CUDA
+    architecture is selected. Updates CUDA_PATH, CUDA_PATH_V12_4, and PATH
+    environment variables with the appropriate NVIDIA driver paths.
+    """
+    if (get_selected_whisper_architecture() != Architectures.CUDA.architecture_value) or (app_settings.editable_settings["Architecture"] != Architectures.CUDA.label):
+        return
+
+    nvidia_base_path = Path(get_file_path('nvidia-drivers'))
+    
     cuda_path = nvidia_base_path / 'cuda_runtime' / 'bin'
     cublas_path = nvidia_base_path / 'cublas' / 'bin'
     cudnn_path = nvidia_base_path / 'cudnn' / 'bin'
     
-    # Convert Path objects to strings
     paths_to_add = [str(cuda_path), str(cublas_path), str(cudnn_path)]
     env_vars = ['CUDA_PATH', 'CUDA_PATH_V12_4', 'PATH']
 
     for env_var in env_vars:
         current_value = os.environ.get(env_var, '')
         new_value = os.pathsep.join(paths_to_add + ([current_value] if current_value else []))
-        print(new_value)
         os.environ[env_var] = new_value
 
 # Configure grid weights for scalability
