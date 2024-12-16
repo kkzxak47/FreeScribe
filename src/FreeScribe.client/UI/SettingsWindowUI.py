@@ -28,7 +28,7 @@ from Model import Model, ModelManager
 from utils.file_utils import get_file_path
 from UI.MarkdownWindow import MarkdownWindow
 from UI.Widgets.MicrophoneSelector import MicrophoneSelector
-from UI.SettingsWindow import SettingsKeys, FeatureToggle
+from UI.SettingsWindow import SettingsKeys, FeatureToggle, Architectures
 
 
 class SettingsWindowUI:
@@ -208,7 +208,7 @@ class SettingsWindowUI:
             self.whisper_architecture_dropdown.current(whisper_architecture_options.index(self.settings.editable_settings[SettingsKeys.WHISPER_ARCHITECTURE.value]))
         else:
             # Default cpu
-            self.whisper_architecture_dropdown.set("CPU")
+            self.whisper_architecture_dropdown.set()
         
         self.whisper_architecture_dropdown.grid(row=right_row, column=1, padx=0, pady=5, sticky="w")
         self.settings.editable_settings_entries[SettingsKeys.WHISPER_ARCHITECTURE.value] = self.whisper_architecture_dropdown
@@ -270,7 +270,7 @@ class SettingsWindowUI:
             self.architecture_dropdown.current(architecture_options.index(self.settings.editable_settings["Architecture"]))
         else:
             # Default cpu
-            self.architecture_dropdown.set("CPU")
+            self.architecture_dropdown.set(Architectures.CPU.label))
 
         self.architecture_dropdown.grid(row=left_row, column=1, padx=0, pady=5, sticky="w")
 

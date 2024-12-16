@@ -36,6 +36,19 @@ class SettingsKeys(Enum):
     WHISPER_SERVER_API_KEY = "Speech2Text (Whisper) API Key"
     WHISPER_ARCHITECTURE = "Speech2Text (Whisper) Architecture"
 
+class Architectures(Enum):
+    CPU = ("CPU", "cpu")
+    CUDA = ("CUDA (Nvidia GPU)", "cuda")
+
+    @property
+    def label(self):
+        return self.value[0]
+
+    @property
+    def value(self):
+        return self.value[1]
+
+
 
 class FeatureToggle:
     DOCKER_SETTINGS_TAB = False
@@ -555,10 +568,10 @@ class SettingsWindow():
         Returns:
             list: A list of available architectures for the user to choose from.
         """
-        architectures = ["CPU"]  # CPU is always available as fallback
+        architectures = [Architectures.CPU.value]  # CPU is always available as fallback
 
         # Check for NVIDIA support
         if os.path.isfile(get_file_path(self.STATE_FILES_DIR, self.NVIDIA_INSTALL_FILE)):
-            architectures.append("CUDA (Nvidia GPU)")
+            architectures.append(Architectures.CUDA.label)
 
         return architectures
