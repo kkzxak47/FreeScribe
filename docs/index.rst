@@ -6,7 +6,7 @@
 FreeScribe documentation
 ========================
 
-This bage is currently work in progess. Please visit again soon.
+This page is currently work in progress. Please visit again soon.
 
 
 .. toctree::
