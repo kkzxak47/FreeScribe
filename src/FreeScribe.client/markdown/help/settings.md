@@ -17,7 +17,7 @@
 **Type**: string  
 
 ### Whisper Server API Key
-**Description**: API key for Whisper service authentication 
+**Description**: API key for Whisper service authentication.
 **Default**: `None`  
 **Type**: string  
 
