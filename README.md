@@ -29,6 +29,18 @@ If you would like to run the application on a local higher performance server pl
 
 Further documentation can be found [here](https://clinicianfocus.github.io/FreeScribe) (https://clinicianfocus.github.io/FreeScribe).
 
+## Contributing
+
+We welcome contributions to the FreeScribe project! To contribute:
+
+1. Fork the [repository](https://github.com/ClinicianFOCUS/FreeScribe).
+2. Create a new branch (`git checkout -b feature/your-feature`).
+3. Make your changes and commit them (`git commit -m 'Add some feature'`).
+4. Push to the branch (`git push origin feature/your-feature`).
+5. Open a pull request.
+
+Please ensure your code adheres to our coding standards and includes appropriate tests.
+
 # License
 
 FreeScribes code is under the AGPL-3.0 License. See (LICENSE)[https://github.com/ClinicianFOCUS/FreeScribe/blob/main/LICENSE.txt] for further information.
