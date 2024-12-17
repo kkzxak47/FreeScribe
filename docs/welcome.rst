@@ -33,11 +33,3 @@ License
 -------
 
 This project is licensed under the MIT License. See the `LICENSE file <https://github.com/ClinicianFOCUS/FreeScribe/blob/main/LICENSE.txt>`_ for more information.
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Contents:
-
-   welcome
-   how_to_use
-   setting_remote_connection
