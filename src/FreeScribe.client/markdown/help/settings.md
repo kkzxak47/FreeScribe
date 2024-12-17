@@ -12,7 +12,7 @@
 
 ## Whisper Settings
 ### Whisper Endpoint
-**Description**: API endpoint for Whisper service. This sends a wav file from the client to the endpoint. Default is set to the Local Whisper container provided by ClinicianFOCUS
+**Description**: API endpoint for Whisper service. This sends a wav file from the client to the endpoint. Default is set to the Local Whisper container provided by ClinicianFOCUS.
 **Default**: `https://localhost:2224/whisperaudio`  
 **Type**: string  
 
