@@ -87,7 +87,7 @@ class SettingsWindowUI:
         self.settings_window.grab_set()
         self.settings_window.iconbitmap(get_file_path('assets','logo.ico'))
 
-        self.display_center_to_parent()
+        self._display_center_to_parent()
 
         self.main_frame = tk.Frame(self.settings_window)
         self.main_frame.pack(expand=True, fill='both')
