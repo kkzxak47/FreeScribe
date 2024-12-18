@@ -230,7 +230,7 @@ class SettingsWindowUI:
         self.whisper_architecture_dropdown.grid(row=left_row, column=1, padx=0, pady=5, sticky="w")
         self.settings.editable_settings_entries[SettingsKeys.WHISPER_ARCHITECTURE.value] = self.whisper_architecture_dropdown
 
-        right_row += 1
+        left_frame += 1
 
         # set the state of the whisper settings based on the SettingsKeys.LOCAL_WHISPER.value checkbox once all widgets are created
         self.toggle_remote_whisper_settings()
