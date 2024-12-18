@@ -81,8 +81,8 @@ class SettingsWindowUI:
         """
         self.settings_window = tk.Toplevel()
         self.settings_window.title("Settings")
-        self.settings_window.geometry("700x400")  # Set initial window size
-        self.settings_window.minsize(700, 400)    # Set minimum window size
+        self.settings_window.geometry("850x400")  # Set initial window size
+        self.settings_window.minsize(850, 400)    # Set minimum window size
         self.settings_window.resizable(True, True)
         self.settings_window.grab_set()
         self.settings_window.iconbitmap(get_file_path('assets','logo.ico'))
