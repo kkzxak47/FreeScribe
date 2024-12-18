@@ -230,7 +230,7 @@ class SettingsWindowUI:
         self.whisper_architecture_dropdown.grid(row=left_row, column=1, padx=0, pady=5, sticky="w")
         self.settings.editable_settings_entries[SettingsKeys.WHISPER_ARCHITECTURE.value] = self.whisper_architecture_dropdown
 
-        left_frame += 1
+        left_row += 1
 
         # set the state of the whisper settings based on the SettingsKeys.LOCAL_WHISPER.value checkbox once all widgets are created
         self.toggle_remote_whisper_settings()
@@ -762,6 +762,8 @@ class SettingsWindowUI:
         """
         self.settings_window.unbind_all("<MouseWheel>") # Unbind mouse wheel event causing errors
         self.settings_window.unbind_all("<Configure>") # Unbind the configure event causing errors
-        self.cutoff_slider.destroy()
+        
+        if self.cutoff_slider is not None:
+            self.cutoff_slider.destroy()
 
         self.settings_window.destroy()
