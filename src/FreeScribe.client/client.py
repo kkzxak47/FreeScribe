@@ -595,6 +595,7 @@ def send_audio_to_server():
             print(f"An error occurred: {e}")
         finally:
             GENERATION_THREAD_ID = None
+            clear_application_press()
 
     loading_window = LoadingWindow(root, "Processing Audio", "Processing Audio. Please wait.", on_cancel=lambda: (cancel_processing(), cancel_whole_audio_process(current_thread_id)))
 
