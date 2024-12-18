@@ -17,7 +17,9 @@ jobs:
 
       - name: Create Version Text File for PyInstaller
         run: |
-          echo ${{ github.ref }} > .\scripts\__version__
+          $tag = ${{ github.ref }} -replace 'refs/tags/', ''
+          echo $tag > .\scripts\__version__
+          echo $tag
         shell: pwsh
 
       - name: Install Python
