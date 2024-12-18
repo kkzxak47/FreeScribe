@@ -541,10 +541,24 @@ class SettingsWindowUI:
         This method creates and places buttons for saving settings, resetting to default,
         and closing the settings window.
         """
-        tk.Button(self.main_frame, text="Save", command=self.save_settings, width=10).pack(side="right", padx=2, pady=5)
-        tk.Button(self.main_frame, text="Default", width=10, command=self.reset_to_default).pack(side="right", padx=2, pady=5)
-        tk.Button(self.main_frame, text="Close", width=10, command=self.close_window).pack(side="right", padx=2, pady=5)
-        tk.Button(self.main_frame, text="Help", width=10, command=self.create_help_window).pack(side="left", padx=2, pady=5)
+        footer_frame = tk.Frame(self.main_frame)
+        footer_frame.pack(side="bottom", fill="x")
+
+        # Place the "Help" button on the left
+        tk.Button(footer_frame, text="Help", width=10, command=self.create_help_window).pack(side="left", padx=2, pady=5)
+
+        # Place the label in the center
+        version = self.settings.get_application_version()
+        tk.Label(footer_frame, text=f"FreeScribe Client {version}").pack(side="left", expand=True, padx=2, pady=5)
+
+        # Create a frame for the right-side elements
+        right_frame = tk.Frame(footer_frame)
+        right_frame.pack(side="right")
+
+        # Pack all other buttons into the right frame
+        tk.Button(right_frame, text="Close", width=10, command=self.close_window).pack(side="right", padx=2, pady=5)
+        tk.Button(right_frame, text="Default", width=10, command=self.reset_to_default).pack(side="right", padx=2, pady=5)
+        tk.Button(right_frame, text="Save", width=10, command=self.save_settings).pack(side="right", padx=2, pady=5)
 
     def create_help_window(self):
         """
