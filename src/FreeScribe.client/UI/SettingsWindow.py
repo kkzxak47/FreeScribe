@@ -617,7 +617,7 @@ class SettingsWindow():
         try:
             with open(get_file_path('__version__'), 'r') as file:
                 version_str = file.read().strip()
-        except FileNotFoundError:
-            print("Version file not found. Using default version.")
+        except Exception as e:
+            print(f"Error loading version file ({type(e).__name__}). {e}")
         finally:
             return version_str
