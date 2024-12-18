@@ -329,8 +329,9 @@ class SettingsWindow():
         """
         settings = {
             "openai_api_key": self.OPENAI_API_KEY,
-            "editable_settings": self.editable_settings
+            "editable_settings": self.editable_settings,
             # "api_style": self.API_STYLE # FUTURE FEATURE REVISION
+            "app_version": self.get_application_version()
         }
         with open(get_resource_path('settings.txt'), 'w') as file:
             json.dump(settings, file)
@@ -608,3 +609,13 @@ class SettingsWindow():
                 old_cpu_count != self.editable_settings_entries[SettingsKeys.WHISPER_CPU_COUNT.value].get() or
                 old_compute_type != self.editable_settings_entries[SettingsKeys.WHISPER_COMPUTE_TYPE.value].get()):
             self.main_window.root.event_generate("<<LoadSttModel>>")
+
+    def get_application_version(self):
+        version_str = "vx.x.x.alpha"
+        try:
+            with open(get_file_path('__version__'), 'r') as file:
+                version_str = file.read().strip()
+        except FileNotFoundError:
+            print("Version file not found. Using default version.")
+        finally:
+            return version_str
