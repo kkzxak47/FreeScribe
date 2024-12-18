@@ -99,6 +99,8 @@ class SettingsWindow():
     CPU_INSTALL_FILE = "CPU_INSTALL.txt"
     NVIDIA_INSTALL_FILE = "NVIDIA_INSTALL.txt"
     STATE_FILES_DIR = "install_state"
+    DEFAULT_WHISPER_ARCHITECTURE = Architectures.CPU.architecture_value
+    DEFAULT_LLM_ARCHITECTURE = Architectures.CPU.architecture_value
 
     def __init__(self):
         """Initializes the ApplicationSettings with default values."""
@@ -174,7 +176,7 @@ class SettingsWindow():
             "Model": "gemma2:2b-instruct-q8_0",
             "Model Endpoint": "https://localhost:3334/v1",
             "Use Local LLM": True,
-            "Architecture": "CPU",
+            "Architecture": SettingsWindow.DEFAULT_LLM_ARCHITECTURE,
             "use_story": False,
             "use_memory": False,
             "use_authors_note": False,
@@ -199,7 +201,7 @@ class SettingsWindow():
             SettingsKeys.LOCAL_WHISPER.value: True,
             SettingsKeys.WHISPER_ENDPOINT.value: "https://localhost:2224/whisperaudio",
             SettingsKeys.WHISPER_SERVER_API_KEY.value: "",
-            SettingsKeys.WHISPER_ARCHITECTURE.value: "CPU",
+            SettingsKeys.WHISPER_ARCHITECTURE.value: SettingsWindow.DEFAULT_WHISPER_ARCHITECTURE,
             SettingsKeys.WHISPER_BEAM_SIZE.value: 5,
             SettingsKeys.WHISPER_CPU_COUNT.value: multiprocessing.cpu_count(),
             SettingsKeys.WHISPER_VAD_FILTER.value: False,
