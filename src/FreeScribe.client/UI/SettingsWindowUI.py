@@ -194,23 +194,23 @@ class SettingsWindowUI:
         self.settings.editable_settings_entries["Whisper Model"] = self.whisper_models_drop_down
 
         # create the whisper model dropdown slection
-        microphone_select = MicrophoneSelector(left_frame, left_row, 0, self.settings)
+        microphone_select = MicrophoneSelector(right_frame, right_row, 0, self.settings)
         self.settings.editable_settings_entries["Current Mic"] = microphone_select
         
-        left_row += 1
+        right_row += 1
 
         # Whisper Architecture Dropdown
-        self.whisper_architecture_label = tk.Label(right_frame, text=SettingsKeys.WHISPER_ARCHITECTURE.value)
-        self.whisper_architecture_label.grid(row=right_row, column=0, padx=0, pady=5, sticky="w")
+        self.whisper_architecture_label = tk.Label(left_frame, text=SettingsKeys.WHISPER_ARCHITECTURE.value)
+        self.whisper_architecture_label.grid(row=left_row, column=0, padx=0, pady=5, sticky="w")
         whisper_architecture_options = self.settings.get_available_architectures()
-        self.whisper_architecture_dropdown = ttk.Combobox(right_frame, values=whisper_architecture_options, width=20, state="readonly")
+        self.whisper_architecture_dropdown = ttk.Combobox(left_frame, values=whisper_architecture_options, width=20, state="readonly")
         if self.settings.editable_settings[SettingsKeys.WHISPER_ARCHITECTURE.value] in whisper_architecture_options:
             self.whisper_architecture_dropdown.current(whisper_architecture_options.index(self.settings.editable_settings[SettingsKeys.WHISPER_ARCHITECTURE.value]))
         else:
             # Default cpu
-            self.whisper_architecture_dropdown.set()
+            self.whisper_architecture_dropdown.set("CPU")
         
-        self.whisper_architecture_dropdown.grid(row=right_row, column=1, padx=0, pady=5, sticky="w")
+        self.whisper_architecture_dropdown.grid(row=left_row, column=1, padx=0, pady=5, sticky="w")
         self.settings.editable_settings_entries[SettingsKeys.WHISPER_ARCHITECTURE.value] = self.whisper_architecture_dropdown
 
         right_row += 1
