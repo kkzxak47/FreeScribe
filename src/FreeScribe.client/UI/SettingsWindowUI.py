@@ -125,7 +125,7 @@ class SettingsWindowUI:
         
         self.create_buttons()
 
-    def display_center_to_parent(self):
+    def _display_center_to_parent(self):
         # Get parent window dimensions and position
         parent_x = self.root.winfo_x()
         parent_y = self.root.winfo_y()
