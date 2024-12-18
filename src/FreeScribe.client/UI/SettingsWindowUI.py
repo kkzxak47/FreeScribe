@@ -231,7 +231,7 @@ class SettingsWindowUI:
         # set the local option to disabled on switch to remote
         inverted_state = "disabled" if current_state == 0 else "normal"
         self.whisper_models_drop_down.config(state=inverted_state)
-
+        self.whisper_architecture_dropdown.config(state=inverted_state)
 
 
     def create_llm_settings(self):
