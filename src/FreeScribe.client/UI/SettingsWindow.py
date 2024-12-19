@@ -214,7 +214,7 @@ class SettingsWindow():
             "Whisper Model": "small.en",
             "Current Mic": "None",
             "Real Time": True,
-            "Real Time Audio Length": 5,
+            "Real Time Audio Length": 10,
             "Real Time Silence Length": 1,
             "Silence cut-off": 0.035,
             "LLM Container Name": "ollama",
