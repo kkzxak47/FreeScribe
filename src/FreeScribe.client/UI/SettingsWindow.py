@@ -36,10 +36,10 @@ class SettingsKeys(Enum):
     WHISPER_ENDPOINT = "Speech2Text (Whisper) Endpoint"
     WHISPER_SERVER_API_KEY = "Speech2Text (Whisper) API Key"
     WHISPER_ARCHITECTURE = "Speech2Text (Whisper) Architecture"
-    WHISPER_CPU_COUNT = "Speech2Text (Whisper) CPU Thread Count"
-    WHISPER_COMPUTE_TYPE = "Speech2Text (Whisper) Compute Type"
-    WHISPER_BEAM_SIZE = "Speech2Text (Whisper) Beam Size"
-    WHISPER_VAD_FILTER = "Use Speech2Text (Whisper) VAD Filter"
+    WHISPER_CPU_COUNT = "Whisper CPU Thread Count (Experimental)"
+    WHISPER_COMPUTE_TYPE = "Whisper Compute Type (Experimental)"
+    WHISPER_BEAM_SIZE = "Whisper Beam Size (Experimental)"
+    WHISPER_VAD_FILTER = "Use Whisper VAD Filter (Experimental)"
 
 
 class Architectures(Enum):
