@@ -71,8 +71,11 @@ else:
 def on_closing():
     temp_recording = get_resource_path('recording.wav')
     if os.path.exists(temp_recording):
-        print("Deleting temporary recording file")
-        os.remove(temp_recording)
+        try:
+            print("Deleting temporary recording file")
+            os.remove(temp_recording)
+        except OSError as e:
+            print(f"Error deleting temporary recording file: {e}")
     close_mutex()
 
 # Register the close_mutex function to be called on exit
