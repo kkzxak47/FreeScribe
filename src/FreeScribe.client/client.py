@@ -68,8 +68,15 @@ else:
     bring_to_front(APP_NAME)
     sys.exit(0)
 
+def on_closing():
+    temp_recording = get_resource_path('recording.wav')
+    if os.path.exists(temp_recording):
+        print("Deleting temporary recording file")
+        os.remove(temp_recording)
+    close_mutex()
+
 # Register the close_mutex function to be called on exit
-atexit.register(close_mutex)
+atexit.register(on_closing)
 
 # settings logic
 app_settings = SettingsWindow()
