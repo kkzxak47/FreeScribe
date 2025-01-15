@@ -68,21 +68,24 @@ else:
     bring_to_front(APP_NAME)
     sys.exit(0)
 
+def delete_temp_file(filename):
+    """
+    Deletes a temporary file if it exists.
+
+    Args:
+        filename (str): The name of the file to delete.
+    """
+    file_path = get_resource_path(filename)
+    if os.path.exists(file_path):
+        try:
+            print(f"Deleting temporary file: {filename}")
+            os.remove(file_path)
+        except OSError as e:
+            print(f"Error deleting temporary file {filename}: {e}")
+
 def on_closing():
-    temp_recording = get_resource_path('recording.wav')
-    temp_realtime = get_resource_path('realtime.wav')
-    if os.path.exists(temp_recording):
-        try:
-            print("Deleting temporary recording file")
-            os.remove(temp_recording)
-        except OSError as e:
-            print(f"Error deleting temporary recording file: {e}")
-    if os.path.exists(temp_realtime):
-        try:
-            print("Deleting temporary realtime recording file")
-            os.remove(temp_realtime)
-        except OSError as e:
-            print(f"Error deleting temporary realtime recording file: {e}")
+    delete_temp_file('recording.wav')
+    delete_temp_file('realtime.wav')
     close_mutex()
 
 # Register the close_mutex function to be called on exit
