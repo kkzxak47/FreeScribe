@@ -308,15 +308,18 @@ def realtime_text():
                             update_gui(result)
                     else:
                         print("Remote Real Time Whisper")
+                        buffer = io.BytesIO()
                         if frames:
                             # Buffer to hold the audio data. This is used to send the audio data to the server.
-                            buffer = io.BytesIO()
                             with wave.open(buffer, 'wb') as wf:
                                 wf.setnchannels(CHANNELS)
                                 wf.setsampwidth(p.get_sample_size(FORMAT))
                                 wf.setframerate(RATE)
                                 wf.writeframes(b''.join(frames))
                             frames = []
+                        else:
+                            # Dont make the network request if frames is empty
+                            continue
                         
                         buffer.seek(0)  # Reset buffer position to start
 
