@@ -49,6 +49,7 @@ import gc
 from pathlib import Path
 from decimal import Decimal
 from WhisperModel import TranscribeError
+import io
 
 
 
@@ -308,36 +309,35 @@ def realtime_text():
                     else:
                         print("Remote Real Time Whisper")
                         if frames:
-                            with wave.open(get_resource_path("realtime.wav"), 'wb') as wf:
+                            buffer = io.BytesIO()
+                            with wave.open(buffer, 'wb') as wf:
                                 wf.setnchannels(CHANNELS)
                                 wf.setsampwidth(p.get_sample_size(FORMAT))
                                 wf.setframerate(RATE)
                                 wf.writeframes(b''.join(frames))
                             frames = []
-                        file_to_send = get_resource_path("realtime.wav")
-                        with open(file_to_send, 'rb') as f:
-                            files = {'audio': f}
+                        
+                        buffer.seek(0)  # Reset buffer position to start
 
-                            headers = {
-                                "Authorization": "Bearer "+app_settings.editable_settings[SettingsKeys.WHISPER_SERVER_API_KEY.value]
-                            }
+                        files = {'audio': buffer}
 
-                            try:
-                                verify = not app_settings.editable_settings["S2T Server Self-Signed Certificates"]
-                                response = requests.post(app_settings.editable_settings[SettingsKeys.WHISPER_ENDPOINT.value], headers=headers,files=files, verify=verify)
-                                if response.status_code == 200:
-                                    text = response.json()['text']
-                                    if not local_cancel_flag and not is_audio_processing_realtime_canceled.is_set():
-                                        update_gui(text)
-                                else:
-                                    update_gui(f"Error (HTTP Status {response.status_code}): {response.text}")
-                            except Exception as e:
-                                update_gui(f"Error: {e}")
-                            finally:
-                                #Task done clean up file
-                                if os.path.exists(file_to_send):
-                                    f.close()
-                                    os.remove(file_to_send)
+                        headers = {
+                            "Authorization": "Bearer "+app_settings.editable_settings[SettingsKeys.WHISPER_SERVER_API_KEY.value]
+                        }
+
+                        try:
+                            verify = not app_settings.editable_settings["S2T Server Self-Signed Certificates"]
+                            response = requests.post(app_settings.editable_settings[SettingsKeys.WHISPER_ENDPOINT.value], headers=headers,files=files, verify=verify)
+                            if response.status_code == 200:
+                                text = response.json()['text']
+                                if not local_cancel_flag and not is_audio_processing_realtime_canceled.is_set():
+                                    update_gui(text)
+                            else:
+                                update_gui(f"Error (HTTP Status {response.status_code}): {response.text}")
+                        except Exception as e:
+                            update_gui(f"Error: {e}")
+                        finally:
+                            buffer.close()
                 audio_queue.task_done()
     else:
         is_realtimeactive = False
