@@ -319,6 +319,7 @@ def realtime_text():
                             frames = []
                         else:
                             # Dont make the network request if frames is empty
+                            buffer.close()
                             continue
                         
                         buffer.seek(0)  # Reset buffer position to start
