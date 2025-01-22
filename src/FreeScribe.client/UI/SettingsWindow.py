@@ -162,7 +162,6 @@ class SettingsWindow():
             # "singleline",
             # "frmttriminc",
             # "frmtrmblln",
-            SettingsKeys.AUDIO_PROCESSING_TIMEOUT_LENGTH.value,
         ]
 
         self.adv_whisper_settings = [
@@ -177,6 +176,7 @@ class SettingsWindow():
 
         self.adv_general_settings = [
             # "Enable Scribe Template", # Uncomment if you want to implement the feature right now removed as it doesn't have a real structured implementation
+            SettingsKeys.AUDIO_PROCESSING_TIMEOUT_LENGTH.value,
         ]
 
         self.editable_settings = {

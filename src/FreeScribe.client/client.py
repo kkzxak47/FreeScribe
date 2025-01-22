@@ -427,9 +427,14 @@ def toggle_recording():
 
             loading_window = LoadingWindow(root, "Processing Audio", "Processing Audio. Please wait.", on_cancel=lambda: (cancel_processing(), cancel_realtime_processing(REALTIME_TRANSCRIBE_THREAD_ID)))
 
+            try:
+                timeout_length = int(app_settings.editable_settings[SettingsKeys.AUDIO_PROCESSING_TIMEOUT_LENGTH.value])
+            except ValueError:
+                # default to 3minutes
+                timeout_length = 180
 
             timeout_timer = 0.0
-            while audio_queue.empty() is False and timeout_timer < app_settings.editable_settings[SettingsKeys.AUDIO_PROCESSING_TIMEOUT_LENGTH.value]:
+            while audio_queue.empty() is False and timeout_timer < timeout_length:
                 # break because cancel was requested
                 if is_audio_processing_realtime_canceled.is_set():
                     break
@@ -437,7 +442,7 @@ def toggle_recording():
                 timeout_timer += 0.1
                 timeout_timer = round(timeout_timer, 10)
                 if timeout_timer % 5 == 0:
-                    print(f"Waiting for audio processing to finish.Timeout after 60 seconds. Timer: {timeout_timer}s")
+                    print(f"Waiting for audio processing to finish. Timeout after {timeout_length} seconds. Timer: {timeout_timer}s")
                 time.sleep(0.1)
             
             loading_window.destroy()
