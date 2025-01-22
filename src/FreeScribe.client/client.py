@@ -344,7 +344,16 @@ def realtime_text():
 
                             try:
                                 verify = not app_settings.editable_settings["S2T Server Self-Signed Certificates"]
+
+                                print("Sending audio to server")
+                                print("File informaton")
+                                print(f"File: {file_to_send}")
+                                print("File Size: ", os.path.getsize(file_to_send))
+
                                 response = requests.post(app_settings.editable_settings[SettingsKeys.WHISPER_ENDPOINT.value], headers=headers,files=files, verify=verify)
+                                
+                                print("Response from whisper with status code: ", response.status_code)
+
                                 if response.status_code == 200:
                                     text = response.json()['text']
                                     if not local_cancel_flag and not is_audio_processing_realtime_canceled.is_set():
@@ -701,8 +710,15 @@ def send_audio_to_server():
             try:
                 verify = not app_settings.editable_settings["S2T Server Self-Signed Certificates"]
 
+                print("Sending audio to server")
+                print("File informaton")
+                print(f"File: {file_to_send}")
+                print("File Size: ", os.path.getsize(file_to_send))
+
                 # Send the request without verifying the SSL certificate
                 response = requests.post(app_settings.editable_settings[SettingsKeys.WHISPER_ENDPOINT.value], headers=headers, files=files, verify=verify)
+
+                print("Response from whisper with status code: ", response.status_code)
 
                 response.raise_for_status()
 
