@@ -429,7 +429,7 @@ def toggle_recording():
 
 
             timeout_timer = 0.0
-            while audio_queue.empty() is False and timeout_timer < 60.0:
+            while audio_queue.empty() is False and timeout_timer < app_settings.editable_settings[SettingsKeys.AUDIO_PROCESSING_TIMEOUT_LENGTH.value]:
                 # break because cancel was requested
                 if is_audio_processing_realtime_canceled.is_set():
                     break
