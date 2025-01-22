@@ -438,11 +438,16 @@ def toggle_recording():
                 # break because cancel was requested
                 if is_audio_processing_realtime_canceled.is_set():
                     break
-                
+                # increment timer
                 timeout_timer += 0.1
+                # round to 10 decimal places, account for floating point errors
                 timeout_timer = round(timeout_timer, 10)
+
+                # check if we should print a message every 5 seconds 
                 if timeout_timer % 5 == 0:
                     print(f"Waiting for audio processing to finish. Timeout after {timeout_length} seconds. Timer: {timeout_timer}s")
+                
+                # Wait for 100ms before checking again, to avoid busy waiting
                 time.sleep(0.1)
             
             loading_window.destroy()
