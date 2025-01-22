@@ -1058,7 +1058,7 @@ def generate_note_thread(text: str):
 
 def upload_file():
     global uploaded_file_path
-    file_path = filedialog.askopenfilename(filetypes=(("Audio files", "*.wav *.mp3"),))
+    file_path = filedialog.askopenfilename(filetypes=(("Audio files", "*.wav *.mp3 *.m4a"),))
     if file_path:
         uploaded_file_path = file_path
         threaded_send_audio_to_server()  # Add this line to process the file immediately
