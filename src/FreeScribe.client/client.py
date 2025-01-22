@@ -47,7 +47,7 @@ import sys
 from utils.utils import window_has_running_instance, bring_to_front, close_mutex
 import gc
 from pathlib import Path
-
+from decimal import Decimal
 from WhisperModel import TranscribeError
 
 
@@ -428,13 +428,16 @@ def toggle_recording():
             loading_window = LoadingWindow(root, "Processing Audio", "Processing Audio. Please wait.", on_cancel=lambda: (cancel_processing(), cancel_realtime_processing(REALTIME_TRANSCRIBE_THREAD_ID)))
 
 
-            timeout_timer = 0
-            while audio_queue.empty() is False and timeout_timer < 180:
+            timeout_timer = 0.0
+            while timeout_timer < 60.0:
                 # break because cancel was requested
                 if is_audio_processing_realtime_canceled.is_set():
                     break
                 
                 timeout_timer += 0.1
+                timeout_timer = round(timeout_timer, 10)
+                if timeout_timer % 5 == 0:
+                    print(f"Waiting for audio processing to finish.Timeout after 60 seconds. Timer: {timeout_timer}s")
                 time.sleep(0.1)
             
             loading_window.destroy()
