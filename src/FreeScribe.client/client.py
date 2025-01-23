@@ -47,7 +47,8 @@ import sys
 from utils.utils import window_has_running_instance, bring_to_front, close_mutex
 import gc
 from pathlib import Path
-from decimal import Decimalimport torch
+from decimal import Decimal
+import torch
 from WhisperModel import TranscribeError
 import io
 
@@ -237,7 +238,15 @@ def record_audio():
                 frames.append(data)
                 # Check for silence
                 audio_buffer = np.frombuffer(data, dtype=np.int16).astype(np.float32) / 32768
-                if is_silent(audio_buffer, app_settings.editable_settings[SettingsKeys.SILERO_SPEECH_THRESHOLD.value]):
+                
+                # convert the setting from str to float
+                try: 
+                    speech_prob_threshold = float(app_settings.editable_settings[SettingsKeys.SILERO_SPEECH_THRESHOLD.value])
+                except ValueError:
+                    # default it to 0.5 on invalid error
+                    speech_prob_threshold = 0.5
+                
+                if is_silent(audio_buffer, speech_prob_threshold ):
                     silent_duration += CHUNK / RATE
                     silent_warning_duration += CHUNK / RATE
                 else:
@@ -288,7 +297,7 @@ def check_silence_warning(silence_duration):
 
 silero, _silero = torch.hub.load(repo_or_dir='snakers4/silero-vad', model='silero_vad')
 
-def is_silent(data, threshold=0.65):
+def is_silent(data, threshold: float = 0.65):
     """Check if audio chunk contains speech using Silero VAD"""
     # Convert audio data to tensor and ensure correct format
     audio_tensor = torch.FloatTensor(data)
@@ -330,55 +339,55 @@ def realtime_text():
                     except Exception as e:
                         update_gui(f"\nError: {e}\n")
 
-                        if not local_cancel_flag and not is_audio_processing_realtime_canceled.is_set():
-                            update_gui(result)
+                    if not local_cancel_flag and not is_audio_processing_realtime_canceled.is_set():
+                        update_gui(result)
+                else:
+                    print("Remote Real Time Whisper")
+                    buffer = io.BytesIO()
+                    if frames:
+                        # Buffer to hold the audio data. This is used to send the audio data to the server.
+                        with wave.open(buffer, 'wb') as wf:
+                            wf.setnchannels(CHANNELS)
+                            wf.setsampwidth(p.get_sample_size(FORMAT))
+                            wf.setframerate(RATE)
+                            wf.writeframes(b''.join(frames))
+                        frames = []
                     else:
-                        print("Remote Real Time Whisper")
-                        buffer = io.BytesIO()
-                        if frames:
-                            # Buffer to hold the audio data. This is used to send the audio data to the server.
-                            with wave.open(buffer, 'wb') as wf:
-                                wf.setnchannels(CHANNELS)
-                                wf.setsampwidth(p.get_sample_size(FORMAT))
-                                wf.setframerate(RATE)
-                                wf.writeframes(b''.join(frames))
-                            frames = []
+                        # Dont make the network request if frames is empty
+                        buffer.close()
+                        continue
+                    
+                    buffer.seek(0)  # Reset buffer position to start
+
+                    files = {'audio': buffer}
+
+                    headers = {
+                        "Authorization": "Bearer "+app_settings.editable_settings[SettingsKeys.WHISPER_SERVER_API_KEY.value]
+                    }
+
+                    try:
+                        verify = not app_settings.editable_settings["S2T Server Self-Signed Certificates"]
+
+                        print("Sending audio to server")
+                        print("File informaton")
+                        print("File Size: ", len(buffer.getbuffer()), "bytes")
+
+                        response = requests.post(app_settings.editable_settings[SettingsKeys.WHISPER_ENDPOINT.value], headers=headers,files=files, verify=verify)
+                            
+                        print("Response from whisper with status code: ", response.status_code)
+
+                        if response.status_code == 200:
+                            text = response.json()['text']
+                            if not local_cancel_flag and not is_audio_processing_realtime_canceled.is_set():
+                                update_gui(text)
                         else:
-                            # Dont make the network request if frames is empty
-                            buffer.close()
-                            continue
-                        
-                        buffer.seek(0)  # Reset buffer position to start
-
-                        files = {'audio': buffer}
-
-                        headers = {
-                            "Authorization": "Bearer "+app_settings.editable_settings[SettingsKeys.WHISPER_SERVER_API_KEY.value]
-                        }
-
-                        try:
-                            verify = not app_settings.editable_settings["S2T Server Self-Signed Certificates"]
-
-                            print("Sending audio to server")
-                            print("File informaton")
-                            print("File Size: ", len(buffer.getbuffer()), "bytes")
-
-                            response = requests.post(app_settings.editable_settings[SettingsKeys.WHISPER_ENDPOINT.value], headers=headers,files=files, verify=verify)
-                                
-                            print("Response from whisper with status code: ", response.status_code)
-
-                            if response.status_code == 200:
-                                text = response.json()['text']
-                                if not local_cancel_flag and not is_audio_processing_realtime_canceled.is_set():
-                                    update_gui(text)
-                            else:
-                                update_gui(f"Error (HTTP Status {response.status_code}): {response.text}")
-                        except Exception as e:
-                            update_gui(f"Error: {e}")
-                        finally:
-                            #close buffer. we dont need it anymore
-                            buffer.close()
-                audio_queue.task_done()
+                            update_gui(f"Error (HTTP Status {response.status_code}): {response.text}")
+                    except Exception as e:
+                        update_gui(f"Error: {e}")
+                    finally:
+                        #close buffer. we dont need it anymore
+                        buffer.close()
+            audio_queue.task_done()
     else:
         is_realtimeactive = False
 
