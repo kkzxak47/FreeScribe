@@ -41,6 +41,7 @@ class SettingsKeys(Enum):
     WHISPER_BEAM_SIZE = "Whisper Beam Size (Experimental)"
     WHISPER_VAD_FILTER = "Use Whisper VAD Filter (Experimental)"
     AUDIO_PROCESSING_TIMEOUT_LENGTH = "Audio Processing Timeout (seconds)"
+    SILERO_SPEECH_THRESHOLD = "Silero Speech Threshold"
 
 
 class Architectures(Enum):
@@ -165,12 +166,13 @@ class SettingsWindow():
         ]
 
         self.adv_whisper_settings = [
-            "Real Time Audio Length",
-            "BlankSpace", # Represents the whisper cuttoff
+            # "Real Time Audio Length",
+            # "BlankSpace", # Represents the whisper cuttoff
             SettingsKeys.WHISPER_BEAM_SIZE.value,
             SettingsKeys.WHISPER_CPU_COUNT.value,
             SettingsKeys.WHISPER_VAD_FILTER.value,
             SettingsKeys.WHISPER_COMPUTE_TYPE.value,
+            SettingsKeys.SILERO_SPEECH_THRESHOLD.value
         ]
 
 
@@ -237,6 +239,7 @@ class SettingsWindow():
             "Post-Processing": "\n\nUsing the provided list of facts, review the SOAP note for accuracy. Verify that all details align with the information provided in the list of facts and ensure consistency throughout. Update or adjust the SOAP note as necessary to reflect the listed facts without offering opinions or subjective commentary. Ensure that the revised note excludes a \"Notes\" section and does not include a header for the SOAP note. Provide the revised note after making any necessary corrections.",
             "Show Scrub PHI": False,
             SettingsKeys.AUDIO_PROCESSING_TIMEOUT_LENGTH.value: 180,
+            SettingsKeys.SILERO_SPEECH_THRESHOLD.value: 0.5,
         }
 
         self.docker_settings = [
