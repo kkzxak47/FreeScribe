@@ -69,8 +69,28 @@ else:
     bring_to_front(APP_NAME)
     sys.exit(0)
 
+def delete_temp_file(filename):
+    """
+    Deletes a temporary file if it exists.
+
+    Args:
+        filename (str): The name of the file to delete.
+    """
+    file_path = get_resource_path(filename)
+    if os.path.exists(file_path):
+        try:
+            print(f"Deleting temporary file: {filename}")
+            os.remove(file_path)
+        except OSError as e:
+            print(f"Error deleting temporary file {filename}: {e}")
+
+def on_closing():
+    delete_temp_file('recording.wav')
+    delete_temp_file('realtime.wav')
+    close_mutex()
+
 # Register the close_mutex function to be called on exit
-atexit.register(close_mutex)
+atexit.register(on_closing)
 
 # settings logic
 app_settings = SettingsWindow()
@@ -332,7 +352,16 @@ def realtime_text():
 
                         try:
                             verify = not app_settings.editable_settings["S2T Server Self-Signed Certificates"]
+
+                            print("Sending audio to server")
+                            print("File informaton")
+                            print(f"File: {file_to_send}")
+                            print("File Size: ", os.path.getsize(file_to_send))
+
                             response = requests.post(app_settings.editable_settings[SettingsKeys.WHISPER_ENDPOINT.value], headers=headers,files=files, verify=verify)
+                                
+                            print("Response from whisper with status code: ", response.status_code)
+
                             if response.status_code == 200:
                                 text = response.json()['text']
                                 if not local_cancel_flag and not is_audio_processing_realtime_canceled.is_set():
@@ -700,8 +729,15 @@ def send_audio_to_server():
             try:
                 verify = not app_settings.editable_settings["S2T Server Self-Signed Certificates"]
 
+                print("Sending audio to server")
+                print("File informaton")
+                print(f"File: {file_to_send}")
+                print("File Size: ", os.path.getsize(file_to_send))
+
                 # Send the request without verifying the SSL certificate
                 response = requests.post(app_settings.editable_settings[SettingsKeys.WHISPER_ENDPOINT.value], headers=headers, files=files, verify=verify)
+
+                print("Response from whisper with status code: ", response.status_code)
 
                 response.raise_for_status()
 
@@ -1041,7 +1077,7 @@ def generate_note_thread(text: str):
 
 def upload_file():
     global uploaded_file_path
-    file_path = filedialog.askopenfilename(filetypes=(("Audio files", "*.wav *.mp3"),))
+    file_path = filedialog.askopenfilename(filetypes=(("Audio files", "*.wav *.mp3 *.m4a"),))
     if file_path:
         uploaded_file_path = file_path
         threaded_send_audio_to_server()  # Add this line to process the file immediately
