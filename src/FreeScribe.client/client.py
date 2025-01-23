@@ -354,9 +354,8 @@ def realtime_text():
                             verify = not app_settings.editable_settings["S2T Server Self-Signed Certificates"]
 
                             print("Sending audio to server")
-                            print("File informaton")
-                            print(f"File: {file_to_send}")
-                            print("File Size: ", os.path.getsize(file_to_send))
+                            print("File information")
+                            print("File Size: ", len(buffer))
 
                             response = requests.post(app_settings.editable_settings[SettingsKeys.WHISPER_ENDPOINT.value], headers=headers,files=files, verify=verify)
                                 
