@@ -216,7 +216,7 @@ def record_audio():
                 frames.append(data)
                 # Check for silence
                 audio_buffer = np.frombuffer(data, dtype=np.int16).astype(np.float32) / 32768
-                if is_silent(audio_buffer):
+                if is_silent(audio_buffer, app_settings.editable_settings[SettingsKeys.SILERO_SPEECH_THRESHOLD.value]):
                     silent_duration += CHUNK / RATE
                     silent_warning_duration += CHUNK / RATE
                 else:
@@ -269,7 +269,6 @@ silero, _silero = torch.hub.load(repo_or_dir='snakers4/silero-vad', model='siler
 
 def is_silent(data, threshold=0.65):
     """Check if audio chunk contains speech using Silero VAD"""
-    
     # Convert audio data to tensor and ensure correct format
     audio_tensor = torch.FloatTensor(data)
     if audio_tensor.dim() == 2:
@@ -277,7 +276,6 @@ def is_silent(data, threshold=0.65):
     
     # Get speech probability
     speech_prob = silero(audio_tensor, 16000).item()
-    print(f"Speech Probability: {speech_prob}")
     return speech_prob < threshold
 
 def realtime_text():

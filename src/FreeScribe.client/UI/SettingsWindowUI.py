@@ -497,11 +497,11 @@ class SettingsWindowUI:
         
         self.create_editable_settings_col(left_frame, right_frame, 0, 0, self.settings.adv_whisper_settings)
         
-        # Audio meter
-        tk.Label(left_frame, text="Whisper Audio Cutoff").grid(row=1, column=0, padx=0, pady=0, sticky="w")
-        self.cutoff_slider = AudioMeter(left_frame, width=150, height=50, 
-                                    threshold=self.settings.editable_settings["Silence cut-off"] * 32768)
-        self.cutoff_slider.grid(row=1, column=1, padx=0, pady=0, sticky="w")
+        # # Audio meter
+        # tk.Label(left_frame, text="Whisper Audio Cutoff").grid(row=1, column=0, padx=0, pady=0, sticky="w")
+        # self.cutoff_slider = AudioMeter(left_frame, width=150, height=50, 
+        #                             threshold=self.settings.editable_settings["Silence cut-off"] * 32768)
+        # self.cutoff_slider.grid(row=1, column=1, padx=0, pady=0, sticky="w")
         row += 1
 
         # AI Settings
@@ -617,7 +617,8 @@ class SettingsWindowUI:
             self.aiscribe2_text.get("1.0", "end-1c"), # end-1c removes the trailing newline
             self.settings_window,
             # self.api_dropdown.get(),
-            self.cutoff_slider.threshold / 32768,
+            self.settings.editable_settings["Silence cut-off"], # Save the old one for whisper audio cutoff, will be removed in future, left in incase we go back to old cut off
+            # self.cutoff_slider.threshold / 32768, # old threshold 
         )
 
         if self.settings.editable_settings["Use Docker Status Bar"] and self.main_window.docker_status_bar is None:
@@ -764,7 +765,8 @@ class SettingsWindowUI:
         self.settings_window.unbind_all("<MouseWheel>") # Unbind mouse wheel event causing errors
         self.settings_window.unbind_all("<Configure>") # Unbind the configure event causing errors
         
-        if self.cutoff_slider is not None:
-            self.cutoff_slider.destroy()
+        if hasattr(self, "cutoff_slider"):
+            if self.cutoff_slider is not None:
+                self.cutoff_slider.destroy()
 
         self.settings_window.destroy()

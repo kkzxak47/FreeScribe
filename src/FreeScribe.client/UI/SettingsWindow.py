@@ -40,6 +40,7 @@ class SettingsKeys(Enum):
     WHISPER_COMPUTE_TYPE = "Speech2Text (Whisper) Compute Type"
     WHISPER_BEAM_SIZE = "Speech2Text (Whisper) Beam Size"
     WHISPER_VAD_FILTER = "Use Speech2Text (Whisper) VAD Filter"
+    SILERO_SPEECH_THRESHOLD = "Silero Speech Threshold"
 
 
 class Architectures(Enum):
@@ -164,12 +165,13 @@ class SettingsWindow():
         ]
 
         self.adv_whisper_settings = [
-            "Real Time Audio Length",
-            "BlankSpace", # Represents the whisper cuttoff
+            # "Real Time Audio Length",
+            # "BlankSpace", # Represents the whisper cuttoff
             SettingsKeys.WHISPER_BEAM_SIZE.value,
             SettingsKeys.WHISPER_CPU_COUNT.value,
             SettingsKeys.WHISPER_VAD_FILTER.value,
             SettingsKeys.WHISPER_COMPUTE_TYPE.value,
+            SettingsKeys.SILERO_SPEECH_THRESHOLD.value
         ]
 
 
@@ -234,6 +236,7 @@ class SettingsWindow():
             "Pre-Processing": "Please break down the conversation into a list of facts. Take the conversation and transform it to a easy to read list:\n\n",
             "Post-Processing": "\n\nUsing the provided list of facts, review the SOAP note for accuracy. Verify that all details align with the information provided in the list of facts and ensure consistency throughout. Update or adjust the SOAP note as necessary to reflect the listed facts without offering opinions or subjective commentary. Ensure that the revised note excludes a \"Notes\" section and does not include a header for the SOAP note. Provide the revised note after making any necessary corrections.",
             "Show Scrub PHI": False,
+            SettingsKeys.SILERO_SPEECH_THRESHOLD.value: 0.5,
         }
 
         self.docker_settings = [
