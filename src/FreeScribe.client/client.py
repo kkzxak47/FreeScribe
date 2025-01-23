@@ -355,8 +355,7 @@ def realtime_text():
 
                             print("Sending audio to server")
                             print("File informaton")
-                            print(f"File: {file_to_send}")
-                            print("File Size: ", os.path.getsize(file_to_send))
+                            print("File Size: ", len(buffer.getbuffer()), "bytes")
 
                             response = requests.post(app_settings.editable_settings[SettingsKeys.WHISPER_ENDPOINT.value], headers=headers,files=files, verify=verify)
                                 
