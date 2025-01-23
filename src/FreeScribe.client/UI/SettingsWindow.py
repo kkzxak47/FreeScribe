@@ -36,10 +36,11 @@ class SettingsKeys(Enum):
     WHISPER_ENDPOINT = "Speech2Text (Whisper) Endpoint"
     WHISPER_SERVER_API_KEY = "Speech2Text (Whisper) API Key"
     WHISPER_ARCHITECTURE = "Speech2Text (Whisper) Architecture"
-    WHISPER_CPU_COUNT = "Speech2Text (Whisper) CPU Thread Count"
-    WHISPER_COMPUTE_TYPE = "Speech2Text (Whisper) Compute Type"
-    WHISPER_BEAM_SIZE = "Speech2Text (Whisper) Beam Size"
-    WHISPER_VAD_FILTER = "Use Speech2Text (Whisper) VAD Filter"
+    WHISPER_CPU_COUNT = "Whisper CPU Thread Count (Experimental)"
+    WHISPER_COMPUTE_TYPE = "Whisper Compute Type (Experimental)"
+    WHISPER_BEAM_SIZE = "Whisper Beam Size (Experimental)"
+    WHISPER_VAD_FILTER = "Use Whisper VAD Filter (Experimental)"
+    AUDIO_PROCESSING_TIMEOUT_LENGTH = "Audio Processing Timeout (seconds)"
     SILERO_SPEECH_THRESHOLD = "Silero Speech Threshold"
 
 
@@ -177,6 +178,7 @@ class SettingsWindow():
 
         self.adv_general_settings = [
             # "Enable Scribe Template", # Uncomment if you want to implement the feature right now removed as it doesn't have a real structured implementation
+            SettingsKeys.AUDIO_PROCESSING_TIMEOUT_LENGTH.value,
         ]
 
         self.editable_settings = {
@@ -216,7 +218,7 @@ class SettingsWindow():
             "Whisper Model": "small.en",
             "Current Mic": "None",
             "Real Time": True,
-            "Real Time Audio Length": 5,
+            "Real Time Audio Length": 10,
             "Real Time Silence Length": 1,
             "Silence cut-off": 0.035,
             "LLM Container Name": "ollama",
@@ -236,6 +238,7 @@ class SettingsWindow():
             "Pre-Processing": "Please break down the conversation into a list of facts. Take the conversation and transform it to a easy to read list:\n\n",
             "Post-Processing": "\n\nUsing the provided list of facts, review the SOAP note for accuracy. Verify that all details align with the information provided in the list of facts and ensure consistency throughout. Update or adjust the SOAP note as necessary to reflect the listed facts without offering opinions or subjective commentary. Ensure that the revised note excludes a \"Notes\" section and does not include a header for the SOAP note. Provide the revised note after making any necessary corrections.",
             "Show Scrub PHI": False,
+            SettingsKeys.AUDIO_PROCESSING_TIMEOUT_LENGTH.value: 180,
             SettingsKeys.SILERO_SPEECH_THRESHOLD.value: 0.5,
         }
 

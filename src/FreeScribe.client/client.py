@@ -47,8 +47,9 @@ import sys
 from utils.utils import window_has_running_instance, bring_to_front, close_mutex
 import gc
 from pathlib import Path
-import torch
+from decimal import Decimalimport torch
 from WhisperModel import TranscribeError
+import io
 
 
 
@@ -68,8 +69,28 @@ else:
     bring_to_front(APP_NAME)
     sys.exit(0)
 
+def delete_temp_file(filename):
+    """
+    Deletes a temporary file if it exists.
+
+    Args:
+        filename (str): The name of the file to delete.
+    """
+    file_path = get_resource_path(filename)
+    if os.path.exists(file_path):
+        try:
+            print(f"Deleting temporary file: {filename}")
+            os.remove(file_path)
+        except OSError as e:
+            print(f"Error deleting temporary file {filename}: {e}")
+
+def on_closing():
+    delete_temp_file('recording.wav')
+    delete_temp_file('realtime.wav')
+    close_mutex()
+
 # Register the close_mutex function to be called on exit
-atexit.register(close_mutex)
+atexit.register(on_closing)
 
 # settings logic
 app_settings = SettingsWindow()
@@ -309,20 +330,27 @@ def realtime_text():
                     except Exception as e:
                         update_gui(f"\nError: {e}\n")
 
-                    if not local_cancel_flag and not is_audio_processing_realtime_canceled.is_set():
-                        update_gui(result)
-                else:
-                    print("Remote Real Time Whisper")
-                    if frames:
-                        with wave.open(get_resource_path("realtime.wav"), 'wb') as wf:
-                            wf.setnchannels(CHANNELS)
-                            wf.setsampwidth(p.get_sample_size(FORMAT))
-                            wf.setframerate(RATE)
-                            wf.writeframes(b''.join(frames))
-                        frames = []
-                    file_to_send = get_resource_path("realtime.wav")
-                    with open(file_to_send, 'rb') as f:
-                        files = {'audio': f}
+                        if not local_cancel_flag and not is_audio_processing_realtime_canceled.is_set():
+                            update_gui(result)
+                    else:
+                        print("Remote Real Time Whisper")
+                        buffer = io.BytesIO()
+                        if frames:
+                            # Buffer to hold the audio data. This is used to send the audio data to the server.
+                            with wave.open(buffer, 'wb') as wf:
+                                wf.setnchannels(CHANNELS)
+                                wf.setsampwidth(p.get_sample_size(FORMAT))
+                                wf.setframerate(RATE)
+                                wf.writeframes(b''.join(frames))
+                            frames = []
+                        else:
+                            # Dont make the network request if frames is empty
+                            buffer.close()
+                            continue
+                        
+                        buffer.seek(0)  # Reset buffer position to start
+
+                        files = {'audio': buffer}
 
                         headers = {
                             "Authorization": "Bearer "+app_settings.editable_settings[SettingsKeys.WHISPER_SERVER_API_KEY.value]
@@ -330,7 +358,15 @@ def realtime_text():
 
                         try:
                             verify = not app_settings.editable_settings["S2T Server Self-Signed Certificates"]
+
+                            print("Sending audio to server")
+                            print("File informaton")
+                            print("File Size: ", len(buffer.getbuffer()), "bytes")
+
                             response = requests.post(app_settings.editable_settings[SettingsKeys.WHISPER_ENDPOINT.value], headers=headers,files=files, verify=verify)
+                                
+                            print("Response from whisper with status code: ", response.status_code)
+
                             if response.status_code == 200:
                                 text = response.json()['text']
                                 if not local_cancel_flag and not is_audio_processing_realtime_canceled.is_set():
@@ -340,10 +376,8 @@ def realtime_text():
                         except Exception as e:
                             update_gui(f"Error: {e}")
                         finally:
-                            #Task done clean up file
-                            if os.path.exists(file_to_send):
-                                f.close()
-                                os.remove(file_to_send)
+                            #close buffer. we dont need it anymore
+                            buffer.close()
                 audio_queue.task_done()
     else:
         is_realtimeactive = False
@@ -433,14 +467,27 @@ def toggle_recording():
 
             loading_window = LoadingWindow(root, "Processing Audio", "Processing Audio. Please wait.", on_cancel=lambda: (cancel_processing(), cancel_realtime_processing(REALTIME_TRANSCRIBE_THREAD_ID)))
 
+            try:
+                timeout_length = int(app_settings.editable_settings[SettingsKeys.AUDIO_PROCESSING_TIMEOUT_LENGTH.value])
+            except ValueError:
+                # default to 3minutes
+                timeout_length = 180
 
-            timeout_timer = 0
-            while audio_queue.empty() is False and timeout_timer < 180:
+            timeout_timer = 0.0
+            while audio_queue.empty() is False and timeout_timer < timeout_length:
                 # break because cancel was requested
                 if is_audio_processing_realtime_canceled.is_set():
                     break
-                
+                # increment timer
                 timeout_timer += 0.1
+                # round to 10 decimal places, account for floating point errors
+                timeout_timer = round(timeout_timer, 10)
+
+                # check if we should print a message every 5 seconds 
+                if timeout_timer % 5 == 0:
+                    print(f"Waiting for audio processing to finish. Timeout after {timeout_length} seconds. Timer: {timeout_timer}s")
+                
+                # Wait for 100ms before checking again, to avoid busy waiting
                 time.sleep(0.1)
             
             loading_window.destroy()
@@ -687,8 +734,15 @@ def send_audio_to_server():
             try:
                 verify = not app_settings.editable_settings["S2T Server Self-Signed Certificates"]
 
+                print("Sending audio to server")
+                print("File informaton")
+                print(f"File: {file_to_send}")
+                print("File Size: ", os.path.getsize(file_to_send))
+
                 # Send the request without verifying the SSL certificate
                 response = requests.post(app_settings.editable_settings[SettingsKeys.WHISPER_ENDPOINT.value], headers=headers, files=files, verify=verify)
+
+                print("Response from whisper with status code: ", response.status_code)
 
                 response.raise_for_status()
 
@@ -1028,7 +1082,7 @@ def generate_note_thread(text: str):
 
 def upload_file():
     global uploaded_file_path
-    file_path = filedialog.askopenfilename(filetypes=(("Audio files", "*.wav *.mp3"),))
+    file_path = filedialog.askopenfilename(filetypes=(("Audio files", "*.wav *.mp3 *.m4a"),))
     if file_path:
         uploaded_file_path = file_path
         threaded_send_audio_to_server()  # Add this line to process the file immediately
