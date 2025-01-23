@@ -229,7 +229,7 @@ def record_audio():
                 # Check if we need to warn if silence is long than warn time
                 check_silence_warning(silent_warning_duration)
 
-                # If the current_chunk has at least 5 seconds of audio and 1 second of silence at the end
+                # 1 second of silence at the end so we dont cut off speech
                 if silent_duration >= minimum_silent_duration:
                     if app_settings.editable_settings["Real Time"] and current_chunk:
                         audio_queue.put(b''.join(current_chunk))
