@@ -309,7 +309,7 @@ def is_silent(data, threshold: float = 0.65):
     return speech_prob < threshold
 
 def realtime_text():
-    global frames, is_realtimeactive, audio_queue
+    global is_realtimeactive, audio_queue
     # Incase the user starts a new recording while this one the older thread is finishing.
     # This is a local flag to prevent the processing of the current audio chunk 
     # if the global flag is reset on new recording
