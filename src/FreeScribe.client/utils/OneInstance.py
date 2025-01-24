@@ -72,7 +72,9 @@ class OneInstance:
             hwnd = U32DLL.FindWindowW(None, app_name)
             U32DLL.ShowWindow(hwnd, SW_SHOW)
             U32DLL.SetForegroundWindow(hwnd)
-        return True
+            return True
+        
+        return False
 
     def _handle_kill(self, dialog, pid):
         """Handles clicking 'Close Existing Instance' button"""
