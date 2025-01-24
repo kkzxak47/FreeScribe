@@ -71,7 +71,23 @@ class OneInstance:
         U32DLL.ShowWindow(hwnd, SW_SHOW)
         U32DLL.SetForegroundWindow(hwnd)
         return True
-            
+
+    def _handle_kill(self, dialog, pid):
+        """Handles clicking 'Close Existing Instance' button"""
+        if self.kill_instance(pid):
+            dialog.destroy()
+            dialog.return_status = False
+        else:
+            messagebox.showerror("Error", "Failed to terminate existing instance")
+            dialog.destroy()
+            dialog.return_status = True
+    
+    def _handle_cancel(self, dialog):
+        """Handles clicking 'Cancel' button"""
+        dialog.destroy()
+        self.bring_to_front(self.app_name)
+        dialog.return_status = True
+
     def show_instance_dialog(self):
         """
         Shows dialog when another instance is detected.
@@ -83,44 +99,21 @@ class OneInstance:
         dialog = tk.Tk()
         dialog.title("FreeScribe Instance")
         dialog.geometry("300x150")
-
-        # Force dialog to front
         dialog.attributes("-topmost", True)
         dialog.lift()
         dialog.focus_force()
         
         pid = self.get_running_instance_pid()
-        
-        return_status = True
+        dialog.return_status = True
 
         label = tk.Label(dialog, text="Another instance of FreeScribe is already running.\nWhat would you like to do?")
         label.pack(pady=20)
         
-        def handle_kill():
-            """Handles clicking 'Close Existing Instance' button"""
-            nonlocal return_status
-            if self.kill_instance(pid):
-                dialog.destroy()
-                return_status = False
-            else:
-                messagebox.showerror("Error", "Failed to terminate existing instance")
-                dialog.destroy()
-                return_status = True
-        
-        def handle_cancel():
-            """Handles clicking 'Cancel' button"""
-            nonlocal return_status
-            dialog.destroy()
-            self.bring_to_front(self.app_name)
-            return_status = True
-
-        
-        tk.Button(dialog, text="Close Existing Instance", command=handle_kill).pack(padx=5, pady=5)
-        tk.Button(dialog, text="Cancel", command=handle_cancel).pack(padx=5, pady=2)
+        tk.Button(dialog, text="Close Existing Instance", command=lambda: self._handle_kill(dialog, pid)).pack(padx=5, pady=5)
+        tk.Button(dialog, text="Cancel", command=lambda: self._handle_cancel(dialog)).pack(padx=5, pady=2)
         
         dialog.mainloop()
-
-        return return_status
+        return dialog.return_status
         
     def run(self):
         """
