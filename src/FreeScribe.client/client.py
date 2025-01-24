@@ -71,8 +71,6 @@ else:
     root = tk.Tk()
     root.title(APP_NAME)
     
-
-
 def delete_temp_file(filename):
     """
     Deletes a temporary file if it exists.
