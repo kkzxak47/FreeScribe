@@ -58,16 +58,20 @@ sys.stdout = dual
 sys.stderr = dual
 
 APP_NAME = 'AI Medical Scribe'  # Application name
+APP_TASK_MANAGER_NAME = 'freescribe-client.exe'
 
 # check if another instance of the application is already running.
 # if false, create a new instance of the application
 # if true, exit the current instance
-if not window_has_running_instance():
+app_manager = OneInstance(APP_NAME, APP_TASK_MANAGER_NAME)
+
+if app_manager.run():
+    sys.exit(1)
+else:
     root = tk.Tk()
     root.title(APP_NAME)
-else:
-    bring_to_front(APP_NAME)
-    sys.exit(0)
+    
+
 
 def delete_temp_file(filename):
     """
