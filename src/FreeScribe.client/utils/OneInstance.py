@@ -3,8 +3,7 @@ import tkinter as tk
 from tkinter import messagebox
 import psutil  # For process management
 import sys
-import win32gui
-import win32con
+import ctypes
 
 class OneInstance:
     """
@@ -58,19 +57,19 @@ class OneInstance:
         except psutil.NoSuchProcess:
             return False
             
-    def bring_to_front(self):
-        """Brings existing application window to foreground
-        Returns:
-            bool: True if window was found and brought to front, False otherwise
+    def bring_to_front(self, app_name: str):
         """
-        if sys.platform != 'win32':
-            return False
-        
-        hwnd = win32gui.FindWindow(None, self.app_name)
-        if not hwnd:
-            return False
-        win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
-        win32gui.SetForegroundWindow(hwnd)
+        Bring the window with the given handle to the front.
+        Parameters:
+            app_name (str): The name of the application window to bring to the front
+        """
+
+        # TODO - Check platform and handle for different platform
+        U32DLL = ctypes.WinDLL('user32')
+        SW_SHOW = 5
+        hwnd = U32DLL.FindWindowW(None, app_name)
+        U32DLL.ShowWindow(hwnd, SW_SHOW)
+        U32DLL.SetForegroundWindow(hwnd)
         return True
             
     def show_instance_dialog(self):
