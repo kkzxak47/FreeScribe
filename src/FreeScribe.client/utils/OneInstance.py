@@ -3,9 +3,8 @@ import tkinter as tk
 from tkinter import messagebox
 import psutil  # For process management
 import sys
-import win32gui  # Windows GUI functions
-import win32con  # Windows GUI constants  
-import win32process  # Windows process management
+import win32gui
+import win32con
 
 class OneInstance:
     """
@@ -66,9 +65,6 @@ class OneInstance:
         """
         if sys.platform != 'win32':
             return False
-            
-        import win32gui
-        import win32con
         
         hwnd = win32gui.FindWindow(None, self.app_name)
         if not hwnd:
