@@ -65,11 +65,13 @@ class OneInstance:
         """
 
         # TODO - Check platform and handle for different platform
-        U32DLL = ctypes.WinDLL('user32')
-        SW_SHOW = 5
-        hwnd = U32DLL.FindWindowW(None, app_name)
-        U32DLL.ShowWindow(hwnd, SW_SHOW)
-        U32DLL.SetForegroundWindow(hwnd)
+        # For now, only Windows is supported
+        if sys.platform == 'win32':
+            U32DLL = ctypes.WinDLL('user32')
+            SW_SHOW = 5
+            hwnd = U32DLL.FindWindowW(None, app_name)
+            U32DLL.ShowWindow(hwnd, SW_SHOW)
+            U32DLL.SetForegroundWindow(hwnd)
         return True
 
     def _handle_kill(self, dialog, pid):
