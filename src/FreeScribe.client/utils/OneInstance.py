@@ -111,7 +111,7 @@ class OneInstance:
             """Handles clicking 'Cancel' button"""
             nonlocal return_status
             dialog.destroy()
-            self.bring_to_front()
+            self.bring_to_front(self.app_name)
             return_status = True
 
         
