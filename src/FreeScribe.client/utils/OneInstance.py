@@ -7,7 +7,7 @@ import win32gui  # Windows GUI functions
 import win32con  # Windows GUI constants  
 import win32process  # Windows process management
 
-class ApplicationLock:
+class OneInstance:
     """
     Controls application instances to ensure only one is running.
     
