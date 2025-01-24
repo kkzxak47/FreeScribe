@@ -60,11 +60,22 @@ class OneInstance:
             return False
             
     def bring_to_front(self):
-        """Brings existing application window to foreground"""
+        """Brings existing application window to foreground
+        Returns:
+            bool: True if window was found and brought to front, False otherwise
+        """
+        if sys.platform != 'win32':
+            return False
+            
+        import win32gui
+        import win32con
+        
         hwnd = win32gui.FindWindow(None, self.app_name)
-        if hwnd:
-            win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
-            win32gui.SetForegroundWindow(hwnd)
+        if not hwnd:
+            return False
+        win32gui.ShowWindow(hwnd, win32con.SW_RESTORE)
+        win32gui.SetForegroundWindow(hwnd)
+        return True
             
     def show_instance_dialog(self):
         """
