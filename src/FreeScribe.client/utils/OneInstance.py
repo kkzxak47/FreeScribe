@@ -58,7 +58,6 @@ class OneInstance:
                 return True
         except psutil.NoSuchProcess:
             return False
-        return False
             
     def bring_to_front(self):
         """Brings existing application window to foreground"""
