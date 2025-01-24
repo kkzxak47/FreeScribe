@@ -225,7 +225,6 @@ def record_audio():
         return
 
     try:
-
         current_chunk = []
         silent_duration = 0
         silent_warning_duration = 0
@@ -310,7 +309,7 @@ def is_silent(data, threshold: float = 0.65):
     return speech_prob < threshold
 
 def realtime_text():
-    global frames, is_realtimeactive, audio_queue
+    global is_realtimeactive, audio_queue
     # Incase the user starts a new recording while this one the older thread is finishing.
     # This is a local flag to prevent the processing of the current audio chunk 
     # if the global flag is reset on new recording
@@ -345,20 +344,13 @@ def realtime_text():
                 else:
                     print("Remote Real Time Whisper")
                     buffer = io.BytesIO()
-                    if frames:
-                        # Buffer to hold the audio data. This is used to send the audio data to the server.
-                        with wave.open(buffer, 'wb') as wf:
-                            wf.setnchannels(CHANNELS)
-                            wf.setsampwidth(p.get_sample_size(FORMAT))
-                            wf.setframerate(RATE)
-                            wf.writeframes(b''.join(frames))
-                        frames = []
-                    else:
-                        # Dont make the network request if frames is empty
-                        buffer.close()
-                        continue
-                    
-                    buffer.seek(0)  # Reset buffer position to start
+                    with wave.open(buffer, 'wb') as wf:
+                        wf.setnchannels(CHANNELS)
+                        wf.setsampwidth(p.get_sample_size(FORMAT))
+                        wf.setframerate(RATE)
+                        wf.writeframes(audio_data)
+
+                    buffer.seek(0) # Reset buffer position
 
                     files = {'audio': buffer}
 
@@ -412,7 +404,7 @@ def save_audio():
         threaded_send_audio_to_server()
 
 def toggle_recording():
-    global is_recording, recording_thread, DEFAULT_BUTTON_COLOUR, audio_queue, current_view, REALTIME_TRANSCRIBE_THREAD_ID
+    global is_recording, recording_thread, DEFAULT_BUTTON_COLOUR, audio_queue, current_view, REALTIME_TRANSCRIBE_THREAD_ID, frames
 
     # Reset the cancel flags going into a fresh recording
     if not is_recording:
@@ -437,6 +429,8 @@ def toggle_recording():
         response_display.scrolled_text.configure(state='disabled')
         is_recording = True
 
+        # reset frames before new recording so old data is not used
+        frames = []
         recording_thread = threading.Thread(target=record_audio)
         recording_thread.start()
 
