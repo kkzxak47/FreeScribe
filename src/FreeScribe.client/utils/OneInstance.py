@@ -96,6 +96,11 @@ class OneInstance:
         Returns:
             bool: True if existing instance continues, False if terminated
         """
+        pid = self.get_running_instance_pid()
+
+        if not pid:
+            return False
+
         dialog = tk.Tk()
         dialog.title("FreeScribe Instance")
         dialog.geometry("300x150")
@@ -103,7 +108,6 @@ class OneInstance:
         dialog.lift()
         dialog.focus_force()
         
-        pid = self.get_running_instance_pid()
         dialog.return_status = True
 
         label = tk.Label(dialog, text="Another instance of FreeScribe is already running.\nWhat would you like to do?")
