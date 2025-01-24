@@ -11,26 +11,33 @@ and Research Students - Software Developer Alex Simko, Pemba Sherpa (F24), and N
 
 """
 
+import ctypes
+import io
+import sys
+import gc
 import os
-import tkinter as tk
-from tkinter import scrolledtext, ttk, filedialog
-import requests
-import pyperclip
+from pathlib import Path
 import wave
 import threading
-import numpy as np
 import base64
 import json
-import pyaudio
-import tkinter.messagebox as messagebox
 import datetime
-from faster_whisper import WhisperModel
-import scrubadub
 import re
-import speech_recognition as sr # python package is named speechrecognition
 import time
 import queue
 import atexit
+import traceback
+import torch
+import pyaudio
+import requests
+import pyperclip
+import speech_recognition as sr # python package is named speechrecognition
+import scrubadub
+import numpy as np
+import tkinter as tk
+from tkinter import scrolledtext, ttk, filedialog
+import tkinter.messagebox as messagebox
+from faster_whisper import WhisperModel
 from UI.MainWindowUI import MainWindowUI
 from UI.SettingsWindow import SettingsWindow, SettingsKeys, Architectures
 from UI.Widgets.CustomTextBox import CustomTextBox
@@ -39,18 +46,10 @@ from UI.Widgets.MicrophoneSelector import MicrophoneState
 from Model import  ModelManager
 from utils.ip_utils import is_private_ip
 from utils.file_utils import get_file_path, get_resource_path
-import ctypes
-import sys
+from utils.OneInstance import OneInstance
 from UI.DebugWindow import DualOutput
-import traceback
-import sys
 from utils.utils import window_has_running_instance, bring_to_front, close_mutex
-import gc
-from pathlib import Path
-from decimal import Decimal
-import torch
 from WhisperModel import TranscribeError
-import io
 
 
 
