@@ -739,6 +739,9 @@ def send_audio_to_server():
                 "use_translate": app_settings.editable_settings[SettingsKeys.USE_TRANSLATE_TASK.value],
             }
 
+            if app_settings.editable_settings[SettingsKeys.WHISPER_LANGUAGE_CODE.value] not in ["", "auto", "Auto Detect", "None", "None (Auto Detect)"]:
+                body["language_code"] = app_settings.editable_settings[SettingsKeys.WHISPER_LANGUAGE_CODE.value]
+
             try:
                 verify = not app_settings.editable_settings["S2T Server Self-Signed Certificates"]
 
