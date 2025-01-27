@@ -43,6 +43,7 @@ class SettingsKeys(Enum):
     AUDIO_PROCESSING_TIMEOUT_LENGTH = "Audio Processing Timeout (seconds)"
     SILERO_SPEECH_THRESHOLD = "Silero Speech Threshold"
     USE_TRANSLATE_TASK = "Use Translate Task"
+    WHISPER_LANGUAGE_CODE = "Whisper Language Code"
 
 
 class Architectures(Enum):
@@ -175,6 +176,7 @@ class SettingsWindow():
             SettingsKeys.WHISPER_COMPUTE_TYPE.value,
             SettingsKeys.SILERO_SPEECH_THRESHOLD.value,
             SettingsKeys.USE_TRANSLATE_TASK.value,
+            SettingsKeys.WHISPER_LANGUAGE_CODE.value,
         ]
 
 
@@ -243,6 +245,7 @@ class SettingsWindow():
             SettingsKeys.AUDIO_PROCESSING_TIMEOUT_LENGTH.value: 180,
             SettingsKeys.SILERO_SPEECH_THRESHOLD.value: 0.5,
             SettingsKeys.USE_TRANSLATE_TASK.value: False,
+            SettingsKeys.WHISPER_LANGUAGE_CODE.value: "None (Auto Detect)",
         }
 
         self.docker_settings = [
