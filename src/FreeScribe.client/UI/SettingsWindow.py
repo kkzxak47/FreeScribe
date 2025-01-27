@@ -42,6 +42,7 @@ class SettingsKeys(Enum):
     WHISPER_VAD_FILTER = "Use Whisper VAD Filter (Experimental)"
     AUDIO_PROCESSING_TIMEOUT_LENGTH = "Audio Processing Timeout (seconds)"
     SILERO_SPEECH_THRESHOLD = "Silero Speech Threshold"
+    USE_TRANSLATE_TASK = "Use Translate Task"
 
 
 class Architectures(Enum):
@@ -172,7 +173,8 @@ class SettingsWindow():
             SettingsKeys.WHISPER_CPU_COUNT.value,
             SettingsKeys.WHISPER_VAD_FILTER.value,
             SettingsKeys.WHISPER_COMPUTE_TYPE.value,
-            SettingsKeys.SILERO_SPEECH_THRESHOLD.value
+            SettingsKeys.SILERO_SPEECH_THRESHOLD.value,
+            SettingsKeys.USE_TRANSLATE_TASK.value,
         ]
 
 
@@ -240,6 +242,7 @@ class SettingsWindow():
             "Show Scrub PHI": False,
             SettingsKeys.AUDIO_PROCESSING_TIMEOUT_LENGTH.value: 180,
             SettingsKeys.SILERO_SPEECH_THRESHOLD.value: 0.5,
+            SettingsKeys.USE_TRANSLATE_TASK.value: False,
         }
 
         self.docker_settings = [
