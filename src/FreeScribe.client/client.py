@@ -735,6 +735,10 @@ def send_audio_to_server():
                 "Authorization": f"Bearer {app_settings.editable_settings[SettingsKeys.WHISPER_SERVER_API_KEY.value]}"
             }
 
+            body = {
+                "use_translate": app_settings.editable_settings[SettingsKeys.USE_TRANSLATE_TASK.value],
+            }
+
             try:
                 verify = not app_settings.editable_settings["S2T Server Self-Signed Certificates"]
 
@@ -744,7 +748,7 @@ def send_audio_to_server():
                 print("File Size: ", os.path.getsize(file_to_send))
 
                 # Send the request without verifying the SSL certificate
-                response = requests.post(app_settings.editable_settings[SettingsKeys.WHISPER_ENDPOINT.value], headers=headers, files=files, verify=verify)
+                response = requests.post(app_settings.editable_settings[SettingsKeys.WHISPER_ENDPOINT.value], headers=headers, files=files, verify=verify, data=body)
 
                 print("Response from whisper with status code: ", response.status_code)
 
