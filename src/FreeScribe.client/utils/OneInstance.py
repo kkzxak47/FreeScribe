@@ -4,6 +4,7 @@ from tkinter import messagebox
 import psutil  # For process management
 import sys
 import ctypes
+import os
 
 class OneInstance:
     """
@@ -20,15 +21,16 @@ class OneInstance:
         
     def get_running_instance_pid(self):
         """
-        Finds PIDs of any running instances of the application.
+        Finds PIDs of any running instances of the application, excluding the current process.
         
         Returns:
-            list: PIDs of running instances
+            list: PIDs of running instances, excluding the current process
         """
+        current_pid = os.getpid()
         possible_ids = []
         for proc in psutil.process_iter(['pid', 'name']):
             try:
-                if proc.info['name'] == f"{self.app_task_manager_name}":
+                if proc.info['name'] == f"{self.app_task_manager_name}" and proc.info['pid'] != current_pid:
                     possible_ids.append(proc.info['pid'])
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 continue
