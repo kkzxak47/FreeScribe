@@ -366,7 +366,7 @@ def realtime_text():
                         body["language_code"] = app_settings.editable_settings[SettingsKeys.WHISPER_LANGUAGE_CODE.value]
 
                     try:
-                        verify = not app_settings.editable_settings["S2T Server Self-Signed Certificates"]
+                        verify = not app_settings.editable_settings[SettingsKeys.S2T_SELF_SIGNED_CERT.value]
 
                         print("Sending audio to server")
                         print("File informaton")
@@ -750,7 +750,7 @@ def send_audio_to_server():
                 body["language_code"] = app_settings.editable_settings[SettingsKeys.WHISPER_LANGUAGE_CODE.value]
 
             try:
-                verify = not app_settings.editable_settings["S2T Server Self-Signed Certificates"]
+                verify = not app_settings.editable_settings[SettingsKeys.S2T_SELF_SIGNED_CERT.value]
 
                 print("Sending audio to server")
                 print("File informaton")
