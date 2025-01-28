@@ -11,38 +11,46 @@ and Research Students - Software Developer Alex Simko, Pemba Sherpa (F24), and N
 
 """
 
+import ctypes
+import io
+import sys
+import gc
 import os
-import tkinter as tk
-from tkinter import scrolledtext, ttk, filedialog
-import requests
-import pyperclip
+from pathlib import Path
 import wave
 import threading
-import numpy as np
 import base64
 import json
-import pyaudio
-import tkinter.messagebox as messagebox
 import datetime
-import whisper # python package is named openai-whisper
-import scrubadub
 import re
-import speech_recognition as sr # python package is named speechrecognition
 import time
 import queue
 import atexit
+import traceback
+import torch
+import pyaudio
+import requests
+import pyperclip
+import speech_recognition as sr # python package is named speechrecognition
+import scrubadub
+import numpy as np
+import tkinter as tk
+from tkinter import scrolledtext, ttk, filedialog
+import tkinter.messagebox as messagebox
+from faster_whisper import WhisperModel
 from UI.MainWindowUI import MainWindowUI
-from UI.SettingsWindow import SettingsWindow, SettingsKeys
+from UI.SettingsWindow import SettingsWindow, SettingsKeys, Architectures
 from UI.Widgets.CustomTextBox import CustomTextBox
 from UI.LoadingWindow import LoadingWindow
 from Model import  ModelManager
 from utils.ip_utils import is_private_ip
 from utils.file_utils import get_file_path, get_resource_path
-import ctypes
-import sys
+from utils.OneInstance import OneInstance
 from UI.DebugWindow import DualOutput
-import traceback
 from UI.Widgets.MicrophoneTestFrame import MicrophoneTestFrame
+from utils.utils import window_has_running_instance, bring_to_front, close_mutex
+from WhisperModel import TranscribeError
+
 
 
 
@@ -50,11 +58,42 @@ dual = DualOutput()
 sys.stdout = dual
 sys.stderr = dual
 
+APP_NAME = 'AI Medical Scribe'  # Application name
+APP_TASK_MANAGER_NAME = 'freescribe-client.exe'
 
+# check if another instance of the application is already running.
+# if false, create a new instance of the application
+# if true, exit the current instance
+app_manager = OneInstance(APP_NAME, APP_TASK_MANAGER_NAME)
 
-# GUI Setup
-root = tk.Tk()
-root.title("AI Medical Scribe")
+if app_manager.run():
+    sys.exit(1)
+else:
+    root = tk.Tk()
+    root.title(APP_NAME)
+    
+def delete_temp_file(filename):
+    """
+    Deletes a temporary file if it exists.
+
+    Args:
+        filename (str): The name of the file to delete.
+    """
+    file_path = get_resource_path(filename)
+    if os.path.exists(file_path):
+        try:
+            print(f"Deleting temporary file: {filename}")
+            os.remove(file_path)
+        except OSError as e:
+            print(f"Error deleting temporary file {filename}: {e}")
+
+def on_closing():
+    delete_temp_file('recording.wav')
+    delete_temp_file('realtime.wav')
+    close_mutex()
+
+# Register the close_mutex function to be called on exit
+atexit.register(on_closing)
 
 # settings logic
 app_settings = SettingsWindow()
@@ -86,7 +125,7 @@ use_aiscribe = True
 is_gpt_button_active = False
 p = pyaudio.PyAudio()
 audio_queue = queue.Queue()
-CHUNK = 1024
+CHUNK = 512
 FORMAT = pyaudio.paInt16
 CHANNELS = 1
 RATE = 16000
@@ -169,6 +208,7 @@ def toggle_pause():
         elif current_view == "minimal":
             pause_button.config(text="⏸️", bg=DEFAULT_BUTTON_COLOUR)
     
+SILENCE_WARNING_LENGTH = 10 # seconds, warn the user after 10s of no input something might be wrong
 
 def record_audio():
     global is_paused, frames, audio_queue
@@ -186,52 +226,92 @@ def record_audio():
         messagebox.showerror("Audio Error", f"Please check your microphone settings under whisper settings. Error opening audio stream: {e}")
         return
 
+    try:
+        current_chunk = []
+        silent_duration = 0
+        silent_warning_duration = 0
+        record_duration = 0
+        minimum_silent_duration = int(app_settings.editable_settings["Real Time Silence Length"])
+        minimum_audio_duration = int(app_settings.editable_settings["Real Time Audio Length"])
+        
+        while is_recording:
+            if not is_paused:
+                data = stream.read(CHUNK, exception_on_overflow=False)
+                frames.append(data)
+                # Check for silence
+                audio_buffer = np.frombuffer(data, dtype=np.int16).astype(np.float32) / 32768
+                
+                # convert the setting from str to float
+                try: 
+                    speech_prob_threshold = float(app_settings.editable_settings[SettingsKeys.SILERO_SPEECH_THRESHOLD.value])
+                except ValueError:
+                    # default it to 0.5 on invalid error
+                    speech_prob_threshold = 0.5
+                
+                if is_silent(audio_buffer, speech_prob_threshold ):
+                    silent_duration += CHUNK / RATE
+                    silent_warning_duration += CHUNK / RATE
+                else:
+                    current_chunk.append(data)
+                    silent_duration = 0
+                    silent_warning_duration = 0
+                
+                record_duration += CHUNK / RATE
+
+                # Check if we need to warn if silence is long than warn time
+                check_silence_warning(silent_warning_duration)
+
+                # 1 second of silence at the end so we dont cut off speech
+                if silent_duration >= minimum_silent_duration:
+                    if app_settings.editable_settings["Real Time"] and current_chunk:
+                        audio_queue.put(b''.join(current_chunk))
+                    current_chunk = []
+                    silent_duration = 0
+                    record_duration = 0
+
+        # Send any remaining audio chunk when recording stops
+        if current_chunk:
+            audio_queue.put(b''.join(current_chunk))
+    except Exception as e:
+        # Log the error message
+        # TODO System logger
+        # For now general catch on any problems
+        print(f"An error occurred: {e}")
+    finally:
+        stream.stop_stream()
+        stream.close()
+        audio_queue.put(None)
+
+        # If the warning bar is displayed, remove it
+        if window.warning_bar is not None:
+            window.destroy_warning_bar()
+
+def check_silence_warning(silence_duration):
+    """Check if silence warning should be displayed."""
+
+    # Check if we need to warn if silence is long than warn time
+    if silence_duration >= SILENCE_WARNING_LENGTH and window.warning_bar is None:
+        
+        window.create_warning_bar(f"No audio input detected for {SILENCE_WARNING_LENGTH} seconds. Please check your microphone input device in whisper settings and adjust your microphone cutoff level in advanced settings.")
+    elif silence_duration <= SILENCE_WARNING_LENGTH and window.warning_bar is not None:
+        # If the warning bar is displayed, remove it
+        window.destroy_warning_bar()
+
+silero, _silero = torch.hub.load(repo_or_dir='snakers4/silero-vad', model='silero_vad')
+
+def is_silent(data, threshold: float = 0.65):
+    """Check if audio chunk contains speech using Silero VAD"""
+    # Convert audio data to tensor and ensure correct format
+    audio_tensor = torch.FloatTensor(data)
+    if audio_tensor.dim() == 2:
+        audio_tensor = audio_tensor.mean(dim=1)
     
-    current_chunk = []
-    silent_duration = 0
-    record_duration = 0
-    minimum_silent_duration = int(app_settings.editable_settings["Real Time Silence Length"])
-    minimum_audio_duration = int(app_settings.editable_settings["Real Time Audio Length"])
-    
-    while is_recording:
-        if not is_paused:
-            data = stream.read(CHUNK, exception_on_overflow=False)
-            frames.append(data)
-            # Check for silence
-            audio_buffer = np.frombuffer(data, dtype=np.int16).astype(np.float32) / 32768
-            if is_silent(audio_buffer, app_settings.editable_settings["Silence cut-off"]):
-                silent_duration += CHUNK / RATE
-            else:
-                current_chunk.append(data)
-                silent_duration = 0
-            
-            record_duration += CHUNK / RATE
-            
-            # If the current_chunk has at least 5 seconds of audio and 1 second of silence at the end
-            if record_duration >= minimum_audio_duration and silent_duration >= minimum_silent_duration:
-                if app_settings.editable_settings["Real Time"] and current_chunk:
-                    audio_queue.put(b''.join(current_chunk))
-                current_chunk = []
-                silent_duration = 0
-                record_duration = 0
-
-    # Send any remaining audio chunk when recording stops
-    if current_chunk:
-        audio_queue.put(b''.join(current_chunk))
-
-    stream.stop_stream()
-    stream.close()
-    audio_queue.put(None)
-
-
-def is_silent(data, threshold=0.01):
-    """Check if audio chunk is silent"""
-    data_array = np.array(data)
-    max_value = max(abs(data_array))
-    return max_value < threshold
+    # Get speech probability
+    speech_prob = silero(audio_tensor, 16000).item()
+    return speech_prob < threshold
 
 def realtime_text():
-    global frames, is_realtimeactive, audio_queue
+    global is_realtimeactive, audio_queue
     # Incase the user starts a new recording while this one the older thread is finishing.
     # This is a local flag to prevent the processing of the current audio chunk 
     # if the global flag is reset on new recording
@@ -251,50 +331,65 @@ def realtime_text():
             if app_settings.editable_settings["Real Time"] == True:
                 print("Real Time Audio to Text")
                 audio_buffer = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768
-                if not is_silent(audio_buffer):
-                    if app_settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value] == True:
-                        print("Local Real Time Whisper")
-                        if stt_local_model is None:
-                            update_gui("Local Whisper model not loaded. Please check your settings.")
-                            break
+                if app_settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value] == True:
+                    print("Local Real Time Whisper")
+                    if stt_local_model is None:
+                        update_gui("Local Whisper model not loaded. Please check your settings.")
+                        break
+                    try:
+                        result = faster_whisper_transcribe(audio_buffer)
+                    except Exception as e:
+                        update_gui(f"\nError: {e}\n")
 
-                        result = stt_local_model.transcribe(audio_buffer, fp16=False)
-                        if not local_cancel_flag and not is_audio_processing_realtime_canceled.is_set():
-                            update_gui(result['text'])
-                    else:
-                        print("Remote Real Time Whisper")
-                        if frames:
-                            with wave.open(get_resource_path("realtime.wav"), 'wb') as wf:
-                                wf.setnchannels(CHANNELS)
-                                wf.setsampwidth(p.get_sample_size(FORMAT))
-                                wf.setframerate(RATE)
-                                wf.writeframes(b''.join(frames))
-                            frames = []
-                        file_to_send = get_resource_path("realtime.wav")
-                        with open(file_to_send, 'rb') as f:
-                            files = {'audio': f}
+                    if not local_cancel_flag and not is_audio_processing_realtime_canceled.is_set():
+                        update_gui(result)
+                else:
+                    print("Remote Real Time Whisper")
+                    buffer = io.BytesIO()
+                    with wave.open(buffer, 'wb') as wf:
+                        wf.setnchannels(CHANNELS)
+                        wf.setsampwidth(p.get_sample_size(FORMAT))
+                        wf.setframerate(RATE)
+                        wf.writeframes(audio_data)
 
-                            headers = {
-                                "Authorization": "Bearer "+app_settings.editable_settings[SettingsKeys.WHISPER_SERVER_API_KEY.value]
-                            }
+                    buffer.seek(0) # Reset buffer position
 
-                            try:
-                                verify = not app_settings.editable_settings["S2T Server Self-Signed Certificates"]
-                                response = requests.post(app_settings.editable_settings[SettingsKeys.WHISPER_ENDPOINT.value], headers=headers,files=files, verify=verify)
-                                if response.status_code == 200:
-                                    text = response.json()['text']
-                                    if not local_cancel_flag and not is_audio_processing_realtime_canceled.is_set():
-                                        update_gui(text)
-                                else:
-                                    update_gui(f"Error (HTTP Status {response.status_code}): {response.text}")
-                            except Exception as e:
-                                update_gui(f"Error: {e}")
-                            finally:
-                                #Task done clean up file
-                                if os.path.exists(file_to_send):
-                                    f.close()
-                                    os.remove(file_to_send)
-                audio_queue.task_done()
+                    files = {'audio': buffer}
+
+                    headers = {
+                        "Authorization": "Bearer "+app_settings.editable_settings[SettingsKeys.WHISPER_SERVER_API_KEY.value]
+                    }
+
+                    body = {
+                        "use_translate": app_settings.editable_settings[SettingsKeys.USE_TRANSLATE_TASK.value],
+                    }
+
+                    if app_settings.editable_settings[SettingsKeys.WHISPER_LANGUAGE_CODE.value] not in SettingsWindow.AUTO_DETECT_LANGUAGE_CODES:
+                        body["language_code"] = app_settings.editable_settings[SettingsKeys.WHISPER_LANGUAGE_CODE.value]
+
+                    try:
+                        verify = not app_settings.editable_settings[SettingsKeys.S2T_SELF_SIGNED_CERT.value]
+
+                        print("Sending audio to server")
+                        print("File informaton")
+                        print("File Size: ", len(buffer.getbuffer()), "bytes")
+
+                        response = requests.post(app_settings.editable_settings[SettingsKeys.WHISPER_ENDPOINT.value], headers=headers,files=files, verify=verify, data=body)
+                            
+                        print("Response from whisper with status code: ", response.status_code)
+
+                        if response.status_code == 200:
+                            text = response.json()['text']
+                            if not local_cancel_flag and not is_audio_processing_realtime_canceled.is_set():
+                                update_gui(text)
+                        else:
+                            update_gui(f"Error (HTTP Status {response.status_code}): {response.text}")
+                    except Exception as e:
+                        update_gui(f"Error: {e}")
+                    finally:
+                        #close buffer. we dont need it anymore
+                        buffer.close()
+            audio_queue.task_done()
     else:
         is_realtimeactive = False
 
@@ -312,13 +407,13 @@ def save_audio():
             wf.writeframes(b''.join(frames))
         frames = []  # Clear recorded data
 
-        if app_settings.editable_settings["Real Time"] == True and is_audio_processing_realtime_canceled.is_set() is False:
-            send_and_receive()
-        elif app_settings.editable_settings["Real Time"] == False and is_audio_processing_whole_canceled.is_set() is False:
-            threaded_send_audio_to_server()
+    if app_settings.editable_settings["Real Time"] == True and is_audio_processing_realtime_canceled.is_set() is False:
+        send_and_receive()
+    elif app_settings.editable_settings["Real Time"] == False and is_audio_processing_whole_canceled.is_set() is False:
+        threaded_send_audio_to_server()
 
 def toggle_recording():
-    global is_recording, recording_thread, DEFAULT_BUTTON_COLOUR, audio_queue, current_view, REALTIME_TRANSCRIBE_THREAD_ID
+    global is_recording, recording_thread, DEFAULT_BUTTON_COLOUR, audio_queue, current_view, REALTIME_TRANSCRIBE_THREAD_ID, frames
 
     # Reset the cancel flags going into a fresh recording
     if not is_recording:
@@ -343,6 +438,8 @@ def toggle_recording():
         response_display.scrolled_text.configure(state='disabled')
         is_recording = True
 
+        # reset frames before new recording so old data is not used
+        frames = []
         recording_thread = threading.Thread(target=record_audio)
         recording_thread.start()
 
@@ -383,14 +480,27 @@ def toggle_recording():
 
             loading_window = LoadingWindow(root, "Processing Audio", "Processing Audio. Please wait.", on_cancel=lambda: (cancel_processing(), cancel_realtime_processing(REALTIME_TRANSCRIBE_THREAD_ID)))
 
+            try:
+                timeout_length = int(app_settings.editable_settings[SettingsKeys.AUDIO_PROCESSING_TIMEOUT_LENGTH.value])
+            except ValueError:
+                # default to 3minutes
+                timeout_length = 180
 
-            timeout_timer = 0
-            while audio_queue.empty() is False and timeout_timer < 180:
+            timeout_timer = 0.0
+            while audio_queue.empty() is False and timeout_timer < timeout_length:
                 # break because cancel was requested
                 if is_audio_processing_realtime_canceled.is_set():
                     break
-                
+                # increment timer
                 timeout_timer += 0.1
+                # round to 10 decimal places, account for floating point errors
+                timeout_timer = round(timeout_timer, 10)
+
+                # check if we should print a message every 5 seconds 
+                if timeout_timer % 5 == 0:
+                    print(f"Waiting for audio processing to finish. Timeout after {timeout_length} seconds. Timer: {timeout_timer}s")
+                
+                # Wait for 100ms before checking again, to avoid busy waiting
                 time.sleep(0.1)
             
             loading_window.destroy()
@@ -412,6 +522,7 @@ def disable_recording_ui_elements():
     upload_button.config(state='disabled')
     response_display.scrolled_text.configure(state='disabled')
     timestamp_listbox.config(state='disabled')
+    clear_button.config(state='disabled')
 
 def enable_recording_ui_elements():
     window.enable_settings_menu()
@@ -420,6 +531,7 @@ def enable_recording_ui_elements():
     toggle_button.config(state='normal')
     upload_button.config(state='normal')
     timestamp_listbox.config(state='normal')
+    clear_button.config(state='normal')
     
 
 def cancel_processing():
@@ -549,6 +661,7 @@ def send_audio_to_server():
             print(f"An error occurred: {e}")
         finally:
             GENERATION_THREAD_ID = None
+            clear_application_press()
 
     loading_window = LoadingWindow(root, "Processing Audio", "Processing Audio. Please wait.", on_cancel=lambda: (cancel_processing(), cancel_whole_audio_process(current_thread_id)))
 
@@ -569,8 +682,12 @@ def send_audio_to_server():
             uploaded_file_path = None
 
             # Transcribe the audio file using the loaded model
-            result = stt_local_model.transcribe(file_to_send)
-            transcribed_text = result["text"]
+            try:
+                result = faster_whisper_transcribe(file_to_send)
+            except Exception as e:
+                result = f"An error occurred ({type(e).__name__}): {e}"
+
+            transcribed_text = result
 
             # done with file clean up
             if os.path.exists(file_to_send) and delete_file is True:
@@ -627,11 +744,25 @@ def send_audio_to_server():
                 "Authorization": f"Bearer {app_settings.editable_settings[SettingsKeys.WHISPER_SERVER_API_KEY.value]}"
             }
 
+            body = {
+                "use_translate": app_settings.editable_settings[SettingsKeys.USE_TRANSLATE_TASK.value],
+            }
+
+            if app_settings.editable_settings[SettingsKeys.WHISPER_LANGUAGE_CODE.value] not in SettingsWindow.AUTO_DETECT_LANGUAGE_CODES:
+                body["language_code"] = app_settings.editable_settings[SettingsKeys.WHISPER_LANGUAGE_CODE.value]
+
             try:
-                verify = not app_settings.editable_settings["S2T Server Self-Signed Certificates"]
+                verify = not app_settings.editable_settings[SettingsKeys.S2T_SELF_SIGNED_CERT.value]
+
+                print("Sending audio to server")
+                print("File informaton")
+                print(f"File: {file_to_send}")
+                print("File Size: ", os.path.getsize(file_to_send))
 
                 # Send the request without verifying the SSL certificate
-                response = requests.post(app_settings.editable_settings[SettingsKeys.WHISPER_ENDPOINT.value], headers=headers, files=files, verify=verify)
+                response = requests.post(app_settings.editable_settings[SettingsKeys.WHISPER_ENDPOINT.value], headers=headers, files=files, verify=verify, data=body)
+
+                print("Response from whisper with status code: ", response.status_code)
 
                 response.raise_for_status()
 
@@ -971,7 +1102,7 @@ def generate_note_thread(text: str):
 
 def upload_file():
     global uploaded_file_path
-    file_path = filedialog.askopenfilename(filetypes=(("Audio files", "*.wav *.mp3"),))
+    file_path = filedialog.askopenfilename(filetypes=(("Audio files", "*.wav *.mp3 *.m4a"),))
     if file_path:
         uploaded_file_path = file_path
         threaded_send_audio_to_server()  # Add this line to process the file immediately
@@ -1165,42 +1296,187 @@ def set_minimal_view():
     # root.attributes('-toolwindow', True)
 
 def copy_text(widget):
+    """
+    Copy text content from a tkinter widget to the system clipboard.
+
+    Args:
+        widget: A tkinter Text widget containing the text to be copied.
+    """
     text = widget.get("1.0", tk.END)
     pyperclip.copy(text)
 
 def add_placeholder(event, text_widget, placeholder_text="Text box"):
+    """
+    Add placeholder text to a tkinter Text widget when it's empty.
+
+    Args:
+        event: The event that triggered this function.
+        text_widget: The tkinter Text widget to add placeholder text to.
+        placeholder_text (str, optional): The placeholder text to display. Defaults to "Text box".
+    """
     if text_widget.get("1.0", "end-1c") == "":
         text_widget.insert("1.0", placeholder_text)
         text_widget.config(fg='grey')
 
 def remove_placeholder(event, text_widget, placeholder_text="Text box"):
+    """
+    Remove placeholder text from a tkinter Text widget when it gains focus.
+
+    Args:
+        event: The event that triggered this function.
+        text_widget: The tkinter Text widget to remove placeholder text from.
+        placeholder_text (str, optional): The placeholder text to remove. Defaults to "Text box".
+    """
     if text_widget.get("1.0", "end-1c") == placeholder_text:
         text_widget.delete("1.0", "end")
         text_widget.config(fg='black')
 
 def load_stt_model(event=None):
+    """
+    Initialize speech-to-text model loading in a separate thread.
+
+    Args:
+        event: Optional event parameter for binding to tkinter events.
+    """
     thread = threading.Thread(target=_load_stt_model_thread, daemon=True)
     thread.start()
 
 def _load_stt_model_thread():
+    """
+    Internal function to load the Whisper speech-to-text model.
+    
+    Creates a loading window and handles the initialization of the WhisperModel
+    with configured settings. Updates the global stt_local_model variable.
+    
+    Raises:
+        Exception: Any error that occurs during model loading is caught, logged,
+                  and displayed to the user via a message box.
+    """
     global stt_local_model
     model = app_settings.editable_settings["Whisper Model"].strip()
-    # Create a loading window to display the loading message
     stt_loading_window = LoadingWindow(root, "Speech to Text", "Loading Speech to Text. Please wait.")
     print(f"Loading STT model: {model}")
     try:
-        # Load the specified Whisper model
-        stt_local_model = whisper.load_model(model)
+        unload_stt_model()
+        device_type = get_selected_whisper_architecture()
+        set_cuda_paths()
+
+        compute_type = app_settings.editable_settings[SettingsKeys.WHISPER_COMPUTE_TYPE.value]
+        # Change the  compute type automatically if using a gpu one.
+        if device_type == Architectures.CPU.architecture_value and compute_type == "float16":
+            compute_type = "int8"
+            
+
+        stt_local_model = WhisperModel(
+            model, 
+            device=device_type,
+            cpu_threads=int(app_settings.editable_settings[SettingsKeys.WHISPER_CPU_COUNT.value]),
+            compute_type=compute_type)
+
         print("STT model loaded successfully.")
     except Exception as e:
-        # Log the error message
-        print(f"An error occurred while loading STT: {e}")
+        print(f"An error occurred while loading STT {type(e).__name__}: {e}")
         stt_local_model = None
-        messagebox.showerror("Error", f"An error occurred while loading the STT model: {e}")
+        messagebox.showerror("Error", f"An error occurred while loading STT {type(e).__name__}: {e}")
     finally:
         stt_loading_window.destroy()
         print("Closing STT loading window.")
 
+def unload_stt_model():
+    """
+    Unload the speech-to-text model from memory.
+    
+    Cleans up the global stt_local_model instance and performs garbage collection
+    to free up system resources.
+    """
+    global stt_local_model
+    if stt_local_model is not None:
+        print("Unloading STT model from device.")
+        del stt_local_model
+        gc.collect()
+        stt_local_model = None
+        print("STT model unloaded successfully.")
+    else:
+        print("STT model is already unloaded.")
+
+def get_selected_whisper_architecture():
+    """
+    Determine the appropriate device architecture for the Whisper model.
+    
+    Returns:
+        str: The architecture value (CPU or CUDA) based on user settings.
+    """
+    device_type = Architectures.CPU.architecture_value
+    if app_settings.editable_settings[SettingsKeys.WHISPER_ARCHITECTURE.value] == Architectures.CUDA.label:
+        device_type = Architectures.CUDA.architecture_value
+
+    return device_type
+
+def faster_whisper_transcribe(audio):
+    """
+    Transcribe audio using the Faster Whisper model.
+    
+    Args:
+        audio: Audio data to transcribe.
+    
+    Returns:
+        str: Transcribed text or error message if transcription fails.
+        
+    Raises:
+        Exception: Any error during transcription is caught and returned as an error message.
+    """
+    try:
+        if stt_local_model is None:
+            load_stt_model()
+            raise TranscribeError("Speech2Text model not loaded. Please try again once loaded.")
+
+        # Validate beam_size
+        try:
+            beam_size = int(app_settings.editable_settings[SettingsKeys.WHISPER_BEAM_SIZE.value])
+            if beam_size <= 0:
+                raise ValueError(f"{SettingsKeys.WHISPER_BEAM_SIZE.value} must be greater than 0 in advanced settings")
+        except (ValueError, TypeError) as e:
+            return f"Invalid {SettingsKeys.WHISPER_BEAM_SIZE.value} parameter. Please go into the advanced settings and ensure you have a integer greater than 0: {str(e)}"
+
+        # Validate vad_filter
+        vad_filter = bool(app_settings.editable_settings[SettingsKeys.WHISPER_VAD_FILTER.value])
+
+        segments, info = stt_local_model.transcribe(
+            audio,
+            beam_size=beam_size,
+            vad_filter=vad_filter,
+        )
+
+        return "".join(f"{segment.text} " for segment in segments)
+    except Exception as e:
+        error_message = f"Transcription failed: {str(e)}"
+        print(f"Error during transcription: {str(e)}")
+        raise TranscribeError(error_message) from e
+
+def set_cuda_paths():
+    """
+    Configure CUDA-related environment variables and paths.
+    
+    Sets up the necessary environment variables for CUDA execution when CUDA
+    architecture is selected. Updates CUDA_PATH, CUDA_PATH_V12_4, and PATH
+    environment variables with the appropriate NVIDIA driver paths.
+    """
+    if (get_selected_whisper_architecture() != Architectures.CUDA.architecture_value) or (app_settings.editable_settings["Architecture"] != Architectures.CUDA.label):
+        return
+
+    nvidia_base_path = Path(get_file_path('nvidia-drivers'))
+    
+    cuda_path = nvidia_base_path / 'cuda_runtime' / 'bin'
+    cublas_path = nvidia_base_path / 'cublas' / 'bin'
+    cudnn_path = nvidia_base_path / 'cudnn' / 'bin'
+    
+    paths_to_add = [str(cuda_path), str(cublas_path), str(cudnn_path)]
+    env_vars = ['CUDA_PATH', 'CUDA_PATH_V12_4', 'PATH']
+
+    for env_var in env_vars:
+        current_value = os.environ.get(env_var, '')
+        new_value = os.pathsep.join(paths_to_add + ([current_value] if current_value else []))
+        os.environ[env_var] = new_value
 
 # Configure grid weights for scalability
 root.grid_columnconfigure(0, weight=1, minsize= 10)
@@ -1304,7 +1580,8 @@ root.bind('<Alt-r>', lambda event: mic_button.invoke())
 #set min size
 root.minsize(900, 400)
 
-
+if (app_settings.editable_settings['Show Welcome Message']):
+    window.show_welcome_message()
 
 #Wait for the UI root to be intialized then load the model. If using local llm.
 if app_settings.editable_settings["Use Local LLM"]:

@@ -28,7 +28,7 @@ from Model import Model, ModelManager
 from utils.file_utils import get_file_path
 from UI.MarkdownWindow import MarkdownWindow
 from UI.Widgets.MicrophoneSelector import MicrophoneSelector
-from UI.SettingsWindow import SettingsKeys, FeatureToggle
+from UI.SettingsWindow import SettingsKeys, FeatureToggle, Architectures, SettingsWindow
 
 
 class SettingsWindowUI:
@@ -81,11 +81,13 @@ class SettingsWindowUI:
         """
         self.settings_window = tk.Toplevel()
         self.settings_window.title("Settings")
-        self.settings_window.geometry("600x450")  # Set initial window size
-        self.settings_window.minsize(600, 500)    # Set minimum window size
+        self.settings_window.geometry("775x400")  # Set initial window size
+        self.settings_window.minsize(775, 400)    # Set minimum window size
         self.settings_window.resizable(True, True)
         self.settings_window.grab_set()
         self.settings_window.iconbitmap(get_file_path('assets','logo.ico'))
+
+        self._display_center_to_parent()
 
         self.main_frame = tk.Frame(self.settings_window)
         self.main_frame.pack(expand=True, fill='both')
@@ -123,6 +125,21 @@ class SettingsWindowUI:
         
         self.create_buttons()
 
+    def _display_center_to_parent(self):
+        # Get parent window dimensions and position
+        parent_x = self.root.winfo_x()
+        parent_y = self.root.winfo_y()
+        parent_width = self.root.winfo_width()
+        parent_height = self.root.winfo_height()
+
+        # Calculate the position for the settings window
+        settings_width = 775
+        settings_height = 400
+        center_x = parent_x + (parent_width - settings_width) // 2
+        center_y = parent_y + (parent_height - settings_height) // 2
+
+        # Apply the calculated position to the settings window
+        self.settings_window.geometry(f"{settings_width}x{settings_height}+{center_x}+{center_y}")
 
     def add_scrollbar_to_frame(self, frame):
         """
@@ -181,7 +198,7 @@ class SettingsWindowUI:
         # create the whisper model dropdown slection
         tk.Label(left_frame, text="Whisper Model").grid(row=3, column=0, padx=0, pady=5, sticky="w")
         whisper_models_drop_down_options = ["medium", "small", "tiny", "tiny.en", "base", "base.en", "small.en", "medium.en", "large"]
-        self.whisper_models_drop_down = ttk.Combobox(left_frame, values=whisper_models_drop_down_options, width=13)
+        self.whisper_models_drop_down = ttk.Combobox(left_frame, values=whisper_models_drop_down_options, width=20)
         self.whisper_models_drop_down.grid(row=3, column=1, padx=0, pady=5, sticky="w")
 
         try:
@@ -196,7 +213,24 @@ class SettingsWindowUI:
         # create the whisper model dropdown slection
         # microphone_select = MicrophoneSelector(left_frame, left_row, 0, self.settings)
         # self.settings.editable_settings_entries["Current Mic"] = microphone_select
+
         
+        right_row += 1
+
+        # Whisper Architecture Dropdown
+        self.whisper_architecture_label = tk.Label(left_frame, text=SettingsKeys.WHISPER_ARCHITECTURE.value)
+        self.whisper_architecture_label.grid(row=left_row, column=0, padx=0, pady=5, sticky="w")
+        whisper_architecture_options = self.settings.get_available_architectures()
+        self.whisper_architecture_dropdown = ttk.Combobox(left_frame, values=whisper_architecture_options, width=20, state="readonly")
+        if self.settings.editable_settings[SettingsKeys.WHISPER_ARCHITECTURE.value] in whisper_architecture_options:
+            self.whisper_architecture_dropdown.current(whisper_architecture_options.index(self.settings.editable_settings[SettingsKeys.WHISPER_ARCHITECTURE.value]))
+        else:
+            # Default cpu
+            self.whisper_architecture_dropdown.set(SettingsWindow.DEFAULT_WHISPER_ARCHITECTURE)
+        
+        self.whisper_architecture_dropdown.grid(row=left_row, column=1, padx=0, pady=5, sticky="w")
+        self.settings.editable_settings_entries[SettingsKeys.WHISPER_ARCHITECTURE.value] = self.whisper_architecture_dropdown
+
         left_row += 1
 
         # set the state of the whisper settings based on the SettingsKeys.LOCAL_WHISPER.value checkbox once all widgets are created
@@ -215,7 +249,7 @@ class SettingsWindowUI:
         # set the local option to disabled on switch to remote
         inverted_state = "disabled" if current_state == 0 else "normal"
         self.whisper_models_drop_down.config(state=inverted_state)
-
+        self.whisper_architecture_dropdown.config(state=inverted_state)
 
 
     def create_llm_settings(self):
@@ -230,6 +264,9 @@ class SettingsWindowUI:
         right_frame = ttk.Frame(self.llm_settings_frame)
         right_frame.grid(row=0, column=1, padx=10, pady=5, sticky="nw")
 
+        self.llm_settings_frame.columnconfigure(0, weight=1)
+        self.llm_settings_frame.columnconfigure(1, weight=1)
+
         left_row = 0
         right_row = 0
 
@@ -243,23 +280,30 @@ class SettingsWindowUI:
         left_row += 1
 
         #6. GPU OR CPU SELECTION (Right Column)
-        tk.Label(left_frame, text="Local Architecture").grid(row=left_row, column=0, padx=0, pady=5, sticky="w")
+        self.local_architecture_label = tk.Label(left_frame, text="Local Architecture")
+        self.local_architecture_label.grid(row=left_row, column=0, padx=0, pady=5, sticky="w")
         architecture_options = self.settings.get_available_architectures()
-        self.architecture_dropdown = ttk.Combobox(left_frame, values=architecture_options, width=15, state="readonly")
+        self.architecture_dropdown = ttk.Combobox(left_frame, values=architecture_options, width=20, state="readonly")
         if self.settings.editable_settings["Architecture"] in architecture_options:
             self.architecture_dropdown.current(architecture_options.index(self.settings.editable_settings["Architecture"]))
         else:
             # Default cpu
-            self.architecture_dropdown.set("CPU")
+            self.architecture_dropdown.set(Architectures.CPU.label)
 
         self.architecture_dropdown.grid(row=left_row, column=1, padx=0, pady=5, sticky="w")
+
+        # hide architecture dropdown if architecture only has one option
+        if len(architecture_options) == 1:
+            self.local_architecture_label.grid_forget()
+            self.architecture_dropdown.grid_forget()
+
 
         left_row += 1
 
         # 5. Models (Left Column)
         tk.Label(left_frame, text="Models").grid(row=left_row, column=0, padx=0, pady=5, sticky="w")
         models_drop_down_options = []
-        self.models_drop_down = ttk.Combobox(left_frame, values=models_drop_down_options, width=15, state="readonly")
+        self.models_drop_down = ttk.Combobox(left_frame, values=models_drop_down_options, width=20, state="readonly")
         self.models_drop_down.grid(row=left_row, column=1, padx=0, pady=5, sticky="w")
         self.models_drop_down.bind('<<ComboboxSelected>>', self.on_model_selection_change)
         thread = threading.Thread(target=self.settings.update_models_dropdown, args=(self.models_drop_down,))
@@ -441,8 +485,9 @@ class SettingsWindowUI:
         row = self._create_section_header("⚠️ Advanced Settings (For Advanced Users Only)", 0, text_colour="red")
         
         # General Settings
-        row = self._create_section_header("General Settings", row, text_colour="black")
-        row = create_settings_columns(self.settings.adv_general_settings, row)
+        if len(self.settings.adv_general_settings) > 0:
+            row = self._create_section_header("General Settings", row, text_colour="black")
+            row = create_settings_columns(self.settings.adv_general_settings, row)
 
         # Whisper Settings
         row = self._create_section_header("Whisper Settings", row, text_colour="black")
@@ -453,11 +498,11 @@ class SettingsWindowUI:
         
         self.create_editable_settings_col(left_frame, right_frame, 0, 0, self.settings.adv_whisper_settings)
         
-        # Audio meter
-        tk.Label(left_frame, text="Whisper Audio Cutoff").grid(row=1, column=0, padx=0, pady=0, sticky="w")
-        self.cutoff_slider = AudioMeter(left_frame, width=150, height=50, 
-                                    threshold=self.settings.editable_settings["Silence cut-off"] * 32768)
-        self.cutoff_slider.grid(row=1, column=1, padx=0, pady=0, sticky="w")
+        # # Audio meter
+        # tk.Label(left_frame, text="Whisper Audio Cutoff").grid(row=1, column=0, padx=0, pady=0, sticky="w")
+        # self.cutoff_slider = AudioMeter(left_frame, width=150, height=50, 
+        #                             threshold=self.settings.editable_settings["Silence cut-off"] * 32768)
+        # self.cutoff_slider.grid(row=1, column=1, padx=0, pady=0, sticky="w")
         row += 1
 
         # AI Settings
@@ -515,10 +560,24 @@ class SettingsWindowUI:
         This method creates and places buttons for saving settings, resetting to default,
         and closing the settings window.
         """
-        tk.Button(self.main_frame, text="Save", command=self.save_settings, width=10).pack(side="right", padx=2, pady=5)
-        tk.Button(self.main_frame, text="Default", width=10, command=self.reset_to_default).pack(side="right", padx=2, pady=5)
-        tk.Button(self.main_frame, text="Close", width=10, command=self.close_window).pack(side="right", padx=2, pady=5)
-        tk.Button(self.main_frame, text="Help", width=10, command=self.create_help_window).pack(side="left", padx=2, pady=5)
+        footer_frame = tk.Frame(self.main_frame)
+        footer_frame.pack(side="bottom", fill="x")
+
+        # Place the "Help" button on the left
+        tk.Button(footer_frame, text="Help", width=10, command=self.create_help_window).pack(side="left", padx=2, pady=5)
+
+        # Place the label in the center
+        version = self.settings.get_application_version()
+        tk.Label(footer_frame, text=f"FreeScribe Client {version}").pack(side="left", expand=True, padx=2, pady=5)
+
+        # Create a frame for the right-side elements
+        right_frame = tk.Frame(footer_frame)
+        right_frame.pack(side="right")
+
+        # Pack all other buttons into the right frame
+        tk.Button(right_frame, text="Close", width=10, command=self.close_window).pack(side="right", padx=2, pady=5)
+        tk.Button(right_frame, text="Default", width=10, command=self.reset_to_default).pack(side="right", padx=2, pady=5)
+        tk.Button(right_frame, text="Save", width=10, command=self.save_settings).pack(side="right", padx=2, pady=5)
 
     def create_help_window(self):
         """
@@ -545,6 +604,7 @@ class SettingsWindowUI:
         if self.get_selected_model() not in ["Loading models...", "Failed to load models"]:
             self.settings.editable_settings["Model"] = self.get_selected_model()
 
+        self.settings.update_whisper_model()
 
         self.settings.editable_settings["Pre-Processing"] = self.preprocess_text.get("1.0", "end-1c") # end-1c removes the trailing newline
         self.settings.editable_settings["Post-Processing"] = self.postprocess_text.get("1.0", "end-1c") # end-1c removes the trailing newline
@@ -552,17 +612,14 @@ class SettingsWindowUI:
         # save architecture
         self.settings.editable_settings["Architecture"] = self.architecture_dropdown.get()
 
-        # save the old whisper model to compare with the new model later
-        old_local_whisper = self.settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value]
-        old_model = self.settings.editable_settings["Whisper Model"]
-
         self.settings.save_settings(
             self.openai_api_key_entry.get(),
             self.aiscribe_text.get("1.0", "end-1c"), # end-1c removes the trailing newline
             self.aiscribe2_text.get("1.0", "end-1c"), # end-1c removes the trailing newline
             self.settings_window,
             # self.api_dropdown.get(),
-            self.cutoff_slider.threshold / 32768,
+            self.settings.editable_settings["Silence cut-off"], # Save the old one for whisper audio cutoff, will be removed in future, left in incase we go back to old cut off
+            # self.cutoff_slider.threshold / 32768, # old threshold 
         )
 
         if self.settings.editable_settings["Use Docker Status Bar"] and self.main_window.docker_status_bar is None:
@@ -578,12 +635,6 @@ class SettingsWindowUI:
         if close_window:
             self.close_window()
 
-        # loading the model after the window is closed to prevent the window from freezing
-        # if Local Whisper is selected, compare the old model with the new model and reload the model if it has changed
-        if self.settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value] and (
-                old_local_whisper != self.settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value] or old_model !=
-                self.settings.editable_settings["Whisper Model"]):
-            self.root.event_generate("<<LoadSttModel>>")
 
     def reset_to_default(self):
         """
@@ -605,7 +656,7 @@ class SettingsWindowUI:
         # 1. LLM Preset (Left Column)
         tk.Label(frame, text="Settings Presets:").grid(row=row, column=0, padx=0, pady=5, sticky="w")
         llm_preset_options = ["Local AI", "ClinicianFocus Toolbox", "Custom"]
-        self.llm_preset_dropdown = ttk.Combobox(frame, values=llm_preset_options, width=15, state="readonly")
+        self.llm_preset_dropdown = ttk.Combobox(frame, values=llm_preset_options, width=20, state="readonly")
         if self.settings.editable_settings["Preset"] in llm_preset_options:
             self.llm_preset_dropdown.current(llm_preset_options.index(self.settings.editable_settings["Preset"]))
         else:
@@ -658,7 +709,7 @@ class SettingsWindowUI:
         """
         tk.Label(frame, text=label).grid(row=row_idx, column=0, padx=0, pady=5, sticky="w")
         value = self.settings.editable_settings[setting_name]
-        entry = tk.Entry(frame)
+        entry = tk.Entry(frame, width=25)
         entry.insert(0, str(value))
         entry.grid(row=row_idx, column=1, padx=0, pady=5, sticky="w")
         self.settings.editable_settings_entries[setting_name] = entry
@@ -714,6 +765,9 @@ class SettingsWindowUI:
         """
         self.settings_window.unbind_all("<MouseWheel>") # Unbind mouse wheel event causing errors
         self.settings_window.unbind_all("<Configure>") # Unbind the configure event causing errors
-        self.cutoff_slider.destroy()
+        
+        if hasattr(self, "cutoff_slider"):
+            if self.cutoff_slider is not None:
+                self.cutoff_slider.destroy()
 
         self.settings_window.destroy()
