@@ -105,6 +105,7 @@ class SettingsWindow():
     STATE_FILES_DIR = "install_state"
     DEFAULT_WHISPER_ARCHITECTURE = Architectures.CPU.architecture_value
     DEFAULT_LLM_ARCHITECTURE = Architectures.CPU.architecture_value
+    AUTO_DETECT_LANGUAGE_CODES = ["", "auto", "Auto Detect", "None", "None (Auto Detect)"]
 
     def __init__(self):
         """Initializes the ApplicationSettings with default values."""

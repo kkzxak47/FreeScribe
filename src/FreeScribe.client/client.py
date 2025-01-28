@@ -362,7 +362,7 @@ def realtime_text():
                         "use_translate": app_settings.editable_settings[SettingsKeys.USE_TRANSLATE_TASK.value],
                     }
 
-                    if app_settings.editable_settings[SettingsKeys.WHISPER_LANGUAGE_CODE.value] not in ["", "auto", "Auto Detect", "None", "None (Auto Detect)"]:
+                    if app_settings.editable_settings[SettingsKeys.WHISPER_LANGUAGE_CODE.value] not in SettingsWindow.AUTO_DETECT_LANGUAGE_CODES:
                         body["language_code"] = app_settings.editable_settings[SettingsKeys.WHISPER_LANGUAGE_CODE.value]
 
                     try:
@@ -746,7 +746,7 @@ def send_audio_to_server():
                 "use_translate": app_settings.editable_settings[SettingsKeys.USE_TRANSLATE_TASK.value],
             }
 
-            if app_settings.editable_settings[SettingsKeys.WHISPER_LANGUAGE_CODE.value] not in ["", "auto", "Auto Detect", "None", "None (Auto Detect)"]:
+            if app_settings.editable_settings[SettingsKeys.WHISPER_LANGUAGE_CODE.value] not in SettingsWindow.AUTO_DETECT_LANGUAGE_CODES:
                 body["language_code"] = app_settings.editable_settings[SettingsKeys.WHISPER_LANGUAGE_CODE.value]
 
             try:
