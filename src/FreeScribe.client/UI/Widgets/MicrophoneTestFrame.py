@@ -63,7 +63,7 @@ class MicrophoneTestFrame:
             device_info = self.p.get_device_info_by_index(i)
             if device_info['maxInputChannels'] > 0:
                 device_name = device_info['name']
-                excluded_names = ["Stereo Mix", "Loopback", "Virtual", "Output", 
+                excluded_names = ["Virtual", "Output", 
                                 "Wave Out", "What U Hear", "Aux", "Port", "Mix"]
                 if not any(excluded_name.lower() in device_name.lower() 
                           for excluded_name in excluded_names):
