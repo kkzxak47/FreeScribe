@@ -35,7 +35,6 @@ from UI.MainWindowUI import MainWindowUI
 from UI.SettingsWindow import SettingsWindow, SettingsKeys
 from UI.Widgets.CustomTextBox import CustomTextBox
 from UI.LoadingWindow import LoadingWindow
-from UI.Widgets.MicrophoneSelector import MicrophoneState
 from Model import  ModelManager
 from utils.ip_utils import is_private_ip
 from utils.file_utils import get_file_path, get_resource_path
@@ -43,6 +42,9 @@ import ctypes
 import sys
 from UI.DebugWindow import DualOutput
 import traceback
+from UI.Widgets.MicrophoneTestFrame import MicrophoneTestFrame
+
+
 
 dual = DualOutput()
 sys.stdout = dual
@@ -172,13 +174,14 @@ def record_audio():
     global is_paused, frames, audio_queue
 
     try:
+        selected_index = MicrophoneTestFrame.get_selected_microphone_index()
         stream = p.open(
             format=FORMAT, 
             channels=1, 
             rate=RATE, 
             input=True,
             frames_per_buffer=CHUNK, 
-            input_device_index=int(MicrophoneState.SELECTED_MICROPHONE_INDEX))
+            input_device_index=int(selected_index))
     except (OSError, IOError) as e:
         messagebox.showerror("Audio Error", f"Please check your microphone settings under whisper settings. Error opening audio stream: {e}")
         return
@@ -1279,6 +1282,7 @@ history_frame.grid_columnconfigure(0, weight=1)
 history_frame.grid_rowconfigure(0, weight=4)  # Timestamp takes more space
 history_frame.grid_rowconfigure(1, weight=1)  # Mic test takes less space
 
+# Add the timestamp listbox
 timestamp_listbox = tk.Listbox(history_frame, height=30)
 timestamp_listbox.grid(row=0, column=0, sticky='nsew')
 timestamp_listbox.bind('<<ListboxSelect>>', show_response)
@@ -1286,8 +1290,9 @@ timestamp_listbox.insert(tk.END, "Temporary Note History")
 timestamp_listbox.config(fg='grey')
 
 # Add microphone test frame
-from UI.Widgets.MicrophoneTestFrame import MicrophoneTestFrame
-mic_test = MicrophoneTestFrame(history_frame, p)
+
+mic_test = MicrophoneTestFrame(parent=history_frame, p=p, app_settings=app_settings)
+mic_test.frame.grid(row=1, column=0, sticky='nsew')  # Use grid to place the frame
 
 window.update_aiscribe_texts(None)
 # Bind Alt+P to send_and_receive function
