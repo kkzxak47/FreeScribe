@@ -181,43 +181,54 @@ def get_prompt(formatted_message):
 
 def threaded_toggle_recording():
     logging.debug(f"*** Toggle Recording - Recording status: {is_recording}, STT local model: {stt_local_model}")
+    task_done_var = tk.BooleanVar(value=False)
+    stt_thread = threading.Thread(target=double_check_stt_model_loading, args=(task_done_var,))
+    stt_thread.start()
+    root.wait_variable(task_done_var)
 
-    double_check_stt_model_loading()
     thread = threading.Thread(target=toggle_recording)
     thread.start()
 
 
-def double_check_stt_model_loading():
-    # if using local whisper and model is not loaded, when starting recording
-    if not is_recording and app_settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value] and not stt_local_model:
-        stt_loading_window = None
-        try:
-            if stt_model_loading_thread_lock.locked():
-                stt_loading_window = LoadingWindow(root, "Speech to Text", "Loading Speech to Text. Please wait.")
-                timeout = 180
-                time_start = time.monotonic()
-                # wait until the other loading thread is done
-                while True:
-                    time.sleep(0.1)
-                    if not stt_model_loading_thread_lock.locked():
-                        break
-                    if time.monotonic() - time_start > timeout:
-                        messagebox.showerror("Error",
-                                             f"Timed out while loading local STT model after {timeout} seconds.")
-                        break
-                stt_loading_window.destroy()
-                stt_loading_window = None
-            # double check
-            if stt_local_model is None:
-                # mandatory loading, synchronous
-                t = load_stt_model()
-                t.join()
-        except Exception as e:
-            logging.exception(str(e))
-            messagebox.showerror("Error", f"An error occurred while loading STT synchronously {type(e).__name__}: {e}")
-        finally:
-            if stt_loading_window:
-                stt_loading_window.destroy()
+def double_check_stt_model_loading(task_done_var):
+    stt_loading_window = None
+    try:
+        if is_recording:
+            return
+        if not app_settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value]:
+            return
+        if stt_local_model:
+            return
+        # if using local whisper and model is not loaded, when starting recording
+        if stt_model_loading_thread_lock.locked():
+            stt_loading_window = LoadingWindow(root, "Speech to Text", "Loading Speech to Text. Please wait.")
+            timeout = 180
+            time_start = time.monotonic()
+            # wait until the other loading thread is done
+            while True:
+                time.sleep(0.1)
+                if not stt_model_loading_thread_lock.locked():
+                    break
+                if time.monotonic() - time_start > timeout:
+                    messagebox.showerror("Error",
+                                         f"Timed out while loading local STT model after {timeout} seconds.")
+                    break
+            stt_loading_window.destroy()
+            stt_loading_window = None
+        # double check
+        if stt_local_model is None:
+            # mandatory loading, synchronous
+            t = load_stt_model()
+            t.join()
+
+    except Exception as e:
+        logging.exception(str(e))
+        messagebox.showerror("Error",
+                             f"An error occurred while loading STT synchronously {type(e).__name__}: {e}")
+    finally:
+        if stt_loading_window:
+            stt_loading_window.destroy()
+        task_done_var.set(True)
 
 
 def threaded_realtime_text():
