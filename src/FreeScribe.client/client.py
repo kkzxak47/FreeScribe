@@ -982,9 +982,12 @@ def send_text_to_localmodel(edited_text):
     )
 
     
+def screen_input(conversation):
+    prompt = "Go over this conversation and ensure its a conversation with more than 50 words. Also, if it is a conversation between a doctor and a patient. Please return one word. Either True or False based. Do not give a explanation and do not format the text. Here is the conversation:\n"
 
+    return send_text_to_chatgpt(f"{prompt}{conversation}")
 
-def send_text_to_chatgpt(edited_text):  
+def send_text_to_chatgpt(edited_text): 
     if app_settings.editable_settings["Use Local LLM"]:
         return send_text_to_localmodel(edited_text)
     else:
@@ -993,6 +996,9 @@ def send_text_to_chatgpt(edited_text):
 def generate_note(formatted_message):
             try:
                 # If note generation is on
+                prescreen = screen_input(formatted_message)
+                print("prescreen: ", prescreen)
+                return
                 if use_aiscribe:
                     # If pre-processing is enabled
                     if app_settings.editable_settings["Use Pre-Processing"]:
