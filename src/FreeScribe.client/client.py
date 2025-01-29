@@ -50,6 +50,7 @@ from utils.OneInstance import OneInstance
 from UI.DebugWindow import DualOutput
 from utils.utils import window_has_running_instance, bring_to_front, close_mutex
 from WhisperModel import TranscribeError
+from UI.Widgets.PopupBox import PopupBox
 
 
 
@@ -983,9 +984,31 @@ def send_text_to_localmodel(edited_text):
 
     
 def screen_input(conversation):
-    prompt = "Go over this conversation and ensure its a conversation with more than 50 words. Also, if it is a conversation between a doctor and a patient. Please return one word. Either True or False based. Do not give a explanation and do not format the text. Here is the conversation:\n"
+    prompt = "Go over this conversation and ensure it's a conversation with more than 50 words. Also, if it is a conversation between a doctor and a patient. Please return one word. Either True or False based. Do not give an explanation and do not format the text. Here is the conversation:\n"
 
-    return send_text_to_chatgpt(f"{prompt}{conversation}")
+    # If note generation is on
+    prescreen = send_text_to_chatgpt(f"{prompt}{conversation}")
+    is_valid_input = prescreen.strip().lower() == "true"
+
+    print("Generating Input. AI Prescreen: ", prescreen)
+    
+    if not is_valid_input:
+        # Simulate the popup logic with return values
+        popup_result = PopupBox(
+            parent=root,
+            title="Invalid Input",
+            message="Input has been flagged as invalid. Please ensure the input is a conversation with more than 50 words between a doctor and a patient. Unexpected results may occur from the AI.",
+            button_text_1="Cancel",
+            button_text_2="Process Anyway!",
+            button_1_callback=cancel,
+            button_2_callback=process
+        )
+
+        # Return based on the user's choice
+        if popup_result == "button_1":
+            return False
+        elif popup_result == "button_2":
+            return True
 
 def send_text_to_chatgpt(edited_text): 
     if app_settings.editable_settings["Use Local LLM"]:
@@ -995,15 +1018,6 @@ def send_text_to_chatgpt(edited_text):
 
 def generate_note(formatted_message):
             try:
-                # If note generation is on
-                prescreen = screen_input(formatted_message)
-                 if prescreen is "True":
-                    print("prescreen is true")
-                    return
-                else:
-                    print("prescreen is false")
-                    return
-                return
                 if use_aiscribe:
                     # If pre-processing is enabled
                     if app_settings.editable_settings["Use Pre-Processing"]:
@@ -1081,6 +1095,8 @@ def generate_note_thread(text: str):
     :type text: str
     """
     global GENERATION_THREAD_ID
+
+    screen_input(text)
 
     thread = threading.Thread(target=generate_note, args=(text,))
     thread.start()
