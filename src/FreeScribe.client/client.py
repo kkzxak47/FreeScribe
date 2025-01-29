@@ -187,20 +187,16 @@ def get_prompt(formatted_message):
 def threaded_toggle_recording():
     logging.debug(f"*** Toggle Recording - Recording status: {is_recording}, STT local model: {stt_local_model}")
     task_done_var = tk.BooleanVar(value=False)
-    model_name = app_settings.editable_settings["Whisper Model"].strip()
-    stt_loading_window = LoadingWindow(root, "Loading STT model",
-                                       f"Loading {model_name} model. Please wait.",
-                                       on_cancel=lambda: task_done_var.set(True))
     stt_thread = threading.Thread(target=double_check_stt_model_loading, args=(task_done_var,))
     stt_thread.start()
     root.wait_variable(task_done_var)
-    stt_loading_window.destroy()
 
     thread = threading.Thread(target=toggle_recording)
     thread.start()
 
 
 def double_check_stt_model_loading(task_done_var):
+    stt_loading_window = None
     try:
         if is_recording:
             return
@@ -210,7 +206,10 @@ def double_check_stt_model_loading(task_done_var):
             return
         # if using local whisper and model is not loaded, when starting recording
         if stt_model_loading_thread_lock.locked():
-
+            model_name = app_settings.editable_settings["Whisper Model"].strip()
+            stt_loading_window = LoadingWindow(root, "Loading STT model",
+                                               f"Loading {model_name} model. Please wait.",
+                                               on_cancel=lambda: task_done_var.set(True))
             timeout = 300
             time_start = time.monotonic()
             # wait until the other loading thread is done
@@ -226,7 +225,8 @@ def double_check_stt_model_loading(task_done_var):
                     return
                 if not stt_model_loading_thread_lock.locked():
                     break
-
+            stt_loading_window.destroy()
+            stt_loading_window = None
         # double check
         if stt_local_model is None:
             # mandatory loading, synchronous
@@ -238,6 +238,8 @@ def double_check_stt_model_loading(task_done_var):
         messagebox.showerror("Error",
                              f"An error occurred while loading STT synchronously {type(e).__name__}: {e}")
     finally:
+        if stt_loading_window:
+            stt_loading_window.destroy()
         task_done_var.set(True)
 
 
