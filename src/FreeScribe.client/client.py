@@ -1568,8 +1568,8 @@ timestamp_listbox.config(fg='grey')
 
 # Add microphone test frame
 
-mic_test = MicrophoneTestFrame(parent=history_frame, p=p, app_settings=app_settings)
-mic_test.frame.grid(row=1, column=0, sticky='nsew')  # Use grid to place the frame
+mic_test = MicrophoneTestFrame(parent=history_frame, p=p, app_settings=app_settings, root=root)
+mic_test.frame.grid(row=1, column=0, pady=15, sticky='nsew')  # Use grid to place the frame
 
 window.update_aiscribe_texts(None)
 # Bind Alt+P to send_and_receive function

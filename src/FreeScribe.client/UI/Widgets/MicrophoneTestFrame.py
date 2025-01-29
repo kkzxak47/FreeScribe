@@ -4,13 +4,14 @@ import pyaudio
 import numpy as np
 from PIL import Image, ImageTk
 from utils.file_utils import get_file_path
+from UI.SettingsWindowUI import SettingsWindowUI
 
 class MicrophoneState:
     SELECTED_MICROPHONE_INDEX = None
     SELECTED_MICROPHONE_NAME = None
 
 class MicrophoneTestFrame:
-    def __init__(self, parent, p, app_settings):
+    def __init__(self, parent, p, app_settings, root):
         """
         Initialize the MicrophoneTestFrame.
 
@@ -23,11 +24,14 @@ class MicrophoneTestFrame:
         app_settings : dict
             Application settings including editable settings.
         """
+        self.root = root
         self.parent = parent
         self.p = p
         self.app_settings = app_settings
         self.stream = None  # Persistent audio stream
         self.is_stream_active = False  # Track if the stream is active
+
+        self.setting_window = SettingsWindowUI(self.app_settings, self, self.root)  # Settings window
 
         # Create a frame for the microphone test
         self.frame = ttk.Frame(self.parent)
@@ -68,10 +72,12 @@ class MicrophoneTestFrame:
                     if device_name not in [name for _, name in self.mic_list]:
                         self.mic_list.append((i, device_name))
                         self.mic_mapping[device_name] = i
-                        
+
         # Load the selected microphone from settings if available
+        print("yogesh")
+        print(self.app_settings.editable_settings["Current Mic"])
         if self.app_settings and "Current Mic" in self.app_settings.editable_settings:
-            selected_name = self.app_settings.editable_settings["Current Mic"]
+            selected_name = self.app_settings.editable_settings["Current Mic"]            
             if selected_name in self.mic_mapping:
                 MicrophoneState.SELECTED_MICROPHONE_NAME = selected_name
                 MicrophoneState.SELECTED_MICROPHONE_INDEX = self.mic_mapping[selected_name]
@@ -168,7 +174,10 @@ class MicrophoneTestFrame:
         if selected_name in self.mic_mapping:
             selected_index = self.mic_mapping[selected_name]
             self.update_selected_microphone(selected_index)
-            self.reopen_stream()  # Reopen the stream with the new device
+            # save the settings to the file
+            self.setting_window.settings.save_settings_to_file()
+            # Reopen the stream with the new device
+            self.reopen_stream()  
 
     def update_selected_microphone(self, selected_index):
         """
@@ -185,6 +194,7 @@ class MicrophoneTestFrame:
                 MicrophoneState.SELECTED_MICROPHONE_INDEX = selected_mic["index"]
                 MicrophoneState.SELECTED_MICROPHONE_NAME = selected_mic["name"]
                 self.status_label.config(text="Microphone: Connected", foreground="green")
+                self.app_settings.editable_settings["Current Mic"] = selected_mic["name"]
 
                 # Close existing stream if any
                 if self.stream:
