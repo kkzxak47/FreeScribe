@@ -52,7 +52,7 @@ from UI.DebugWindow import DualOutput
 from utils.utils import window_has_running_instance, bring_to_front, close_mutex
 from WhisperModel import TranscribeError
 
-if os.environ.get("DEBUG"):
+if os.environ.get("FREESCRIBE_DEBUG"):
     LOG_LEVEL = logging.DEBUG
 else:
     LOG_LEVEL = logging.INFO
