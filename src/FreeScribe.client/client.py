@@ -52,6 +52,10 @@ from UI.DebugWindow import DualOutput
 from utils.utils import window_has_running_instance, bring_to_front, close_mutex
 from WhisperModel import TranscribeError
 
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 
 
 dual = DualOutput()
@@ -176,7 +180,8 @@ def get_prompt(formatted_message):
     }
 
 def threaded_toggle_recording():
-    print(f"*** Toggle Recording...\n {is_recording = } {stt_local_model = }")
+    logging.debug(f"Toggle Recording - Recording status: {is_recording}, STT local model: {stt_local_model}")
+
     # if using local whisper and model is not loaded, when starting recording
     if not is_recording and app_settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value] and not stt_local_model:
         stt_loading_window = None
