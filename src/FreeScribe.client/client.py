@@ -179,6 +179,7 @@ def threaded_toggle_recording():
     print(f"*** Toggle Recording...\n {is_recording = } {stt_local_model = }")
     # if using local whisper and model is not loaded, when starting recording
     if not is_recording and app_settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value] and not stt_local_model:
+        stt_loading_window = None
         try:
             if stt_model_loading_thread_lock.locked():
                 stt_loading_window = LoadingWindow(root, "Speech to Text", "Loading Speech to Text. Please wait.")
@@ -193,6 +194,7 @@ def threaded_toggle_recording():
                         messagebox.showerror("Error", f"Timed out while loading local STT model after {timeout} seconds.")
                         break
                 stt_loading_window.destroy()
+                stt_loading_window = None
             # double check
             if stt_local_model is None:
                 # mandatory loading, synchronous
@@ -201,6 +203,9 @@ def threaded_toggle_recording():
         except Exception as e:
             logging.exception(str(e))
             messagebox.showerror("Error", f"An error occurred while loading STT synchronously {type(e).__name__}: {e}")
+        finally:
+            if stt_loading_window:
+                stt_loading_window.destroy()
     thread = threading.Thread(target=toggle_recording)
     thread.start()
 
