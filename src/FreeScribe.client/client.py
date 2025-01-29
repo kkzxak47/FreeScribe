@@ -182,7 +182,7 @@ def get_prompt(formatted_message):
 def threaded_toggle_recording():
     logging.debug(f"*** Toggle Recording - Recording status: {is_recording}, STT local model: {stt_local_model}")
     task_done_var = tk.BooleanVar(value=False)
-    stt_loading_window = LoadingWindow(root, "Speech to Text", "Loading Speech to Text. Please wait.")
+    stt_loading_window = LoadingWindow(root, "Loading", "Loading models. Please wait.")
     stt_thread = threading.Thread(target=double_check_stt_model_loading, args=(task_done_var,))
     stt_thread.start()
     root.wait_variable(task_done_var)
