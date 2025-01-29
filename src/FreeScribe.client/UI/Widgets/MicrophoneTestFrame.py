@@ -74,8 +74,6 @@ class MicrophoneTestFrame:
                         self.mic_mapping[device_name] = i
 
         # Load the selected microphone from settings if available
-        print("yogesh")
-        print(self.app_settings.editable_settings["Current Mic"])
         if self.app_settings and "Current Mic" in self.app_settings.editable_settings:
             selected_name = self.app_settings.editable_settings["Current Mic"]            
             if selected_name in self.mic_mapping:
@@ -112,10 +110,11 @@ class MicrophoneTestFrame:
             center_frame, 
             values=mic_options, 
             state='readonly', 
-            width=30,
+            width=40,
             style='Mic.TCombobox'
         )
-        self.mic_dropdown.grid(row=0, column=0, pady=(0, 5), sticky='nsew')
+        self.mic_dropdown.grid(row=0, column=0, pady=(0, 5), padx=(10, 0), sticky='nsew')
+
 
         # Set the default selection
         if MicrophoneState.SELECTED_MICROPHONE_NAME:
@@ -155,7 +154,7 @@ class MicrophoneTestFrame:
 
         # Status label for feedback
         self.status_label = ttk.Label(self.frame, text="Microphone: Ready", foreground="green")
-        self.status_label.grid(row=2, column=0, pady=(5, 0), sticky='nsew')
+        self.status_label.grid(row=2, column=0, pady=(5, 0), padx=(40, 0), sticky='nsew')
 
     def initialize_selected_microphone(self):
         """
