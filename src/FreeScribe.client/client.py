@@ -222,6 +222,11 @@ def record_audio():
             input_device_index=int(MicrophoneState.SELECTED_MICROPHONE_INDEX))
     except (OSError, IOError) as e:
         messagebox.showerror("Audio Error", f"Please check your microphone settings under whisper settings. Error opening audio stream: {e}")
+        print(f"Error opening audio stream: {e}")
+        return
+    except (ValueError, TypeError) as e:
+        messagebox.showerror("Audio Error", f"Please check your microphone settings under whisper settings. Error opening audio stream: {e}")
+        print(f"Error opening audio stream: {e}")
         return
 
     try:
