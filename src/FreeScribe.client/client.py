@@ -208,7 +208,7 @@ def double_check_stt_model_loading(task_done_var):
         # if using local whisper and model is not loaded, when starting recording
         if stt_model_loading_thread_lock.locked():
 
-            timeout = 180
+            timeout = 300
             time_start = time.monotonic()
             # wait until the other loading thread is done
             while True:
