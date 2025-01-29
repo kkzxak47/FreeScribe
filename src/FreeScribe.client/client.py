@@ -180,8 +180,14 @@ def get_prompt(formatted_message):
     }
 
 def threaded_toggle_recording():
-    logging.debug(f"Toggle Recording - Recording status: {is_recording}, STT local model: {stt_local_model}")
+    logging.debug(f"*** Toggle Recording - Recording status: {is_recording}, STT local model: {stt_local_model}")
 
+    double_check_stt_model_loading()
+    thread = threading.Thread(target=toggle_recording)
+    thread.start()
+
+
+def double_check_stt_model_loading():
     # if using local whisper and model is not loaded, when starting recording
     if not is_recording and app_settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value] and not stt_local_model:
         stt_loading_window = None
@@ -196,7 +202,8 @@ def threaded_toggle_recording():
                     if not stt_model_loading_thread_lock.locked():
                         break
                     if time.monotonic() - time_start > timeout:
-                        messagebox.showerror("Error", f"Timed out while loading local STT model after {timeout} seconds.")
+                        messagebox.showerror("Error",
+                                             f"Timed out while loading local STT model after {timeout} seconds.")
                         break
                 stt_loading_window.destroy()
                 stt_loading_window = None
@@ -211,8 +218,7 @@ def threaded_toggle_recording():
         finally:
             if stt_loading_window:
                 stt_loading_window.destroy()
-    thread = threading.Thread(target=toggle_recording)
-    thread.start()
+
 
 def threaded_realtime_text():
     thread = threading.Thread(target=realtime_text)
