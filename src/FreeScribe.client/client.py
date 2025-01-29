@@ -187,7 +187,8 @@ def get_prompt(formatted_message):
 def threaded_toggle_recording():
     logging.debug(f"*** Toggle Recording - Recording status: {is_recording}, STT local model: {stt_local_model}")
     task_done_var = tk.BooleanVar(value=False)
-    stt_loading_window = LoadingWindow(root, "Loading", "Loading models. Please wait.")
+    model_name = app_settings.editable_settings["Whisper Model"].strip()
+    stt_loading_window = LoadingWindow(root, "Loading STT model", f"Loading {model_name} model. Please wait.")
     stt_thread = threading.Thread(target=double_check_stt_model_loading, args=(task_done_var,))
     stt_thread.start()
     root.wait_variable(task_done_var)
@@ -1417,7 +1418,7 @@ def _load_stt_model_thread():
     with stt_model_loading_thread_lock:
         global stt_local_model
         model = app_settings.editable_settings["Whisper Model"].strip()
-        stt_loading_window = LoadingWindow(root, "Speech to Text", "Loading Speech to Text. Please wait.")
+        stt_loading_window = LoadingWindow(root, "Speech to Text", f"Loading Speech to Text {model} model. Please wait.")
         print(f"Loading STT model: {model}")
         try:
             unload_stt_model()
