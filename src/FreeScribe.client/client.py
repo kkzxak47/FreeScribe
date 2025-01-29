@@ -997,7 +997,12 @@ def generate_note(formatted_message):
             try:
                 # If note generation is on
                 prescreen = screen_input(formatted_message)
-                print("prescreen: ", prescreen)
+                 if prescreen is "True":
+                    print("prescreen is true")
+                    return
+                else:
+                    print("prescreen is false")
+                    return
                 return
                 if use_aiscribe:
                     # If pre-processing is enabled
