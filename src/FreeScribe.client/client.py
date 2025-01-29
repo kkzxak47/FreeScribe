@@ -842,17 +842,17 @@ def update_gui_with_response(response_text):
     global response_history, user_message, IS_FIRST_LOG
 
     if IS_FIRST_LOG:
-        timestamp_listbox.delete(0, tk.END)
-        timestamp_listbox.config(fg='black')
+        history_frame.delete(0, tk.END)
+        history_frame.config(fg='black')
         IS_FIRST_LOG = False
 
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     response_history.insert(0, (timestamp, user_message, response_text))
 
     # Update the timestamp listbox
-    timestamp_listbox.delete(0, tk.END)
+    history_frame.delete(0, tk.END)
     for time, _, _ in response_history:
-        timestamp_listbox.insert(tk.END, time)
+        history_frame.insert(tk.END, time)
 
     display_text(response_text)
     pyperclip.copy(response_text)
@@ -1179,7 +1179,7 @@ def set_full_view():
     toggle_button.grid()
     upload_button.grid()
     response_display.grid()
-    timestamp_listbox.grid()
+    history_frame.grid()
     mic_button.grid(row=1, column=1, pady=5, padx=0,sticky='nsew')
     pause_button.grid(row=1, column=2, pady=5, padx=0,sticky='nsew')
     switch_view_button.grid(row=1, column=7, pady=5, padx=0,sticky='nsew')
@@ -1243,8 +1243,9 @@ def set_minimal_view():
     toggle_button.grid_remove()
     upload_button.grid_remove()
     response_display.grid_remove()
-    timestamp_listbox.grid_remove()
+    history_frame.grid_remove()
     blinking_circle_canvas.grid_remove()
+
 
     # Configure minimal view button sizes and placements
     mic_button.config(width=2, height=1)
