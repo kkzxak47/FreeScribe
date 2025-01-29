@@ -188,7 +188,9 @@ def threaded_toggle_recording():
     logging.debug(f"*** Toggle Recording - Recording status: {is_recording}, STT local model: {stt_local_model}")
     task_done_var = tk.BooleanVar(value=False)
     model_name = app_settings.editable_settings["Whisper Model"].strip()
-    stt_loading_window = LoadingWindow(root, "Loading STT model", f"Loading {model_name} model. Please wait.")
+    stt_loading_window = LoadingWindow(root, "Loading STT model",
+                                       f"Loading {model_name} model. Please wait.",
+                                       on_cancel=lambda: task_done_var.set(True))
     stt_thread = threading.Thread(target=double_check_stt_model_loading, args=(task_done_var,))
     stt_thread.start()
     root.wait_variable(task_done_var)
@@ -214,11 +216,15 @@ def double_check_stt_model_loading(task_done_var):
             # wait until the other loading thread is done
             while True:
                 time.sleep(0.1)
-                if not stt_model_loading_thread_lock.locked():
-                    break
+                if task_done_var.get():
+                    # user cancel
+                    logging.debug(f"user canceled after {time.monotonic() - time_start} seconds")
+                    return
                 if time.monotonic() - time_start > timeout:
                     messagebox.showerror("Error",
                                          f"Timed out while loading local STT model after {timeout} seconds.")
+                    return
+                if not stt_model_loading_thread_lock.locked():
                     break
 
         # double check
