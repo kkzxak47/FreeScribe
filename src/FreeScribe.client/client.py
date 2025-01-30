@@ -187,15 +187,19 @@ def get_prompt(formatted_message):
 def threaded_toggle_recording():
     logging.debug(f"*** Toggle Recording - Recording status: {is_recording}, STT local model: {stt_local_model}")
     task_done_var = tk.BooleanVar(value=False)
-    stt_thread = threading.Thread(target=double_check_stt_model_loading, args=(task_done_var,))
+    task_cancel_var = tk.BooleanVar(value=False)
+    stt_thread = threading.Thread(target=double_check_stt_model_loading, args=(task_done_var, task_cancel_var))
     stt_thread.start()
     root.wait_variable(task_done_var)
+    if task_cancel_var.get():
+        logging.debug(f"double checking canceled")
+        return
 
     thread = threading.Thread(target=toggle_recording)
     thread.start()
 
 
-def double_check_stt_model_loading(task_done_var):
+def double_check_stt_model_loading(task_done_var, task_cancel_var):
     stt_loading_window = None
     try:
         if is_recording:
@@ -209,13 +213,13 @@ def double_check_stt_model_loading(task_done_var):
             model_name = app_settings.editable_settings["Whisper Model"].strip()
             stt_loading_window = LoadingWindow(root, "Loading STT model",
                                                f"Loading {model_name} model. Please wait.",
-                                               on_cancel=lambda: task_done_var.set(True))
+                                               on_cancel=lambda: task_cancel_var.set(True))
             timeout = 300
             time_start = time.monotonic()
             # wait until the other loading thread is done
             while True:
                 time.sleep(0.1)
-                if task_done_var.get():
+                if task_cancel_var.get():
                     # user cancel
                     logging.debug(f"user canceled after {time.monotonic() - time_start} seconds")
                     return
