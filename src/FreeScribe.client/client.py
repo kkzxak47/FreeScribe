@@ -984,39 +984,77 @@ def send_text_to_localmodel(edited_text):
 
     
 def screen_input_with_llm(conversation):
-    prompt = "Go over this conversation and ensure it's a conversation with more than 50 words. Also, if it is a conversation between a doctor and a patient. Please return one word. Either True or False based. Do not give an explanation and do not format the text. Here is the conversation:\n"
+    """
+    Send a conversation to a large language model (LLM) for prescreening.
 
-    # If note generation is on
+    :param conversation: A string containing the conversation to be screened.
+    :return: A boolean indicating whether the conversation is valid.
+    """
+    prompt = (
+        "Go over this conversation and ensure it's a conversation with more than 50 words. "
+        "Also, if it is a conversation between a doctor and a patient. Please return one word. "
+        "Either True or False based. Do not give an explanation and do not format the text. "
+        "Here is the conversation:\n"
+    )
+
+    # Send the prompt and conversation to the LLM for evaluation
     prescreen = send_text_to_chatgpt(f"{prompt}{conversation}")
+
+    # Check if the response from the LLM is 'true' (case-insensitive)
     is_valid_input = prescreen.strip().lower() == "true"
 
+    # Log the AI's response for debugging purposes
     print("Generating Input. AI Prescreen: ", prescreen)
+
     return is_valid_input
 
+
 def display_screening_popup():
-    # Simulate the popup logic with return values
+    """
+    Display a popup window to inform the user of invalid input and offer options.
+
+    :return: A boolean indicating the user's choice:
+             - False if the user clicks 'Cancel'.
+             - True if the user clicks 'Process Anyway!'.
+    """
+    # Create and display the popup window
     popup_result = PopupBox(
         parent=root,
         title="Invalid Input",
-        message="Input has been flagged as invalid. Please ensure the input is a conversation with more than 50 words between a doctor and a patient. Unexpected results may occur from the AI.",
+        message=(
+            "Input has been flagged as invalid. Please ensure the input is a conversation with more than "
+            "50 words between a doctor and a patient. Unexpected results may occur from the AI."
+        ),
         button_text_1="Cancel",
         button_text_2="Process Anyway!"
     )
 
-    # Return based on the user's choice
+    # Return based on the button the user clicks
     if popup_result.response == "button_1":
         return False
     elif popup_result.response == "button_2":
         return True
 
+
 def screen_input(user_message):
+    """
+    Screen the user's input message based on the application's settings.
+
+    :param user_message: The message to be screened.
+    :return: A boolean indicating whether the input is valid and accepted for further processing.
+    """
+    # Check if AI prescreening is enabled in the application settings
     if app_settings.editable_settings[SettingsKeys.USE_PRESCREEN_AI_INPUT.value]:
+        # Perform AI-based prescreening
         screen_result = screen_input_with_llm(user_message)
+
+        # If the input fails prescreening, display a popup for the user
         if not screen_result:
             return display_screening_popup()
         else:
             return True
     else:
+        # If prescreening is disabled, always return True
         return True
 
 def send_text_to_chatgpt(edited_text): 
