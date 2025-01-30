@@ -1448,7 +1448,8 @@ def _load_stt_model_thread():
                 model,
                 device=device_type,
                 cpu_threads=int(app_settings.editable_settings[SettingsKeys.WHISPER_CPU_COUNT.value]),
-                compute_type=compute_type)
+                compute_type=compute_type
+            )
 
             print("STT model loaded successfully.")
         except Exception as e:
