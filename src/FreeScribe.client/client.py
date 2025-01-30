@@ -1552,7 +1552,7 @@ if app_settings.editable_settings["Enable Scribe Template"]:
 
 # Create a frame to hold both timestamp listbox and mic test
 history_frame = ttk.Frame(root)
-history_frame.grid(row=0, column=9, columnspan=2, rowspan=3, padx=5, pady=15, sticky='nsew')
+history_frame.grid(row=0, column=9, columnspan=2, rowspan=5, padx=5, pady=10, sticky='nsew')
 
 # Configure the frame's grid
 history_frame.grid_columnconfigure(0, weight=1)
@@ -1561,7 +1561,7 @@ history_frame.grid_rowconfigure(1, weight=1)  # Mic test takes less space
 
 # Add the timestamp listbox
 timestamp_listbox = tk.Listbox(history_frame, height=30)
-timestamp_listbox.grid(row=0, column=0, sticky='nsew')
+timestamp_listbox.grid(row=0, column=0, rowspan=3,sticky='nsew')
 timestamp_listbox.bind('<<ListboxSelect>>', show_response)
 timestamp_listbox.insert(tk.END, "Temporary Note History")
 timestamp_listbox.config(fg='grey')
@@ -1569,7 +1569,7 @@ timestamp_listbox.config(fg='grey')
 # Add microphone test frame
 
 mic_test = MicrophoneTestFrame(parent=history_frame, p=p, app_settings=app_settings, root=root)
-mic_test.frame.grid(row=1, column=0, pady=15, sticky='nsew')  # Use grid to place the frame
+mic_test.frame.grid(row=4, column=0, pady=10, sticky='nsew')  # Use grid to place the frame
 
 window.update_aiscribe_texts(None)
 # Bind Alt+P to send_and_receive function
