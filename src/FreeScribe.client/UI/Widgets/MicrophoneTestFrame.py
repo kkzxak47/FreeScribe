@@ -59,7 +59,8 @@ class MicrophoneTestFrame:
         try:
             default_input_info = self.p.get_default_input_device_info()
             self.default_input_index = default_input_info['index']
-        except IOError:
+        except IOError as e:
+            print(f"Failed to initialize microphone ({type(e).__name__}): {e}")
             self.default_input_index = None
 
         device_count = self.p.get_device_count()
@@ -215,7 +216,7 @@ class MicrophoneTestFrame:
                 self.is_stream_active = True
             except Exception as e:
                 self.status_label.config(text="Error: Microphone not found", foreground="red")
-                # messagebox.showerror("Microphone Error", f"Failed to open microphone: {e}")
+                print(f"Failed to open microphone ({type(e).__name__}): {e}")
         else:
             MicrophoneState.SELECTED_MICROPHONE_INDEX = None
             MicrophoneState.SELECTED_MICROPHONE_NAME = None
@@ -252,7 +253,7 @@ class MicrophoneTestFrame:
                 self.status_label.config(text="Microphone: Connected", foreground="green")
             except Exception as e:
                 self.status_label.config(text="Error: Microphone not found", foreground="red")
-                # messagebox.showerror("Microphone Error", f"Failed to open microphone: {e}")
+                print(f"Failed to open microphone ({type(e).__name__}): {e}")
 
     def update_volume_meter(self):
         """
@@ -289,12 +290,13 @@ class MicrophoneTestFrame:
         except OSError as e:
             if e.errno in [-9988, -9999]:  # Handle both Stream closed and Unanticipated host error
                 self.status_label.config(text="Error: Microphone disconnected", foreground="red")
-                print(f"Error in update_volume_meter: {e}")
+                print(f"Error in update_volume_meter({type(e).__name__}): {e}")
                 self.is_stream_active = False
                 self.stream = None
                 for segment in self.segments:
                     segment.configure(style='Inactive.TFrame')
             else:
+                print(f"Error in update_volume_meter({type(e).__name__}): {e}")
                 raise  # Re-raise the exception if it's not the expected error
 
         self.frame.after(100, self.update_volume_meter)
