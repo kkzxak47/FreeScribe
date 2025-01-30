@@ -1053,9 +1053,9 @@ def screen_input(user_message):
             return display_screening_popup()
         else:
             return True
-    else:
-        # If prescreening is disabled, always return True
-        return True
+            
+    #else return true always
+    return True
 
 def send_text_to_chatgpt(edited_text): 
     if app_settings.editable_settings["Use Local LLM"]:
