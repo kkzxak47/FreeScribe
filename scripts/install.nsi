@@ -175,6 +175,7 @@ Function .onInit
     ; Check if the process is running
     ${If} $0 == 0
         MessageBox MB_YESNOCANCEL|MB_ICONEXCLAMATION "FreeScribe is currently running. Would you like to stop it?$\n$\nYes = Force Stop$\nNo = Retry$\nCancel = Exit" IDYES kill_process IDCANCEL cancel
+
         Goto CheckIfFreeScribeIsRunning
         kill_process:
             Call KillFreeScribeProcess
