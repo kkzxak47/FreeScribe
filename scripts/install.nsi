@@ -30,6 +30,32 @@ Var /GLOBAL SELECTED_OPTION
 Var /GLOBAL REMOVE_CONFIG_CHECKBOX
 Var /GLOBAL REMOVE_CONFIG
 
+Function KillFreeScribeProcess
+    nsExec::ExecToStack 'taskkill /F /IM freescribe-client.exe'
+    Pop $0 ; Return value
+
+    ${If} $0 == 0
+        MessageBox MB_OK "FreeScribe process has been terminated."
+        Return
+    ${Else}
+        MessageBox MB_OK|MB_ICONEXCLAMATION "Failed to terminate FreeScribe process. Please close it manually."
+        Return
+    ${EndIf}
+FunctionEnd
+
+Function un.KillFreeScribeProcess
+    nsExec::ExecToStack 'taskkill /F /IM freescribe-client.exe'
+    Pop $0 ; Return value
+
+    ${If} $0 == 0
+        MessageBox MB_OK "FreeScribe process has been terminated."
+        Return
+    ${Else}
+        MessageBox MB_OK|MB_ICONEXCLAMATION "Failed to terminate FreeScribe process. Please close it manually."
+        Return
+    ${EndIf}
+FunctionEnd
+
 Function Check_For_Old_Version_In_App_Data
     ; Check if the old version exists in AppData
     IfFileExists "$APPDATA\FreeScribe\freescribe-client.exe" 0 OldVersionDoesNotExist
@@ -134,9 +160,13 @@ Function un.onInit
 
     ; Check if the process is running
     ${If} $0 == 0
-        MessageBox MB_RETRYCANCEL "FreeScribe is currently running. Please close the application and try again." IDRETRY CheckIfFreeScribeIsRunning IDCANCEL abort
-        abort:
-            Abort
+        MessageBox MB_YESNOCANCEL|MB_ICONEXCLAMATION "FreeScribe is currently running. Would you like to stop it?$\n$\nYes = Force Stop$\nNo = Retry$\nCancel = Exit" IDYES kill_process IDNO retry
+        Abort
+        kill_process:
+            Call un.KillFreeScribeProcess
+            Goto CheckIfFreeScribeIsRunning
+        retry:
+            Goto CheckIfFreeScribeIsRunning
     ${EndIf}
 FunctionEnd
 ; Checks on installer start
@@ -147,9 +177,14 @@ Function .onInit
 
     ; Check if the process is running
     ${If} $0 == 0
-        MessageBox MB_RETRYCANCEL "FreeScribe is currently running. Please close the application and try again." IDRETRY CheckIfFreeScribeIsRunning IDCANCEL abort
-        abort:
-            Abort
+        MessageBox MB_YESNOCANCEL|MB_ICONEXCLAMATION "FreeScribe is currently running. Would you like to stop it?$\n$\nYes = Force Stop$\nNo = Retry$\nCancel = Exit" IDYES kill_process IDNO retry
+        Abort
+        kill_process:
+            Call KillFreeScribeProcess
+            Goto CheckIfFreeScribeIsRunning
+        retry:
+            Goto CheckIfFreeScribeIsRunning
+
     ${EndIf}
 
     IfSilent SILENT_MODE NOT_SILENT_MODE
