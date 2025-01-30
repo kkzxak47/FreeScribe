@@ -999,9 +999,7 @@ def screen_input(conversation):
             title="Invalid Input",
             message="Input has been flagged as invalid. Please ensure the input is a conversation with more than 50 words between a doctor and a patient. Unexpected results may occur from the AI.",
             button_text_1="Cancel",
-            button_text_2="Process Anyway!",
-            button_1_callback=cancel,
-            button_2_callback=process
+            button_text_2="Process Anyway!"
         )
 
         # Return based on the user's choice
@@ -1096,7 +1094,9 @@ def generate_note_thread(text: str):
     """
     global GENERATION_THREAD_ID
 
-    screen_input(text)
+    # Check if we should do the prescreen prompt if enabled in settings
+    if app_settings.editable_settings[SettingsKeys.USE_PRESCREEN_AI_INPUT.value]:
+        screen_input(text)
 
     thread = threading.Thread(target=generate_note, args=(text,))
     thread.start()
