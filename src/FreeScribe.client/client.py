@@ -13,6 +13,7 @@ and Research Students - Software Developer Alex Simko, Pemba Sherpa (F24), and N
 
 import ctypes
 import io
+import logging
 import sys
 import gc
 import os
@@ -51,6 +52,15 @@ from UI.DebugWindow import DualOutput
 from utils.utils import window_has_running_instance, bring_to_front, close_mutex
 from WhisperModel import TranscribeError
 
+if os.environ.get("FREESCRIBE_DEBUG"):
+    LOG_LEVEL = logging.DEBUG
+else:
+    LOG_LEVEL = logging.INFO
+
+logging.basicConfig(
+    level=LOG_LEVEL,
+    format='%(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(message)s'
+)
 
 
 dual = DualOutput()
@@ -143,6 +153,8 @@ GENERATION_THREAD_ID = None
 # Global instance of whisper model
 stt_local_model = None
 
+stt_model_loading_thread_lock = threading.Lock()
+
 
 def get_prompt(formatted_message):
 
@@ -173,8 +185,68 @@ def get_prompt(formatted_message):
     }
 
 def threaded_toggle_recording():
+    logging.debug(f"*** Toggle Recording - Recording status: {is_recording}, STT local model: {stt_local_model}")
+    task_done_var = tk.BooleanVar(value=False)
+    task_cancel_var = tk.BooleanVar(value=False)
+    stt_thread = threading.Thread(target=double_check_stt_model_loading, args=(task_done_var, task_cancel_var))
+    stt_thread.start()
+    root.wait_variable(task_done_var)
+    if task_cancel_var.get():
+        logging.debug(f"double checking canceled")
+        return
+
     thread = threading.Thread(target=toggle_recording)
     thread.start()
+
+
+def double_check_stt_model_loading(task_done_var, task_cancel_var):
+    stt_loading_window = None
+    try:
+        if is_recording:
+            return
+        if not app_settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value]:
+            return
+        if stt_local_model:
+            return
+        # if using local whisper and model is not loaded, when starting recording
+        if stt_model_loading_thread_lock.locked():
+            model_name = app_settings.editable_settings["Whisper Model"].strip()
+            stt_loading_window = LoadingWindow(root, "Loading Voice to Text model",
+                                               f"Loading {model_name} model. Please wait.",
+                                               on_cancel=lambda: task_cancel_var.set(True))
+            timeout = 300
+            time_start = time.monotonic()
+            # wait until the other loading thread is done
+            while True:
+                time.sleep(0.1)
+                if task_cancel_var.get():
+                    # user cancel
+                    logging.debug(f"user canceled after {time.monotonic() - time_start} seconds")
+                    return
+                if time.monotonic() - time_start > timeout:
+                    messagebox.showerror("Error",
+                                         f"Timed out while loading local Voice to Text model after {timeout} seconds.")
+                    task_cancel_var.set(True)
+                    return
+                if not stt_model_loading_thread_lock.locked():
+                    break
+            stt_loading_window.destroy()
+            stt_loading_window = None
+        # double check
+        if stt_local_model is None:
+            # mandatory loading, synchronous
+            t = load_stt_model()
+            t.join()
+
+    except Exception as e:
+        logging.exception(str(e))
+        messagebox.showerror("Error",
+                             f"An error occurred while loading Voice to Text model synchronously {type(e).__name__}: {e}")
+    finally:
+        if stt_loading_window:
+            stt_loading_window.destroy()
+        task_done_var.set(True)
+
 
 def threaded_realtime_text():
     thread = threading.Thread(target=realtime_text)
@@ -1341,8 +1413,9 @@ def load_stt_model(event=None):
     Args:
         event: Optional event parameter for binding to tkinter events.
     """
-    thread = threading.Thread(target=_load_stt_model_thread, daemon=True)
+    thread = threading.Thread(target=_load_stt_model_thread)
     thread.start()
+    return thread
 
 def _load_stt_model_thread():
     """
@@ -1355,35 +1428,37 @@ def _load_stt_model_thread():
         Exception: Any error that occurs during model loading is caught, logged,
                   and displayed to the user via a message box.
     """
-    global stt_local_model
-    model = app_settings.editable_settings["Whisper Model"].strip()
-    stt_loading_window = LoadingWindow(root, "Speech to Text", "Loading Speech to Text. Please wait.")
-    print(f"Loading STT model: {model}")
-    try:
-        unload_stt_model()
-        device_type = get_selected_whisper_architecture()
-        set_cuda_paths()
+    with stt_model_loading_thread_lock:
+        global stt_local_model
+        model = app_settings.editable_settings["Whisper Model"].strip()
+        stt_loading_window = LoadingWindow(root, "Voice to Text", f"Loading Voice to Text {model} model. Please wait.")
+        print(f"Loading STT model: {model}")
+        try:
+            unload_stt_model()
+            device_type = get_selected_whisper_architecture()
+            set_cuda_paths()
 
-        compute_type = app_settings.editable_settings[SettingsKeys.WHISPER_COMPUTE_TYPE.value]
-        # Change the  compute type automatically if using a gpu one.
-        if device_type == Architectures.CPU.architecture_value and compute_type == "float16":
-            compute_type = "int8"
-            
+            compute_type = app_settings.editable_settings[SettingsKeys.WHISPER_COMPUTE_TYPE.value]
+            # Change the  compute type automatically if using a gpu one.
+            if device_type == Architectures.CPU.architecture_value and compute_type == "float16":
+                compute_type = "int8"
 
-        stt_local_model = WhisperModel(
-            model, 
-            device=device_type,
-            cpu_threads=int(app_settings.editable_settings[SettingsKeys.WHISPER_CPU_COUNT.value]),
-            compute_type=compute_type)
 
-        print("STT model loaded successfully.")
-    except Exception as e:
-        print(f"An error occurred while loading STT {type(e).__name__}: {e}")
-        stt_local_model = None
-        messagebox.showerror("Error", f"An error occurred while loading STT {type(e).__name__}: {e}")
-    finally:
-        stt_loading_window.destroy()
-        print("Closing STT loading window.")
+            stt_local_model = WhisperModel(
+                model,
+                device=device_type,
+                cpu_threads=int(app_settings.editable_settings[SettingsKeys.WHISPER_CPU_COUNT.value]),
+                compute_type=compute_type
+            )
+
+            print("STT model loaded successfully.")
+        except Exception as e:
+            print(f"An error occurred while loading STT {type(e).__name__}: {e}")
+            stt_local_model = None
+            messagebox.showerror("Error", f"An error occurred while loading Voice to Text {type(e).__name__}: {e}")
+        finally:
+            stt_loading_window.destroy()
+            print("Closing STT loading window.")
 
 def unload_stt_model():
     """
@@ -1395,9 +1470,9 @@ def unload_stt_model():
     global stt_local_model
     if stt_local_model is not None:
         print("Unloading STT model from device.")
-        del stt_local_model
-        gc.collect()
+        # no risk of temporary "stt_local_model in globals() is False" with same gc effect
         stt_local_model = None
+        gc.collect()
         print("STT model unloaded successfully.")
     else:
         print("STT model is already unloaded.")
