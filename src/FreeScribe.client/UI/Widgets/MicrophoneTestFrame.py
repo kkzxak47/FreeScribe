@@ -128,7 +128,7 @@ class MicrophoneTestFrame:
 
         # Volume meter container
         meter_frame = ttk.Frame(self.frame)
-        meter_frame.grid(row=1, column=0, sticky='nsew', pady=(0, 5))
+        meter_frame.grid(row=1, column=0, sticky='nsew', pady=(0, 0))
 
         # Try to load mic icon
         try:
@@ -136,13 +136,13 @@ class MicrophoneTestFrame:
             mic_icon = mic_icon.resize((24, 24))
             self.mic_photo = ImageTk.PhotoImage(mic_icon)
             mic_icon_label = ttk.Label(meter_frame, image=self.mic_photo)
-            mic_icon_label.grid(row=0, column=0, padx=(0, 10), sticky='nsew')
+            mic_icon_label.grid(row=0, column=0, padx=(5, 0), sticky='nsew')
         except Exception as e:
             print(f"Error loading microphone icon: {e}")
 
         # Create volume meter segments
         self.segments_frame = ttk.Frame(meter_frame)
-        self.segments_frame.grid(row=0, column=1, sticky='nsew')
+        self.segments_frame.grid(row=0, column=1, sticky='nsew', pady=(4, 0))
 
         # Create segments
         self.SEGMENT_COUNT = 20
@@ -155,7 +155,7 @@ class MicrophoneTestFrame:
 
         # Status label for feedback
         self.status_label = ttk.Label(self.frame, text="Microphone: Ready", foreground="green")
-        self.status_label.grid(row=2, column=0, pady=(5, 0), padx=(40, 0), sticky='nsew')
+        self.status_label.grid(row=2, column=0, pady=(0, 0), padx=(10, 0), sticky='nsew')
 
     def initialize_selected_microphone(self):
         """
