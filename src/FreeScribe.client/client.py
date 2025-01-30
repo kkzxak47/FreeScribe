@@ -211,7 +211,7 @@ def double_check_stt_model_loading(task_done_var, task_cancel_var):
         # if using local whisper and model is not loaded, when starting recording
         if stt_model_loading_thread_lock.locked():
             model_name = app_settings.editable_settings["Whisper Model"].strip()
-            stt_loading_window = LoadingWindow(root, "Loading STT model",
+            stt_loading_window = LoadingWindow(root, "Loading Voice to Text model",
                                                f"Loading {model_name} model. Please wait.",
                                                on_cancel=lambda: task_cancel_var.set(True))
             timeout = 300
@@ -225,7 +225,7 @@ def double_check_stt_model_loading(task_done_var, task_cancel_var):
                     return
                 if time.monotonic() - time_start > timeout:
                     messagebox.showerror("Error",
-                                         f"Timed out while loading local STT model after {timeout} seconds.")
+                                         f"Timed out while loading local Voice to Text model after {timeout} seconds.")
                     task_cancel_var.set(True)
                     return
                 if not stt_model_loading_thread_lock.locked():
@@ -241,7 +241,7 @@ def double_check_stt_model_loading(task_done_var, task_cancel_var):
     except Exception as e:
         logging.exception(str(e))
         messagebox.showerror("Error",
-                             f"An error occurred while loading STT synchronously {type(e).__name__}: {e}")
+                             f"An error occurred while loading Voice to Text model synchronously {type(e).__name__}: {e}")
     finally:
         if stt_loading_window:
             stt_loading_window.destroy()
@@ -1431,7 +1431,7 @@ def _load_stt_model_thread():
     with stt_model_loading_thread_lock:
         global stt_local_model
         model = app_settings.editable_settings["Whisper Model"].strip()
-        stt_loading_window = LoadingWindow(root, "Speech to Text", f"Loading Speech to Text {model} model. Please wait.")
+        stt_loading_window = LoadingWindow(root, "Voice to Text", f"Loading Voice to Text {model} model. Please wait.")
         print(f"Loading STT model: {model}")
         try:
             unload_stt_model()
@@ -1455,7 +1455,7 @@ def _load_stt_model_thread():
         except Exception as e:
             print(f"An error occurred while loading STT {type(e).__name__}: {e}")
             stt_local_model = None
-            messagebox.showerror("Error", f"An error occurred while loading STT {type(e).__name__}: {e}")
+            messagebox.showerror("Error", f"An error occurred while loading Voice to Text {type(e).__name__}: {e}")
         finally:
             stt_loading_window.destroy()
             print("Closing STT loading window.")
