@@ -297,7 +297,11 @@ class MicrophoneTestFrame:
                     segment.configure(style='Inactive.TFrame')
             else:
                 print(f"Error in update_volume_meter({type(e).__name__}): {e}")
-                raise  # Re-raise the exception if it's not the expected error
+                self.status_label.config(text="Error: Unknown Error. Check debug log for more.", foreground="red")
+                self.is_stream_active = False
+                self.stream = None
+                for segment in self.segments:
+                    segment.configure(style='Inactive.TFrame')
 
         self.frame.after(50, self.update_volume_meter)
 
