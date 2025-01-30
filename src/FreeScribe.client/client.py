@@ -226,6 +226,7 @@ def double_check_stt_model_loading(task_done_var, task_cancel_var):
                 if time.monotonic() - time_start > timeout:
                     messagebox.showerror("Error",
                                          f"Timed out while loading local STT model after {timeout} seconds.")
+                    task_cancel_var.set(True)
                     return
                 if not stt_model_loading_thread_lock.locked():
                     break
