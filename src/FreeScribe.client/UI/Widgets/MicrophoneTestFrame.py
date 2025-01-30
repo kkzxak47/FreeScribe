@@ -288,7 +288,8 @@ class MicrophoneTestFrame:
                     segment.configure(style='Inactive.TFrame')
 
         except OSError as e:
-            if e.errno in [-9988, -9999]:  # Handle both Stream closed and Unanticipated host error
+            # Handle both Stream closed and Unanticipated host error
+            if e.errno in [-9988, -9999]:
                 self.status_label.config(text="Error: Microphone disconnected", foreground="red")
                 print(f"Error in update_volume_meter({type(e).__name__}): {e}")
                 self.is_stream_active = False
@@ -296,6 +297,7 @@ class MicrophoneTestFrame:
                 for segment in self.segments:
                     segment.configure(style='Inactive.TFrame')
             else:
+                # Handle any other stream errors
                 print(f"Error in update_volume_meter({type(e).__name__}): {e}")
                 self.status_label.config(text="Error: Unknown Error. Check debug log for more.", foreground="red")
                 self.is_stream_active = False
