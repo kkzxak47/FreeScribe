@@ -153,13 +153,13 @@ Function un.onInit
 
     ; Check if the process is running
     ${If} $0 == 0
-        MessageBox MB_YESNOCANCEL|MB_ICONEXCLAMATION "FreeScribe is currently running. Would you like to stop it?$\n$\nYes = Force Stop$\nNo = Retry$\nCancel = Exit" IDYES kill_process IDNO retry
+        MessageBox MB_YESNOCANCEL|MB_ICONEXCLAMATION "FreeScribe is currently running. Would you like to stop it?$\n$\nYes = Force Stop$\nNo = Retry$\nCancel = Exit" IDYES kill_process
 
+        Goto CheckIfFreeScribeIsRunning
         kill_process:
             Call un.KillFreeScribeProcess
             Goto CheckIfFreeScribeIsRunning
-        retry:
-            Goto CheckIfFreeScribeIsRunning
+
     ${EndIf}
 FunctionEnd
 ; Checks on installer start
@@ -170,12 +170,10 @@ Function .onInit
 
     ; Check if the process is running
     ${If} $0 == 0
-        MessageBox MB_YESNOCANCEL|MB_ICONEXCLAMATION "FreeScribe is currently running. Would you like to stop it?$\n$\nYes = Force Stop$\nNo = Retry$\nCancel = Exit" IDYES kill_process IDNO retry
-
+        MessageBox MB_YESNOCANCEL|MB_ICONEXCLAMATION "FreeScribe is currently running. Would you like to stop it?$\n$\nYes = Force Stop$\nNo = Retry$\nCancel = Exit" IDYES kill_process
+        Goto CheckIfFreeScribeIsRunning
         kill_process:
             Call KillFreeScribeProcess
-            Goto CheckIfFreeScribeIsRunning
-        retry:
             Goto CheckIfFreeScribeIsRunning
 
     ${EndIf}
