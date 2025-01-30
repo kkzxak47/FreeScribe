@@ -260,7 +260,7 @@ class MicrophoneTestFrame:
         Update the volume meter based on the current microphone input.
         """
         if not self.is_stream_active:
-            self.frame.after(100, self.update_volume_meter)
+            self.frame.after(50, self.update_volume_meter)
             return
 
         try:
@@ -299,7 +299,7 @@ class MicrophoneTestFrame:
                 print(f"Error in update_volume_meter({type(e).__name__}): {e}")
                 raise  # Re-raise the exception if it's not the expected error
 
-        self.frame.after(100, self.update_volume_meter)
+        self.frame.after(50, self.update_volume_meter)
 
     def get_selected_microphone_index():
         """
