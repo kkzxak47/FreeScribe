@@ -983,7 +983,7 @@ def send_text_to_localmodel(edited_text):
     )
 
     
-def screen_input(conversation):
+def screen_input_with_llm(conversation):
     prompt = "Go over this conversation and ensure it's a conversation with more than 50 words. Also, if it is a conversation between a doctor and a patient. Please return one word. Either True or False based. Do not give an explanation and do not format the text. Here is the conversation:\n"
 
     # If note generation is on
@@ -991,22 +991,33 @@ def screen_input(conversation):
     is_valid_input = prescreen.strip().lower() == "true"
 
     print("Generating Input. AI Prescreen: ", prescreen)
-    
-    if not is_valid_input:
-        # Simulate the popup logic with return values
-        popup_result = PopupBox(
-            parent=root,
-            title="Invalid Input",
-            message="Input has been flagged as invalid. Please ensure the input is a conversation with more than 50 words between a doctor and a patient. Unexpected results may occur from the AI.",
-            button_text_1="Cancel",
-            button_text_2="Process Anyway!"
-        )
+    return is_valid_input
 
-        # Return based on the user's choice
-        if popup_result == "button_1":
-            return False
-        elif popup_result == "button_2":
+def display_screening_popup():
+    # Simulate the popup logic with return values
+    popup_result = PopupBox(
+        parent=root,
+        title="Invalid Input",
+        message="Input has been flagged as invalid. Please ensure the input is a conversation with more than 50 words between a doctor and a patient. Unexpected results may occur from the AI.",
+        button_text_1="Cancel",
+        button_text_2="Process Anyway!"
+    )
+
+    # Return based on the user's choice
+    if popup_result.response == "button_1":
+        return False
+    elif popup_result.response == "button_2":
+        return True
+
+def screen_input(user_message):
+    if app_settings.editable_settings[SettingsKeys.USE_PRESCREEN_AI_INPUT.value]:
+        screen_result = screen_input_with_llm(user_message)
+        if not screen_result:
+            return display_screening_popup()
+        else:
             return True
+    else:
+        return True
 
 def send_text_to_chatgpt(edited_text): 
     if app_settings.editable_settings["Use Local LLM"]:
@@ -1094,9 +1105,9 @@ def generate_note_thread(text: str):
     """
     global GENERATION_THREAD_ID
 
-    # Check if we should do the prescreen prompt if enabled in settings
-    if app_settings.editable_settings[SettingsKeys.USE_PRESCREEN_AI_INPUT.value]:
-        screen_input(text)
+    # screen input
+    if screen_input(text) is False:
+        return
 
     thread = threading.Thread(target=generate_note, args=(text,))
     thread.start()
