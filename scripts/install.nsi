@@ -30,7 +30,7 @@ Var /GLOBAL SELECTED_OPTION
 Var /GLOBAL REMOVE_CONFIG_CHECKBOX
 Var /GLOBAL REMOVE_CONFIG
 
-Function KillFreeScribeProcess
+!macro KillFreeScribeProcessMacro
     nsExec::ExecToStack 'taskkill /F /IM freescribe-client.exe'
     Pop $0 ; Return value
 
@@ -41,20 +41,13 @@ Function KillFreeScribeProcess
         MessageBox MB_OK|MB_ICONEXCLAMATION "Failed to terminate FreeScribe process. Please close it manually."
         Return
     ${EndIf}
-FunctionEnd
+!macroend
+
+Function KillFreeScribeProcess
+    !insertmacro KillFreeScribeProcessMacro
 
 Function un.KillFreeScribeProcess
-    nsExec::ExecToStack 'taskkill /F /IM freescribe-client.exe'
-    Pop $0 ; Return value
-
-    ${If} $0 == 0
-        MessageBox MB_OK "FreeScribe process has been terminated."
-        Return
-    ${Else}
-        MessageBox MB_OK|MB_ICONEXCLAMATION "Failed to terminate FreeScribe process. Please close it manually."
-        Return
-    ${EndIf}
-FunctionEnd
+    !insertmacro KillFreeScribeProcessMacro
 
 Function Check_For_Old_Version_In_App_Data
     ; Check if the old version exists in AppData
