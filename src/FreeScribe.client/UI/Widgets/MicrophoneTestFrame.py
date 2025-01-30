@@ -69,10 +69,10 @@ class MicrophoneTestFrame:
             if device_info['maxInputChannels'] > 0:
                 device_name = device_info['name']
                 excluded_names = ["Virtual", "Output", "Wave Out", "What U Hear", "Aux", "Port", "Mix"]
-                if not any(excluded_name.lower() in device_name.lower() for excluded_name in excluded_names):
-                    if device_name not in [name for _, name in self.mic_list]:
-                        self.mic_list.append((i, device_name))
-                        self.mic_mapping[device_name] = i
+                if not any(excluded_name.lower() in device_name.lower() for excluded_name in excluded_names) and device_name not in [name for _, name in self.mic_list]:
+                    self.mic_list.append((i, device_name))
+                    self.mic_mapping[device_name] = i
+
 
         # Load the selected microphone from settings if available
         if self.app_settings and "Current Mic" in self.app_settings.editable_settings:
