@@ -69,6 +69,10 @@ Function KillFreeScribeProcess
     !insertmacro KillFreeScribeProcessMacro
 FunctionEnd
 
+Function un.KillFreeScribeProcess
+    !insertmacro KillFreeScribeProcessMacro
+FunctionEnd
+
 Function Check_For_Old_Version_In_App_Data
     ; Check if the old version exists in AppData
     IfFileExists "$APPDATA\FreeScribe\freescribe-client.exe" 0 OldVersionDoesNotExist
@@ -175,14 +179,98 @@ Function un.onInit
     ${Else}
         StrCpy $Got_Running_Instance "0"
     ${EndIf}
-
 FunctionEnd
+
 ; Checks on installer start
 Var RunningInstanceDialog
 Var ForceStopButton
 Var RetryButton
 
 Var StatusLabel
+
+Function un.CreateRunningInstancePage
+    ${If} $Got_Running_Instance == "0"
+        Abort
+    ${EndIf}
+    !insertmacro MUI_HEADER_TEXT "Running Instance Detected" ""
+
+    nsDialogs::Create 1018
+    Pop $RunningInstanceDialog
+
+    ${If} $RunningInstanceDialog == error
+        Abort
+    ${EndIf}
+
+    ; Create status label
+    ${NSD_CreateLabel} 0 10u 100% 24u "FreeScribe is currently running.$\n$\nPlease choose how to proceed: Force Stop or close it manually and Retry"
+    Pop $StatusLabel
+
+    ; Create Force Stop button
+    ${NSD_CreateButton} 10% 50u 30% 12u "Force Stop"
+    Pop $ForceStopButton
+    ${NSD_OnClick} $ForceStopButton un.OnForceStopClick
+
+    ; Create Retry button
+    ${NSD_CreateButton} 45% 50u 30% 12u "Retry"
+    Pop $RetryButton
+    ${NSD_OnClick} $RetryButton un.OnRetryClick
+
+    Call un.HideNextButton
+    Call un.HideBackButton
+
+    nsDialogs::Show
+FunctionEnd
+
+Function un.OnForceStopClick
+    Call un.KillFreeScribeProcess
+    nsExec::ExecToStack 'cmd /c tasklist /FI "IMAGENAME eq freescribe-client.exe" /NH | find /I "freescribe-client.exe" > nul'
+    Pop $0
+
+    ${If} $0 == 0
+        ${NSD_SetText} $StatusLabel "Unable to terminate FreeScribe.$\nPlease close it manually and click Retry."
+    ${Else}
+        StrCpy $Got_Running_Instance "0"
+        Call un.ShowNextButton
+        Call un.GotoNextPage
+        Abort ; Close the dialog and continue uninstallation
+    ${EndIf}
+FunctionEnd
+
+Function un.OnRetryClick
+    nsExec::ExecToStack 'cmd /c tasklist /FI "IMAGENAME eq freescribe-client.exe" /NH | find /I "freescribe-client.exe" > nul'
+    Pop $0
+
+    ${If} $0 == 0
+        ${NSD_SetText} $StatusLabel "FreeScribe is still running.$\n$\nPlease choose how to proceed: Force Stop or close it manually and Retry"
+    ${Else}
+        StrCpy $Got_Running_Instance "0"
+        Call un.ShowNextButton
+        Call un.GotoNextPage
+        Abort ; Close the dialog and continue uninstallation
+    ${EndIf}
+FunctionEnd
+
+Function un.HideNextButton
+    GetDlgItem $R0 $HWNDPARENT 1 ; Get the handle of the "Next" button
+    ShowWindow $R0 ${SW_HIDE}    ; Hide the "Next" button
+FunctionEnd
+
+Function un.ShowNextButton
+    GetDlgItem $R0 $HWNDPARENT 1 ; Get the handle of the "Next" button
+    ShowWindow $R0 ${SW_SHOW}    ; Show the "Next" button
+FunctionEnd
+
+Function un.HideBackButton
+    GetDlgItem $R0 $HWNDPARENT 3 ; Get the handle of the "Back" button
+    ShowWindow $R0 ${SW_HIDE}    ; Hide the "Back" button
+FunctionEnd
+
+Function un.GotoNextPage
+    ; Programmatically advance to the next page
+    GetDlgItem $1 $HWNDPARENT 1 ; Get the "Next" button handle
+    SendMessage $HWNDPARENT ${WM_COMMAND} 1 $1 ; Simulate clicking the "Next" button
+FunctionEnd
+
 
 PageEx custom
     PageCallbacks CreateRunningInstancePagePre
@@ -600,6 +688,13 @@ Function un.RemoveConfigFilesPageLeave
     ${NSD_GetState} $REMOVE_CONFIG_CHECKBOX $REMOVE_CONFIG
 FunctionEnd
 
+; Define the uninstaller pages first
+UninstPage custom un.CreateRunningInstancePage
+!insertmacro MUI_UNPAGE_CONFIRM
+UninstPage custom un.CreateRemoveConfigFilesPage un.RemoveConfigFilesPageLeave
+!insertmacro MUI_UNPAGE_INSTFILES
+!insertmacro MUI_UNPAGE_FINISH
+
 ; Define installer pages
 Page custom CreateRunningInstancePage
 !insertmacro MUI_PAGE_LICENSE ".\assets\License.txt"
@@ -608,13 +703,6 @@ Page Custom ARCHITECTURE_SELECT ARCHITECTURE_SELECT_LEAVE
 !define MUI_PAGE_CUSTOMFUNCTION_LEAVE InsfilesPageLeave
 !insertmacro MUI_PAGE_INSTFILES
 Page Custom CustomizeFinishPage RunApp
-
-; Define the uninstaller pages
-Page custom CreateRunningInstancePage
-!insertmacro MUI_UNPAGE_CONFIRM
-UninstPage custom un.CreateRemoveConfigFilesPage un.RemoveConfigFilesPageLeave
-!insertmacro MUI_UNPAGE_INSTFILES
-!insertmacro MUI_UNPAGE_FINISH
 
 ; Define the languages
 !insertmacro MUI_LANGUAGE English
