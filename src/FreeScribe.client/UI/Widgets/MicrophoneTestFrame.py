@@ -72,8 +72,6 @@ class MicrophoneTestFrame:
                 if not any(excluded_name.lower() in device_name.lower() for excluded_name in excluded_names) and device_name not in [name for _, name in self.mic_list]:
                     self.mic_list.append((i, device_name))
                     self.mic_mapping[device_name] = i
-
-
         # Load the selected microphone from settings if available
         if self.app_settings and "Current Mic" in self.app_settings.editable_settings:
             selected_name = self.app_settings.editable_settings["Current Mic"]            
@@ -115,8 +113,6 @@ class MicrophoneTestFrame:
             style='Mic.TCombobox'
         )
         self.mic_dropdown.grid(row=0, column=0, pady=(0, 5), padx=(10, 0), sticky='nsew')
-
-
         # Set the default selection
         if MicrophoneState.SELECTED_MICROPHONE_NAME:
             self.mic_dropdown.set(MicrophoneState.SELECTED_MICROPHONE_NAME)
@@ -203,15 +199,14 @@ class MicrophoneTestFrame:
                     self.stream.close()
                 self.stream = None
                 self.is_stream_active = False
-
                 # Open new stream with the selected microphone
                 self.stream = self.p.open(
-                    format=pyaudio.paInt16,
-                    channels=1,
-                    rate=16000,
-                    input=True,
-                    frames_per_buffer=1024,
-                    input_device_index=selected_index
+                    format=pyaudio.paInt16,  # Specifies the format of the audio data. paInt16 means 16-bit int PCM.
+                    channels=1,             # Specifies the number of channels. 1 for mono, 2 for stereo.
+                    rate=16000,             # Specifies the sampling rate in Hz. 16000 Hz is a common rate for speech.
+                    input=True,             # Indicates that this stream will be used for input (recording).
+                    frames_per_buffer=1024, # Specifies the number of samples (per channel) to read in each buffer.
+                    input_device_index=selected_index  # Specifies the index of the input device to use.
                 )
                 self.is_stream_active = True
             except Exception as e:

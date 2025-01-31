@@ -52,8 +52,6 @@ from utils.utils import window_has_running_instance, bring_to_front, close_mutex
 from WhisperModel import TranscribeError
 
 
-
-
 dual = DualOutput()
 sys.stdout = dual
 sys.stderr = dual
@@ -223,7 +221,7 @@ def record_audio():
             frames_per_buffer=CHUNK, 
             input_device_index=int(selected_index))
     except (OSError, IOError) as e:
-        messagebox.showerror("Audio Error", f"Please check your microphone settings under whisper settings. Error opening audio stream: {e}")
+        messagebox.showerror("Audio Error", f"Please check your microphone settings. Error opening audio stream: {e}")
         return
 
     try:
@@ -1245,7 +1243,6 @@ def set_minimal_view():
     response_display.grid_remove()
     history_frame.grid_remove()
     blinking_circle_canvas.grid_remove()
-
 
     # Configure minimal view button sizes and placements
     mic_button.config(width=2, height=1)
