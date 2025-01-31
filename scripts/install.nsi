@@ -31,25 +31,52 @@ Var /GLOBAL REMOVE_CONFIG_CHECKBOX
 Var /GLOBAL REMOVE_CONFIG
 Var /GLOBAL Got_Running_Instance
 
+!macro UIButtonMacros
+    !define HideNextButtonMacro `GetDlgItem $R0 $HWNDPARENT 1 ; Get the handle of the "Next" button \
+        ShowWindow $R0 ${SW_HIDE}    ; Hide the "Next" button`
+        
+    !define ShowNextButtonMacro `GetDlgItem $R0 $HWNDPARENT 1 ; Get the handle of the "Next" button \
+        ShowWindow $R0 ${SW_SHOW}    ; Show the "Next" button`
+        
+    !define GotoNextPageMacro `GetDlgItem $1 $HWNDPARENT 1 ; Get the "Next" button handle \
+        SendMessage $HWNDPARENT ${WM_COMMAND} 1 $1 ; Simulate clicking the "Next" button`
+        
+    !define HideBackButtonMacro `GetDlgItem $R0 $HWNDPARENT 3 ; Get the handle of the "Back" button \
+        ShowWindow $R0 ${SW_HIDE}    ; Hide the "Back" button`
+!macroend
+
+!insertmacro UIButtonMacros
+
 Function HideNextButton
-    GetDlgItem $R0 $HWNDPARENT 1 ; Get the handle of the "Next" button
-    ShowWindow $R0 ${SW_HIDE}    ; Hide the "Next" button
+    !insertmacro HideNextButtonMacro
 FunctionEnd
 
 Function ShowNextButton
-    GetDlgItem $R0 $HWNDPARENT 1 ; Get the handle of the "Next" button
-    ShowWindow $R0 ${SW_SHOW}    ; Show the "Next" button
+    !insertmacro ShowNextButtonMacro
 FunctionEnd
 
 Function GotoNextPage
-    ; Programmatically advance to the next page
-    GetDlgItem $1 $HWNDPARENT 1 ; Get the "Next" button handle
-    SendMessage $HWNDPARENT ${WM_COMMAND} 1 $1 ; Simulate clicking the "Next" button
+    !insertmacro GotoNextPageMacro
 FunctionEnd
 
 Function HideBackButton
-    GetDlgItem $R0 $HWNDPARENT 3 ; Get the handle of the "Back" button
-    ShowWindow $R0 ${SW_HIDE}    ; Hide the "Back" button
+    !insertmacro HideBackButtonMacro
+FunctionEnd
+
+Function un.HideNextButton
+    !insertmacro HideNextButtonMacro
+FunctionEnd
+
+Function un.ShowNextButton
+    !insertmacro ShowNextButtonMacro
+FunctionEnd
+
+Function un.HideBackButton
+    !insertmacro HideBackButtonMacro
+FunctionEnd
+
+Function un.GotoNextPage
+    !insertmacro GotoNextPageMacro
 FunctionEnd
 
 !macro KillFreeScribeProcessMacro
@@ -171,14 +198,7 @@ Function .onInstSuccess
 FunctionEnd
 
 Function un.onInit
-    nsExec::ExecToStack 'cmd /c tasklist /FI "IMAGENAME eq freescribe-client.exe" /NH | find /I "freescribe-client.exe" > nul'
-    Pop $0 ; Return value
-
-    ${If} $0 == 0
-        StrCpy $Got_Running_Instance "1"
-    ${Else}
-        StrCpy $Got_Running_Instance "0"
-    ${EndIf}
+    !insertmacro CheckRunningInstanceMacro
 FunctionEnd
 
 ; Checks on installer start
@@ -249,28 +269,6 @@ Function un.OnRetryClick
         Abort ; Close the dialog and continue uninstallation
     ${EndIf}
 FunctionEnd
-
-Function un.HideNextButton
-    GetDlgItem $R0 $HWNDPARENT 1 ; Get the handle of the "Next" button
-    ShowWindow $R0 ${SW_HIDE}    ; Hide the "Next" button
-FunctionEnd
-
-Function un.ShowNextButton
-    GetDlgItem $R0 $HWNDPARENT 1 ; Get the handle of the "Next" button
-    ShowWindow $R0 ${SW_SHOW}    ; Show the "Next" button
-FunctionEnd
-
-Function un.HideBackButton
-    GetDlgItem $R0 $HWNDPARENT 3 ; Get the handle of the "Back" button
-    ShowWindow $R0 ${SW_HIDE}    ; Hide the "Back" button
-FunctionEnd
-
-Function un.GotoNextPage
-    ; Programmatically advance to the next page
-    GetDlgItem $1 $HWNDPARENT 1 ; Get the "Next" button handle
-    SendMessage $HWNDPARENT ${WM_COMMAND} 1 $1 ; Simulate clicking the "Next" button
-FunctionEnd
-
 
 PageEx custom
     PageCallbacks CreateRunningInstancePagePre
@@ -348,15 +346,20 @@ Function OnRetryClick
     ${EndIf}
 FunctionEnd
 
-Function .onInit
-    nsExec::ExecToStack 'cmd /c tasklist /FI "IMAGENAME eq freescribe-client.exe" /NH | find /I "freescribe-client.exe" > nul'
-    Pop $0
+!macro ProcessManagementMacros
+ !define CheckRunningInstanceMacro `nsExec::ExecToStack 'cmd /c tasklist /FI "IMAGENAME eq freescribe-client.exe" /NH | find /I "freescribe-client.exe" > nul' \
+     Pop $0 ; Return value \
+     ${If} $0 == 0 \
+         StrCpy $Got_Running_Instance "1" \
+     ${Else} \
+         StrCpy $Got_Running_Instance "0" \
+     ${EndIf}`
+!macroend
 
-    ${If} $0 == 0
-        StrCpy $Got_Running_Instance "1"
-    ${Else}
-        StrCpy $Got_Running_Instance "0"
-    ${EndIf}
+!insertmacro ProcessManagementMacros
+
+Function .onInit
+    !insertmacro CheckRunningInstanceMacro
 
     IfSilent SILENT_MODE NOT_SILENT_MODE
 
