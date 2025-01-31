@@ -167,29 +167,85 @@ Function un.onInit
     ${EndIf}
 FunctionEnd
 ; Checks on installer start
+Var RunningInstanceDialog
+Var ForceStopButton
+Var RetryButton
+Var CancelButton
+Var StatusLabel
+
+Function CreateRunningInstancePage
+    !insertmacro MUI_HEADER_TEXT "Running Instance Detected" "FreeScribe is currently running. Please choose an action:"
+    
+    nsDialogs::Create 1018
+    Pop $RunningInstanceDialog
+    
+    ${If} $RunningInstanceDialog == error
+        Abort
+    ${EndIf}
+    
+    ; Create status label
+    ${NSD_CreateLabel} 0 10u 100% 24u "FreeScribe is currently running.$\nPlease choose how to proceed:"
+    Pop $StatusLabel
+    
+    ; Create Force Stop button
+    ${NSD_CreateButton} 10% 50u 30% 12u "Force Stop"
+    Pop $ForceStopButton
+    ${NSD_OnClick} $ForceStopButton OnForceStopClick
+    
+    ; Create Retry button
+    ${NSD_CreateButton} 45% 50u 30% 12u "Retry"
+    Pop $RetryButton
+    ${NSD_OnClick} $RetryButton OnRetryClick
+    
+    ; Create Cancel button
+    ${NSD_CreateButton} 80% 50u 15% 12u "Cancel"
+    Pop $CancelButton
+    ${NSD_OnClick} $CancelButton OnCancelClick
+    
+    nsDialogs::Show
+FunctionEnd
+
+Function OnForceStopClick
+    Call KillFreeScribeProcess
+    nsExec::ExecToStack 'cmd /c tasklist /FI "IMAGENAME eq freescribe-client.exe" /NH | find /I "freescribe-client.exe" > nul'
+    Pop $0
+    
+    ${If} $0 == 0
+        ${NSD_SetText} $StatusLabel "Unable to terminate FreeScribe.$\nPlease close it manually and click Retry."
+    ${Else}
+        Abort ; Close the dialog and continue installation
+    ${EndIf}
+FunctionEnd
+
+Function OnRetryClick
+    nsExec::ExecToStack 'cmd /c tasklist /FI "IMAGENAME eq freescribe-client.exe" /NH | find /I "freescribe-client.exe" > nul'
+    Pop $0
+    
+    ${If} $0 == 0
+        ${NSD_SetText} $StatusLabel "FreeScribe is still running.$\nPlease choose an action."
+    ${Else}
+        Abort ; Close the dialog and continue installation
+    ${EndIf}
+FunctionEnd
+
+Function OnCancelClick
+    Quit
+FunctionEnd
+
 Function .onInit
     CheckIfFreeScribeIsRunning:
     nsExec::ExecToStack 'cmd /c tasklist /FI "IMAGENAME eq freescribe-client.exe" /NH | find /I "freescribe-client.exe" > nul'
-    Pop $0 ; Return value
-
-    ; Check if the process is running
+    Pop $0
+    
     ${If} $0 == 0
-        MessageBox MB_YESNOCANCEL|MB_ICONEXCLAMATION "FreeScribe is currently running. Would you like to stop it?$\n$\nYes = Force Stop$\nNo = Retry$\nCancel = Exit" IDYES kill_process IDCANCEL cancel
-
-        Goto CheckIfFreeScribeIsRunning
-        kill_process:
-            Call KillFreeScribeProcess
-            Goto CheckIfFreeScribeIsRunning
-        cancel:
-            Abort
-
+        Call CreateRunningInstancePage
     ${EndIf}
-
+    
+    ContinueInstallation:
     IfSilent SILENT_MODE NOT_SILENT_MODE
 
     SILENT_MODE:
         ${GetParameters} $R0
-        ; Check for custom parameters
         ${GetOptions} $R0 "/ARCH=" $R1
         ${If} $R1 != ""
             StrCpy $SELECTED_OPTION $R1
@@ -518,6 +574,7 @@ FunctionEnd
 
 ; Define installer pages
 !insertmacro MUI_PAGE_LICENSE ".\assets\License.txt"
+Page Custom CreateRunningInstancePage
 Page Custom ARCHITECTURE_SELECT ARCHITECTURE_SELECT_LEAVE
 !insertmacro MUI_PAGE_DIRECTORY
 !define MUI_PAGE_CUSTOMFUNCTION_LEAVE InsfilesPageLeave
