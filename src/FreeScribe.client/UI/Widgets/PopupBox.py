@@ -36,6 +36,8 @@ class PopupBox:
         self.response = None  # Stores the response indicating which button was clicked
         # Create a top-level window for the popup
         self.dialog = Toplevel(parent)
+        # Make the exit button behave like the second button
+        self.dialog.protocol("WM_DELETE_WINDOW", self.on_button_1)
         # Set the window title
         self.dialog.title(title)
         # Set the size of the window
