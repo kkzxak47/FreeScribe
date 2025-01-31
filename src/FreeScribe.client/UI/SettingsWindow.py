@@ -588,6 +588,8 @@ class SettingsWindow():
         """
         if not os.path.exists(get_resource_path('settings.txt')):
             architectures = self.get_available_architectures()
+            
+            # If CUDA is available, set it as the default architecture to save in settings
             if Architectures.CUDA.label in architectures:
                 print("Settings file not found. Creating default settings file with CUDA architecture.")
                 self.editable_settings[SettingsKeys.WHISPER_ARCHITECTURE.value] = Architectures.CUDA.label
