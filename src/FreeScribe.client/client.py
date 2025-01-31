@@ -1143,14 +1143,7 @@ def generate_note_thread(text: str):
     """
     global GENERATION_THREAD_ID
 
-    # screen input
-    if screen_input(text) is False:
-        return
-
-    thread = threading.Thread(target=generate_note, args=(text,))
-    thread.start()
-
-    GENERATION_THREAD_ID = thread.ident
+    GENERATION_THREAD_ID = None
 
     def cancel_note_generation(thread_id):
         """Cancels any ongoing note generation.
@@ -1160,7 +1153,8 @@ def generate_note_thread(text: str):
         global GENERATION_THREAD_ID
 
         try:
-            kill_thread(thread_id)
+            if thread_id:
+                kill_thread(thread_id)
         except Exception as e:
             # Log the error message
             # TODO implment system logger
@@ -1170,6 +1164,14 @@ def generate_note_thread(text: str):
 
     loading_window = LoadingWindow(root, "Generating Note.", "Generating Note. Please wait.", on_cancel=lambda: cancel_note_generation(GENERATION_THREAD_ID))
     
+    # screen input
+    if screen_input(text) is False:
+        loading_window.destroy()
+        return
+
+    thread = threading.Thread(target=generate_note, args=(text,))
+    thread.start()
+    GENERATION_THREAD_ID = thread.ident
 
     def check_thread_status(thread, loading_window):
         if thread.is_alive():
