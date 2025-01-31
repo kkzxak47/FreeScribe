@@ -29,6 +29,28 @@ Var /GLOBAL NVIDIA_RADIO
 Var /GLOBAL SELECTED_OPTION
 Var /GLOBAL REMOVE_CONFIG_CHECKBOX
 Var /GLOBAL REMOVE_CONFIG
+Var /GLOBAL Got_Running_Instance
+
+Function HideNextButton
+    GetDlgItem $R0 $HWNDPARENT 1 ; Get the handle of the "Next" button
+    ShowWindow $R0 ${SW_HIDE}    ; Hide the "Next" button
+FunctionEnd
+
+Function ShowNextButton
+    GetDlgItem $R0 $HWNDPARENT 1 ; Get the handle of the "Next" button
+    ShowWindow $R0 ${SW_SHOW}    ; Show the "Next" button
+FunctionEnd
+
+Function GotoNextPage
+    ; Programmatically advance to the next page
+    GetDlgItem $1 $HWNDPARENT 1 ; Get the "Next" button handle
+    SendMessage $HWNDPARENT ${WM_COMMAND} 1 $1 ; Simulate clicking the "Next" button
+FunctionEnd
+
+Function HideBackButton
+    GetDlgItem $R0 $HWNDPARENT 3 ; Get the handle of the "Back" button
+    ShowWindow $R0 ${SW_HIDE}    ; Hide the "Back" button
+FunctionEnd
 
 !macro KillFreeScribeProcessMacro
     nsExec::ExecToStack 'taskkill /F /IM freescribe-client.exe'
@@ -44,10 +66,6 @@ Var /GLOBAL REMOVE_CONFIG
 !macroend
 
 Function KillFreeScribeProcess
-    !insertmacro KillFreeScribeProcessMacro
-FunctionEnd
-
-Function un.KillFreeScribeProcess
     !insertmacro KillFreeScribeProcessMacro
 FunctionEnd
 
@@ -149,70 +167,81 @@ Function .onInstSuccess
 FunctionEnd
 
 Function un.onInit
-    CheckIfFreeScribeIsRunning:
     nsExec::ExecToStack 'cmd /c tasklist /FI "IMAGENAME eq freescribe-client.exe" /NH | find /I "freescribe-client.exe" > nul'
     Pop $0 ; Return value
 
-    ; Check if the process is running
     ${If} $0 == 0
-        MessageBox MB_YESNOCANCEL|MB_ICONEXCLAMATION "FreeScribe is currently running. Would you like to stop it?$\n$\nYes = Force Stop$\nNo = Retry$\nCancel = Exit" IDYES kill_process IDCANCEL cancel
-
-        Goto CheckIfFreeScribeIsRunning
-        kill_process:
-            Call un.KillFreeScribeProcess
-            Goto CheckIfFreeScribeIsRunning
-        cancel:
-            Abort
-
+        StrCpy $Got_Running_Instance "1"
+    ${Else}
+        StrCpy $Got_Running_Instance "0"
     ${EndIf}
+
 FunctionEnd
 ; Checks on installer start
 Var RunningInstanceDialog
 Var ForceStopButton
 Var RetryButton
-Var CancelButton
+
 Var StatusLabel
 
+PageEx custom
+    PageCallbacks CreateRunningInstancePagePre
+PageExEnd
+
 Function CreateRunningInstancePage
-    !insertmacro MUI_HEADER_TEXT "Running Instance Detected" "FreeScribe is currently running. Please choose an action:"
-    
+    ${If} $Got_Running_Instance == "0"
+        Abort
+    ${EndIf}
+    !insertmacro MUI_HEADER_TEXT "Running Instance Detected" ""
+
     nsDialogs::Create 1018
     Pop $RunningInstanceDialog
-    
+
     ${If} $RunningInstanceDialog == error
         Abort
     ${EndIf}
-    
+
     ; Create status label
-    ${NSD_CreateLabel} 0 10u 100% 24u "FreeScribe is currently running.$\nPlease choose how to proceed:"
+    ${NSD_CreateLabel} 0 10u 100% 24u "FreeScribe is currently running.$\n$\nPlease choose how to proceed: Force Stop or close it manually and Retry"
     Pop $StatusLabel
-    
+
     ; Create Force Stop button
     ${NSD_CreateButton} 10% 50u 30% 12u "Force Stop"
     Pop $ForceStopButton
     ${NSD_OnClick} $ForceStopButton OnForceStopClick
-    
+
     ; Create Retry button
     ${NSD_CreateButton} 45% 50u 30% 12u "Retry"
     Pop $RetryButton
     ${NSD_OnClick} $RetryButton OnRetryClick
-    
-    ; Create Cancel button
-    ${NSD_CreateButton} 80% 50u 15% 12u "Cancel"
-    Pop $CancelButton
-    ${NSD_OnClick} $CancelButton OnCancelClick
-    
+
+    ${If} $Got_Running_Instance == "1"
+        Call HideNextButton
+    ${Else}
+        Call ShowNextButton
+    ${EndIf}
+    Call HideBackButton
+
     nsDialogs::Show
+FunctionEnd
+
+Function CreateRunningInstancePagePre
+    ${If} $Got_Running_Instance == "0"
+        Abort
+    ${EndIf}
 FunctionEnd
 
 Function OnForceStopClick
     Call KillFreeScribeProcess
     nsExec::ExecToStack 'cmd /c tasklist /FI "IMAGENAME eq freescribe-client.exe" /NH | find /I "freescribe-client.exe" > nul'
     Pop $0
-    
+
     ${If} $0 == 0
         ${NSD_SetText} $StatusLabel "Unable to terminate FreeScribe.$\nPlease close it manually and click Retry."
     ${Else}
+        StrCpy $Got_Running_Instance "0"
+        Call ShowNextButton
+        Call GotoNextPage
         Abort ; Close the dialog and continue installation
     ${EndIf}
 FunctionEnd
@@ -220,28 +249,27 @@ FunctionEnd
 Function OnRetryClick
     nsExec::ExecToStack 'cmd /c tasklist /FI "IMAGENAME eq freescribe-client.exe" /NH | find /I "freescribe-client.exe" > nul'
     Pop $0
-    
+
     ${If} $0 == 0
-        ${NSD_SetText} $StatusLabel "FreeScribe is still running.$\nPlease choose an action."
+        ${NSD_SetText} $StatusLabel "FreeScribe is still running.$\n$\nPlease choose how to proceed: Force Stop or close it manually and Retry"
     ${Else}
+        StrCpy $Got_Running_Instance "0"
+        Call ShowNextButton
+        Call GotoNextPage
         Abort ; Close the dialog and continue installation
     ${EndIf}
 FunctionEnd
 
-Function OnCancelClick
-    Quit
-FunctionEnd
-
 Function .onInit
-    CheckIfFreeScribeIsRunning:
     nsExec::ExecToStack 'cmd /c tasklist /FI "IMAGENAME eq freescribe-client.exe" /NH | find /I "freescribe-client.exe" > nul'
     Pop $0
-    
+
     ${If} $0 == 0
-        Call CreateRunningInstancePage
+        StrCpy $Got_Running_Instance "1"
+    ${Else}
+        StrCpy $Got_Running_Instance "0"
     ${EndIf}
-    
-    ContinueInstallation:
+
     IfSilent SILENT_MODE NOT_SILENT_MODE
 
     SILENT_MODE:
@@ -493,7 +521,7 @@ FunctionEnd
 ;------------------------------------------------------------------------------
 ; Function: CompareVersions
 ; Purpose: Compares two version numbers in format "X.Y" (e.g., "1.0", "2.3")
-; 
+;
 ; Parameters:
 ;   Stack 1 (bottom): First version string to compare
 ;   Stack 0 (top): Second version string to compare
@@ -517,22 +545,22 @@ Function CompareVersions
     Push $R3
     Push $R4
     Push $R5
-    
+
     ; Split version strings into major and minor numbers
     ${WordFind} $R1 "." "+1" $R2    ; Extract major number from first version
     ${WordFind} $R1 "." "+2" $R3    ; Extract minor number from first version
     ${WordFind} $R0 "." "+1" $R4    ; Extract major number from second version
     ${WordFind} $R0 "." "+2" $R5    ; Extract minor number from second version
-    
+
     ; Convert to comparable numbers:
     ; Multiply major version by 1000 to handle minor version properly
     IntOp $R2 $R2 * 1000            ; Convert first version major number
     IntOp $R4 $R4 * 1000            ; Convert second version major number
-    
+
     ; Add minor numbers to create complete comparable values
     IntOp $R2 $R2 + $R3             ; First version complete number
     IntOp $R4 $R4 + $R5             ; Second version complete number
-    
+
     ; Compare versions and set return value
     ${If} $R2 < $R4                 ; If first version is less than second
         StrCpy $R0 1
@@ -541,7 +569,7 @@ Function CompareVersions
     ${Else}                         ; If versions are equal
         StrCpy $R0 0
     ${EndIf}
-    
+
     ; Restore registers from stack
     Pop $R5
     Pop $R4
@@ -553,7 +581,7 @@ FunctionEnd
 
 Function un.CreateRemoveConfigFilesPage
     !insertmacro MUI_HEADER_TEXT "Remove Configuration Files" "Do you want to remove the configuration files (e.g., settings)?"
-    
+
     nsDialogs::Create 1018
     Pop $0
 
@@ -573,8 +601,8 @@ Function un.RemoveConfigFilesPageLeave
 FunctionEnd
 
 ; Define installer pages
+Page custom CreateRunningInstancePage
 !insertmacro MUI_PAGE_LICENSE ".\assets\License.txt"
-Page Custom CreateRunningInstancePage
 Page Custom ARCHITECTURE_SELECT ARCHITECTURE_SELECT_LEAVE
 !insertmacro MUI_PAGE_DIRECTORY
 !define MUI_PAGE_CUSTOMFUNCTION_LEAVE InsfilesPageLeave
@@ -582,6 +610,7 @@ Page Custom ARCHITECTURE_SELECT ARCHITECTURE_SELECT_LEAVE
 Page Custom CustomizeFinishPage RunApp
 
 ; Define the uninstaller pages
+Page custom CreateRunningInstancePage
 !insertmacro MUI_UNPAGE_CONFIRM
 UninstPage custom un.CreateRemoveConfigFilesPage un.RemoveConfigFilesPageLeave
 !insertmacro MUI_UNPAGE_INSTFILES
