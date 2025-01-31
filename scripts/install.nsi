@@ -31,21 +31,25 @@ Var /GLOBAL REMOVE_CONFIG_CHECKBOX
 Var /GLOBAL REMOVE_CONFIG
 Var /GLOBAL Got_Running_Instance
 
-!macro UIButtonMacros
-    !define HideNextButtonMacro `GetDlgItem $R0 $HWNDPARENT 1 ; Get the handle of the "Next" button \
-        ShowWindow $R0 ${SW_HIDE}    ; Hide the "Next" button`
-        
-    !define ShowNextButtonMacro `GetDlgItem $R0 $HWNDPARENT 1 ; Get the handle of the "Next" button \
-        ShowWindow $R0 ${SW_SHOW}    ; Show the "Next" button`
-        
-    !define GotoNextPageMacro `GetDlgItem $1 $HWNDPARENT 1 ; Get the "Next" button handle \
-        SendMessage $HWNDPARENT ${WM_COMMAND} 1 $1 ; Simulate clicking the "Next" button`
-        
-    !define HideBackButtonMacro `GetDlgItem $R0 $HWNDPARENT 3 ; Get the handle of the "Back" button \
-        ShowWindow $R0 ${SW_HIDE}    ; Hide the "Back" button`
+!macro HideNextButtonMacro
+    GetDlgItem $R0 $HWNDPARENT 1 ; Get the handle of the "Next" button
+    ShowWindow $R0 ${SW_HIDE}    ; Hide the "Next" button
 !macroend
 
-!insertmacro UIButtonMacros
+!macro ShowNextButtonMacro
+    GetDlgItem $R0 $HWNDPARENT 1 ; Get the handle of the "Next" button
+    ShowWindow $R0 ${SW_SHOW}    ; Show the "Next" button
+!macroend
+
+!macro GotoNextPageMacro
+    GetDlgItem $1 $HWNDPARENT 1 ; Get the "Next" button handle
+    SendMessage $HWNDPARENT ${WM_COMMAND} 1 $1 ; Simulate clicking the "Next" button
+!macroend
+
+!macro HideBackButtonMacro
+    GetDlgItem $R0 $HWNDPARENT 3 ; Get the handle of the "Back" button
+    ShowWindow $R0 ${SW_HIDE}    ; Hide the "Back" button
+!macroend
 
 Function HideNextButton
     !insertmacro HideNextButtonMacro
@@ -346,17 +350,15 @@ Function OnRetryClick
     ${EndIf}
 FunctionEnd
 
-!macro ProcessManagementMacros
- !define CheckRunningInstanceMacro `nsExec::ExecToStack 'cmd /c tasklist /FI "IMAGENAME eq freescribe-client.exe" /NH | find /I "freescribe-client.exe" > nul' \
-     Pop $0 ; Return value \
-     ${If} $0 == 0 \
-         StrCpy $Got_Running_Instance "1" \
-     ${Else} \
-         StrCpy $Got_Running_Instance "0" \
-     ${EndIf}`
+!macro CheckRunningInstanceMacro
+    nsExec::ExecToStack 'cmd /c tasklist /FI "IMAGENAME eq freescribe-client.exe" /NH | find /I "freescribe-client.exe" > nul'
+    Pop $0 ; Return value
+    ${If} $0 == 0
+        StrCpy $Got_Running_Instance "1"
+    ${Else}
+        StrCpy $Got_Running_Instance "0"
+    ${EndIf}
 !macroend
-
-!insertmacro ProcessManagementMacros
 
 Function .onInit
     !insertmacro CheckRunningInstanceMacro
