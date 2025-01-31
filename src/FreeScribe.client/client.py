@@ -1605,7 +1605,7 @@ clear_button.grid(row=1, column=4, pady=5, sticky='nsew')
 toggle_button = tk.Button(root, text="AI Scribe\nON", command=toggle_aiscribe, height=2, width=11)
 toggle_button.grid(row=1, column=5, pady=5, sticky='nsew')
 
-upload_button = tk.Button(root, text="Upload\nRecording", command=upload_file, height=2, width=11)
+upload_button = tk.Button(root, text="Upload Audio\nFor Transcription", command=upload_file, height=2, width=11)
 upload_button.grid(row=1, column=6, pady=5, sticky='nsew')
 
 switch_view_button = tk.Button(root, text="Minimize View", command=toggle_view, height=2, width=11)
