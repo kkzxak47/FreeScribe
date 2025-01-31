@@ -39,9 +39,22 @@ class PopupBox:
         # Set the window title
         self.dialog.title(title)
         # Set the size of the window
-        self.dialog.geometry("300x150")
+        window_width = 300
+        window_height = 150
+        self.dialog.geometry(f"{window_width}x{window_height}")
         # Disable window resizing
         self.dialog.resizable(False, False)
+
+        # Center the dialog relative to the parent window
+        parent_x = parent.winfo_rootx()
+        parent_y = parent.winfo_rooty()
+        parent_width = parent.winfo_width()
+        parent_height = parent.winfo_height()
+
+        center_x = parent_x + (parent_width // 2) - (window_width // 2)
+        center_y = parent_y + (parent_height // 2) - (window_height // 2)
+
+        self.dialog.geometry(f"+{center_x}+{center_y}")
 
         # Create and pack the message label
         label = tk.Label(self.dialog, text=message, wraplength=250)
