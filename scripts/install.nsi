@@ -6,6 +6,11 @@
 ; Define the name of the installer
 OutFile "..\dist\FreeScribeInstaller.exe"
 
+; Silent mode flags:
+; /S - Silent mode
+; /ARCH=[CPU|NVIDIA] - Force architecture selection
+; /K - Kill running instance before installation
+
 ; Define the default installation directory to AppData
 InstallDir "$PROGRAMFILES\FreeScribe"
 
@@ -279,6 +284,10 @@ PageEx custom
 PageExEnd
 
 Function CreateRunningInstancePage
+    ; Skip this page in silent mode
+    IfSilent 0 +2
+    Abort
+    
     ${If} $Got_Running_Instance == "0"
         Abort
     ${EndIf}
@@ -371,6 +380,17 @@ Function .onInit
         ${If} $R1 != ""
             StrCpy $SELECTED_OPTION $R1
         ${EndIf}
+        
+        ; Check for /K flag to kill running instance
+        ${GetOptions} $R0 "/K" $R2
+        ${IfNot} ${Errors}
+            Call KillFreeScribeProcess
+            !insertmacro CheckRunningInstanceMacro ; Re-check after killing
+        ${EndIf}
+        
+        ; Skip running instance page in silent mode
+        StrCpy $Got_Running_Instance "0"
+        Return
 
     NOT_SILENT_MODE:
 FunctionEnd
