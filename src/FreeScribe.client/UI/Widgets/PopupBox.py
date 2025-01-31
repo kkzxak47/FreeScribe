@@ -34,10 +34,14 @@ class PopupBox:
         :param button_2_callback: Optional callback function for the second button.
         """
         self.response = None  # Stores the response indicating which button was clicked
-        self.dialog = Toplevel(parent)  # Create a top-level window for the popup
-        self.dialog.title(title)  # Set the window title
-        self.dialog.geometry("300x150")  # Set the size of the window
-        self.dialog.resizable(False, False)  # Disable window resizing
+        # Create a top-level window for the popup
+        self.dialog = Toplevel(parent)
+        # Set the window title
+        self.dialog.title(title)
+        # Set the size of the window
+        self.dialog.geometry("300x150")
+        # Disable window resizing
+        self.dialog.resizable(False, False)
 
         # Create and pack the message label
         label = tk.Label(self.dialog, text=message, wraplength=250)
@@ -56,9 +60,12 @@ class PopupBox:
         button_2.pack(side=tk.RIGHT, padx=10)
 
         # Configure the dialog as a modal window
-        self.dialog.transient(parent)  # Make the dialog appear on top of the parent window
-        self.dialog.grab_set()  # Prevent interaction with other windows until this dialog is closed
-        parent.wait_window(self.dialog)  # Wait until the dialog window is closed
+        # Make the dialog appear on top of the parent window
+        self.dialog.transient(parent)
+        # Prevent interaction with other windows until this dialog is closed
+        self.dialog.grab_set()
+        # Wait until the dialog window is closed
+        parent.wait_window(self.dialog)
 
     def on_button_1(self):
         """
