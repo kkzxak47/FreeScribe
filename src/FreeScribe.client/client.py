@@ -48,6 +48,7 @@ from Model import  ModelManager
 from utils.ip_utils import is_private_ip
 from utils.file_utils import get_file_path, get_resource_path
 from utils.OneInstance import OneInstance
+from utils.utils import get_application_version
 from UI.DebugWindow import DualOutput
 from utils.utils import window_has_running_instance, bring_to_front, close_mutex
 from WhisperModel import TranscribeError
@@ -1259,6 +1260,7 @@ def set_full_view():
     pause_button.grid(row=1, column=2, pady=5, padx=0,sticky='nsew')
     switch_view_button.grid(row=1, column=7, pady=5, padx=0,sticky='nsew')
     blinking_circle_canvas.grid(row=1, column=8, padx=0,pady=5)
+    footer_frame.grid()
 
     window.toggle_menu_bar(enable=True)
 
@@ -1320,7 +1322,7 @@ def set_minimal_view():
     response_display.grid_remove()
     timestamp_listbox.grid_remove()
     blinking_circle_canvas.grid_remove()
-
+    footer_frame.grid_remove()
     # Configure minimal view button sizes and placements
     mic_button.config(width=2, height=1)
     pause_button.config(width=2, height=1)
@@ -1632,6 +1634,14 @@ timestamp_listbox.grid(row=0, column=9, columnspan=2, rowspan=3, padx=5, pady=15
 timestamp_listbox.bind('<<ListboxSelect>>', show_response)
 timestamp_listbox.insert(tk.END, "Temporary Note History")
 timestamp_listbox.config(fg='grey')
+
+# Add a footer frame at the bottom of the window
+footer_frame = tk.Frame(root, bg="lightgray", height=30)
+footer_frame.grid(row=100, column=0, columnspan=100, sticky="ew")  # Use grid instead of pack
+
+# Add "Version 2" label in the center of the footer
+version = get_application_version()
+version_label = tk.Label(footer_frame, text=f"FreeScribe Client {version}",bg="lightgray",fg="black").pack(side="left", expand=True, padx=2, pady=5)
 
 window.update_aiscribe_texts(None)
 # Bind Alt+P to send_and_receive function

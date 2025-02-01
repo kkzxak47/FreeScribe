@@ -26,6 +26,7 @@ from UI.Widgets.AudioMeter import AudioMeter
 import threading
 from Model import Model, ModelManager
 from utils.file_utils import get_file_path
+from utils.utils import get_application_version
 from UI.MarkdownWindow import MarkdownWindow
 from UI.Widgets.MicrophoneSelector import MicrophoneSelector
 from UI.SettingsWindow import SettingsKeys, FeatureToggle, Architectures, SettingsWindow
@@ -102,8 +103,8 @@ class SettingsWindowUI:
         self.docker_settings_frame = ttk.Frame(self.notebook)
 
         self.notebook.add(self.general_settings_frame, text="General Settings")
-        self.notebook.add(self.llm_settings_frame, text="AI Settings")
         self.notebook.add(self.whisper_settings_frame, text="Speech-to-Text Settings")
+        self.notebook.add(self.llm_settings_frame, text="AI Settings")
         self.notebook.add(self.advanced_frame, text="Advanced Settings")
 
         self.settings_window.protocol("WM_DELETE_WINDOW", self.close_window)
@@ -559,15 +560,15 @@ class SettingsWindowUI:
         This method creates and places buttons for saving settings, resetting to default,
         and closing the settings window.
         """
-        footer_frame = tk.Frame(self.main_frame)
+        footer_frame = tk.Frame(self.main_frame,bg="lightgray", height=30)
         footer_frame.pack(side="bottom", fill="x")
 
         # Place the "Help" button on the left
         tk.Button(footer_frame, text="Help", width=10, command=self.create_help_window).pack(side="left", padx=2, pady=5)
 
         # Place the label in the center
-        version = self.settings.get_application_version()
-        tk.Label(footer_frame, text=f"FreeScribe Client {version}").pack(side="left", expand=True, padx=2, pady=5)
+        version = get_application_version()
+        tk.Label(footer_frame, text=f"FreeScribe Client {version}",bg="lightgray",fg="black").pack(side="left", expand=True, padx=2, pady=5)
 
         # Create a frame for the right-side elements
         right_frame = tk.Frame(footer_frame)
@@ -668,12 +669,29 @@ class SettingsWindowUI:
         
         # Add a note at the bottom of the general settings frame
         note_text = (
-            "Note: 'Show Scrub PHI' will only work for local LLM and private network.\n"
-            "For internet-facing endpoint, it will be enabled regardless of the 'Show Scrub PHI' value."
-        )
-        note_label = tk.Label(self.general_settings_frame, text=note_text, fg="red", wraplength=400, justify="left")
-        note_label.grid(padx=10, pady=5, sticky="w")
+        "NOTE: To protect personal health information (PHI), we recommend using a local network.\n"
+        "The 'Show Scrub PHI' feature is only applicable for local LLMs and private networks.\n"
+        "For internet-facing endpoints, this feature will always be enabled, regardless of the 'Show Scrub PHI' setting."
+    )
 
+        # Create a frame to hold the note labels
+        note_frame = tk.Frame(self.general_settings_frame)
+        note_frame.grid(padx=10, pady=5, sticky="w")
+
+        # Add the red * label
+        star_label = tk.Label(note_frame, text="*", fg="red", font=("Arial", 10, "bold"))
+        star_label.grid(row=0, column=0, sticky="w")
+
+        # Add the rest of the text in black (bold and underlined)
+        note_label = tk.Label(
+            note_frame,
+            text=note_text,
+            fg="black",  # Set text color to black
+            font=("Arial", 8, "bold underline"),  # Set font to bold and underlined
+            wraplength=400,
+            justify="left"
+        )
+        note_label.grid(row=0, column=1, sticky="w")
 
     def _create_checkbox(self, frame, label, setting_name, row_idx, setting_key=None):
         """

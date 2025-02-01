@@ -3,6 +3,7 @@ import markdown as md
 import tkinter as tk
 from tkhtmlview import HTMLLabel
 from utils.file_utils import get_file_path
+from utils.utils import get_application_version
 
 class MarkdownWindow:
     """
@@ -37,8 +38,13 @@ class MarkdownWindow:
         self.window.iconbitmap(get_file_path('assets', 'logo.ico'))
 
         # Footer frame to hold checkbox and close button
-        footer_frame = tk.Frame(self.window)
+        footer_frame = tk.Frame(self.window,bg="lightgray")
         footer_frame.pack(side=tk.BOTTOM, fill="x", padx=10, pady=10)
+
+        # Add a version label to the footer
+        version = get_application_version()
+        version_label = tk.Label(footer_frame, text=f"FreeScribe Client {version}",bg="lightgray",fg="black").pack(side="left", expand=True, padx=2, pady=5)
+
 
         # Create a frame to hold the HTMLLabel and scrollbar
         frame = tk.Frame(self.window)
@@ -63,13 +69,13 @@ class MarkdownWindow:
             ).pack(side=tk.BOTTOM, padx=5)
 
             close_button = tk.Button(
-                footer_frame, text="Close", command=lambda: self._on_close(var, callback)
+                footer_frame, text="Close", command=lambda: self._on_close(var, callback),font=("Arial", 12),width=6,height=1
             )
         else:
-            close_button = tk.Button(footer_frame, text="Close", command=self.window.destroy)
+            close_button = tk.Button(footer_frame, text="Close", command=self.window.destroy,font=("Arial", 12),width=6,height=1)
 
         # Add the close button
-        close_button.pack(side=tk.BOTTOM, padx=5)
+        close_button.pack(side=tk.BOTTOM, padx=5, pady=5)
 
         # Adjust window size based on content with constraints
         self._adjust_window_size(html_label, scrollbar)
