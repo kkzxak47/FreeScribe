@@ -45,6 +45,8 @@ class SettingsKeys(Enum):
     USE_TRANSLATE_TASK = "Use Translate Task"
     WHISPER_LANGUAGE_CODE = "Whisper Language Code"
     S2T_SELF_SIGNED_CERT = "S2T Server Self-Signed Certificates"
+    LLM_ARCHITECTURE = "Architecture"
+    USE_PRESCREEN_AI_INPUT = "Use Pre-Screen AI Input"
 
 
 class Architectures(Enum):
@@ -91,7 +93,7 @@ class SettingsWindow():
     save_settings_to_file():
         Saves the current settings to a JSON file.
     save_settings(openai_api_key, aiscribe_text, aiscribe2_text, 
-                  settings_window, preset):
+                  settings_window):
         Saves the current settings, including API keys, IP addresses, and user-defined parameters.
     load_aiscribe_from_file():
         Loads the first AI Scribe text from a file.
@@ -179,6 +181,7 @@ class SettingsWindow():
             SettingsKeys.SILERO_SPEECH_THRESHOLD.value,
             SettingsKeys.USE_TRANSLATE_TASK.value,
             SettingsKeys.WHISPER_LANGUAGE_CODE.value,
+            SettingsKeys.USE_PRESCREEN_AI_INPUT.value,
         ]
 
 
@@ -191,7 +194,7 @@ class SettingsWindow():
             "Model": "gemma2:2b-instruct-q8_0",
             "Model Endpoint": "https://localhost:3334/v1",
             "Use Local LLM": True,
-            "Architecture": SettingsWindow.DEFAULT_LLM_ARCHITECTURE,
+            SettingsKeys.LLM_ARCHITECTURE.value: SettingsWindow.DEFAULT_LLM_ARCHITECTURE,
             "use_story": False,
             "use_memory": False,
             "use_authors_note": False,
@@ -221,7 +224,7 @@ class SettingsWindow():
             SettingsKeys.WHISPER_CPU_COUNT.value: multiprocessing.cpu_count(),
             SettingsKeys.WHISPER_VAD_FILTER.value: False,
             SettingsKeys.WHISPER_COMPUTE_TYPE.value: "float16",
-            "Whisper Model": "small.en",
+            "Whisper Model": "medium",
             "Current Mic": "None",
             "Real Time": True,
             "Real Time Audio Length": 10,
@@ -234,7 +237,6 @@ class SettingsWindow():
             "Whisper Caddy Container Name": "caddy",
             "Auto Shutdown Containers on Exit": True,
             "Use Docker Status Bar": False,
-            "Preset": "Custom",
             "Show Welcome Message": True,
             "Enable Scribe Template": False,
             "Use Pre-Processing": True,
@@ -248,6 +250,7 @@ class SettingsWindow():
             SettingsKeys.SILERO_SPEECH_THRESHOLD.value: 0.5,
             SettingsKeys.USE_TRANSLATE_TASK.value: False,
             SettingsKeys.WHISPER_LANGUAGE_CODE.value: "None (Auto Detect)",
+            SettingsKeys.USE_PRESCREEN_AI_INPUT.value: True,
         }
 
         self.docker_settings = [
@@ -512,45 +515,6 @@ class SettingsWindow():
             else:
                 dropdown.set(models[0])
         
-
-    def load_settings_preset(self, preset_name, settings_class):
-        """
-        Load a settings preset from a file.
-
-        This method loads a settings preset from a JSON file with the given name.
-        The settings are then applied to the application settings.
-
-        Parameters:
-            preset_name (str): The name of the settings preset to load.
-
-        Returns:
-            None
-        """
-        self.editable_settings["Preset"] = preset_name
-
-        if preset_name != "Custom":
-            # load the settigns from the json preset file
-            self.load_settings_from_file("presets/" + preset_name + ".json")
-
-            self.editable_settings["Preset"] = preset_name
-            #close the settings window 
-            settings_class.close_window()
-
-            # save the settings to the file
-            self.save_settings_to_file()
-
-            if preset_name != "Local AI":
-                messagebox.showinfo("Settings Preset", "Settings preset loaded successfully. Closing settings window. Please re-open and set respective API keys.")
-
-                # Unload ai model if switching
-                # already has safety check in unload to check if model exist.
-                ModelManager.unload_model()
-            else: # if is local ai
-                # load the models here
-                ModelManager.start_model_threaded(self, self.main_window.root)
-        else:
-            messagebox.showinfo("Custom Settings", "To use custom settings then please fill in the values and save them.")
-
     def set_main_window(self, window):
         """
         Set the main window instance for the settings.
@@ -582,8 +546,20 @@ class SettingsWindow():
             ModelManager.start_model_threaded(self, self.main_window.root)
 
     def _create_settings_and_aiscribe_if_not_exist(self):
+        """
+        Create the settings and AI Scribe files if they do not exist.
+        """
         if not os.path.exists(get_resource_path('settings.txt')):
-            print("Settings file not found. Creating default settings file.")
+            architectures = self.get_available_architectures()
+            
+            # If CUDA is available, set it as the default architecture to save in settings
+            if Architectures.CUDA.label in architectures:
+                print("Settings file not found. Creating default settings file with CUDA architecture.")
+                self.editable_settings[SettingsKeys.WHISPER_ARCHITECTURE.value] = Architectures.CUDA.label
+                self.editable_settings[SettingsKeys.LLM_ARCHITECTURE.value] = Architectures.CUDA.label
+            else:
+                print("Settings file not found. Creating default settings file.")
+
             self.save_settings_to_file()
         if not os.path.exists(get_resource_path('aiscribe.txt')):
             print("AIScribe file not found. Creating default AIScribe file.")
@@ -630,13 +606,3 @@ class SettingsWindow():
                 old_cpu_count != self.editable_settings_entries[SettingsKeys.WHISPER_CPU_COUNT.value].get() or
                 old_compute_type != self.editable_settings_entries[SettingsKeys.WHISPER_COMPUTE_TYPE.value].get()):
             self.main_window.root.event_generate("<<LoadSttModel>>")
-
-    def get_application_version(self):
-        version_str = "vx.x.x.alpha"
-        try:
-            with open(get_file_path('__version__'), 'r') as file:
-                version_str = file.read().strip()
-        except Exception as e:
-            print(f"Error loading version file ({type(e).__name__}). {e}")
-        finally:
-            return version_str

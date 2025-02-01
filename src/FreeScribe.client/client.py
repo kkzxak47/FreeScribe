@@ -13,6 +13,7 @@ and Research Students - Software Developer Alex Simko, Pemba Sherpa (F24), and N
 
 import ctypes
 import io
+import logging
 import sys
 import gc
 import os
@@ -46,11 +47,22 @@ from Model import  ModelManager
 from utils.ip_utils import is_private_ip
 from utils.file_utils import get_file_path, get_resource_path
 from utils.OneInstance import OneInstance
+from utils.utils import get_application_version
 from UI.DebugWindow import DualOutput
 from UI.Widgets.MicrophoneTestFrame import MicrophoneTestFrame
 from utils.utils import window_has_running_instance, bring_to_front, close_mutex
 from WhisperModel import TranscribeError
+from UI.Widgets.PopupBox import PopupBox
 
+if os.environ.get("FREESCRIBE_DEBUG"):
+    LOG_LEVEL = logging.DEBUG
+else:
+    LOG_LEVEL = logging.INFO
+
+logging.basicConfig(
+    level=LOG_LEVEL,
+    format='%(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(message)s'
+)
 
 dual = DualOutput()
 sys.stdout = dual
@@ -142,6 +154,8 @@ GENERATION_THREAD_ID = None
 # Global instance of whisper model
 stt_local_model = None
 
+stt_model_loading_thread_lock = threading.Lock()
+
 
 def get_prompt(formatted_message):
 
@@ -172,8 +186,68 @@ def get_prompt(formatted_message):
     }
 
 def threaded_toggle_recording():
+    logging.debug(f"*** Toggle Recording - Recording status: {is_recording}, STT local model: {stt_local_model}")
+    task_done_var = tk.BooleanVar(value=False)
+    task_cancel_var = tk.BooleanVar(value=False)
+    stt_thread = threading.Thread(target=double_check_stt_model_loading, args=(task_done_var, task_cancel_var))
+    stt_thread.start()
+    root.wait_variable(task_done_var)
+    if task_cancel_var.get():
+        logging.debug(f"double checking canceled")
+        return
+
     thread = threading.Thread(target=toggle_recording)
     thread.start()
+
+
+def double_check_stt_model_loading(task_done_var, task_cancel_var):
+    stt_loading_window = None
+    try:
+        if is_recording:
+            return
+        if not app_settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value]:
+            return
+        if stt_local_model:
+            return
+        # if using local whisper and model is not loaded, when starting recording
+        if stt_model_loading_thread_lock.locked():
+            model_name = app_settings.editable_settings["Whisper Model"].strip()
+            stt_loading_window = LoadingWindow(root, "Loading Voice to Text model",
+                                               f"Loading {model_name} model. Please wait.",
+                                               on_cancel=lambda: task_cancel_var.set(True))
+            timeout = 300
+            time_start = time.monotonic()
+            # wait until the other loading thread is done
+            while True:
+                time.sleep(0.1)
+                if task_cancel_var.get():
+                    # user cancel
+                    logging.debug(f"user canceled after {time.monotonic() - time_start} seconds")
+                    return
+                if time.monotonic() - time_start > timeout:
+                    messagebox.showerror("Error",
+                                         f"Timed out while loading local Voice to Text model after {timeout} seconds.")
+                    task_cancel_var.set(True)
+                    return
+                if not stt_model_loading_thread_lock.locked():
+                    break
+            stt_loading_window.destroy()
+            stt_loading_window = None
+        # double check
+        if stt_local_model is None:
+            # mandatory loading, synchronous
+            t = load_stt_model()
+            t.join()
+
+    except Exception as e:
+        logging.exception(str(e))
+        messagebox.showerror("Error",
+                             f"An error occurred while loading Voice to Text model synchronously {type(e).__name__}: {e}")
+    finally:
+        if stt_loading_window:
+            stt_loading_window.destroy()
+        task_done_var.set(True)
+
 
 def threaded_realtime_text():
     thread = threading.Thread(target=realtime_text)
@@ -977,9 +1051,81 @@ def send_text_to_localmodel(edited_text):
     )
 
     
+def screen_input_with_llm(conversation):
+    """
+    Send a conversation to a large language model (LLM) for prescreening.
+
+    :param conversation: A string containing the conversation to be screened.
+    :return: A boolean indicating whether the conversation is valid.
+    """
+    prompt = (
+        "Go over this conversation and ensure it's a conversation with more than 50 words. "
+        "Also, if it is a conversation between a doctor and a patient. Please return one word. "
+        "Either True or False based. Do not give an explanation and do not format the text. "
+        "Here is the conversation:\n"
+    )
+
+    # Send the prompt and conversation to the LLM for evaluation
+    prescreen = send_text_to_chatgpt(f"{prompt}{conversation}")
+
+    # Check if the response from the LLM is 'true' (case-insensitive)
+    is_valid_input = prescreen.strip().lower() == "true"
+
+    # Log the AI's response for debugging purposes
+    print("Generating Input. AI Prescreen: ", prescreen)
+
+    return is_valid_input
 
 
-def send_text_to_chatgpt(edited_text):  
+def display_screening_popup():
+    """
+    Display a popup window to inform the user of invalid input and offer options.
+
+    :return: A boolean indicating the user's choice:
+             - False if the user clicks 'Cancel'.
+             - True if the user clicks 'Process Anyway!'.
+    """
+    # Create and display the popup window
+    popup_result = PopupBox(
+        parent=root,
+        title="Invalid Input",
+        message=(
+            "Input has been flagged as invalid. Please ensure the input is a conversation with more than "
+            "50 words between a doctor and a patient. Unexpected results may occur from the AI."
+        ),
+        button_text_1="Cancel",
+        button_text_2="Process Anyway!"
+    )
+
+    # Return based on the button the user clicks
+    if popup_result.response == "button_1":
+        return False
+    elif popup_result.response == "button_2":
+        return True
+
+
+def screen_input(user_message):
+    """
+    Screen the user's input message based on the application's settings.
+
+    :param user_message: The message to be screened.
+    :return: A boolean indicating whether the input is valid and accepted for further processing.
+    """
+    # Check if AI prescreening is enabled in the application settings
+    if app_settings.editable_settings[SettingsKeys.USE_PRESCREEN_AI_INPUT.value]:
+        # Perform AI-based prescreening
+        screen_result = screen_input_with_llm(user_message)
+
+        # If the input fails prescreening, display a popup for the user
+        if not screen_result:
+            return display_screening_popup()
+        else:
+            return True
+            
+    #else return true always
+    return True
+
+def send_text_to_chatgpt(edited_text): 
     if app_settings.editable_settings["Use Local LLM"]:
         return send_text_to_localmodel(edited_text)
     else:
@@ -987,7 +1133,6 @@ def send_text_to_chatgpt(edited_text):
 
 def generate_note(formatted_message):
             try:
-                # If note generation is on
                 if use_aiscribe:
                     # If pre-processing is enabled
                     if app_settings.editable_settings["Use Pre-Processing"]:
@@ -1066,10 +1211,7 @@ def generate_note_thread(text: str):
     """
     global GENERATION_THREAD_ID
 
-    thread = threading.Thread(target=generate_note, args=(text,))
-    thread.start()
-
-    GENERATION_THREAD_ID = thread.ident
+    GENERATION_THREAD_ID = None
 
     def cancel_note_generation(thread_id):
         """Cancels any ongoing note generation.
@@ -1079,7 +1221,8 @@ def generate_note_thread(text: str):
         global GENERATION_THREAD_ID
 
         try:
-            kill_thread(thread_id)
+            if thread_id:
+                kill_thread(thread_id)
         except Exception as e:
             # Log the error message
             # TODO implment system logger
@@ -1089,6 +1232,14 @@ def generate_note_thread(text: str):
 
     loading_window = LoadingWindow(root, "Generating Note.", "Generating Note. Please wait.", on_cancel=lambda: cancel_note_generation(GENERATION_THREAD_ID))
     
+    # screen input
+    if screen_input(text) is False:
+        loading_window.destroy()
+        return
+
+    thread = threading.Thread(target=generate_note, args=(text,))
+    thread.start()
+    GENERATION_THREAD_ID = thread.ident
 
     def check_thread_status(thread, loading_window):
         if thread.is_alive():
@@ -1182,6 +1333,7 @@ def set_full_view():
     pause_button.grid(row=1, column=2, pady=5, padx=0,sticky='nsew')
     switch_view_button.grid(row=1, column=7, pady=5, padx=0,sticky='nsew')
     blinking_circle_canvas.grid(row=1, column=8, padx=0,pady=5)
+    footer_frame.grid()
 
     window.toggle_menu_bar(enable=True)
 
@@ -1243,7 +1395,7 @@ def set_minimal_view():
     response_display.grid_remove()
     history_frame.grid_remove()
     blinking_circle_canvas.grid_remove()
-
+    footer_frame.grid_remove()
     # Configure minimal view button sizes and placements
     mic_button.config(width=2, height=1)
     pause_button.config(width=2, height=1)
@@ -1336,8 +1488,9 @@ def load_stt_model(event=None):
     Args:
         event: Optional event parameter for binding to tkinter events.
     """
-    thread = threading.Thread(target=_load_stt_model_thread, daemon=True)
+    thread = threading.Thread(target=_load_stt_model_thread)
     thread.start()
+    return thread
 
 def _load_stt_model_thread():
     """
@@ -1350,35 +1503,37 @@ def _load_stt_model_thread():
         Exception: Any error that occurs during model loading is caught, logged,
                   and displayed to the user via a message box.
     """
-    global stt_local_model
-    model = app_settings.editable_settings["Whisper Model"].strip()
-    stt_loading_window = LoadingWindow(root, "Speech to Text", "Loading Speech to Text. Please wait.")
-    print(f"Loading STT model: {model}")
-    try:
-        unload_stt_model()
-        device_type = get_selected_whisper_architecture()
-        set_cuda_paths()
+    with stt_model_loading_thread_lock:
+        global stt_local_model
+        model = app_settings.editable_settings["Whisper Model"].strip()
+        stt_loading_window = LoadingWindow(root, "Voice to Text", f"Loading Voice to Text {model} model. Please wait.")
+        print(f"Loading STT model: {model}")
+        try:
+            unload_stt_model()
+            device_type = get_selected_whisper_architecture()
+            set_cuda_paths()
 
-        compute_type = app_settings.editable_settings[SettingsKeys.WHISPER_COMPUTE_TYPE.value]
-        # Change the  compute type automatically if using a gpu one.
-        if device_type == Architectures.CPU.architecture_value and compute_type == "float16":
-            compute_type = "int8"
-            
+            compute_type = app_settings.editable_settings[SettingsKeys.WHISPER_COMPUTE_TYPE.value]
+            # Change the  compute type automatically if using a gpu one.
+            if device_type == Architectures.CPU.architecture_value and compute_type == "float16":
+                compute_type = "int8"
 
-        stt_local_model = WhisperModel(
-            model, 
-            device=device_type,
-            cpu_threads=int(app_settings.editable_settings[SettingsKeys.WHISPER_CPU_COUNT.value]),
-            compute_type=compute_type)
 
-        print("STT model loaded successfully.")
-    except Exception as e:
-        print(f"An error occurred while loading STT {type(e).__name__}: {e}")
-        stt_local_model = None
-        messagebox.showerror("Error", f"An error occurred while loading STT {type(e).__name__}: {e}")
-    finally:
-        stt_loading_window.destroy()
-        print("Closing STT loading window.")
+            stt_local_model = WhisperModel(
+                model,
+                device=device_type,
+                cpu_threads=int(app_settings.editable_settings[SettingsKeys.WHISPER_CPU_COUNT.value]),
+                compute_type=compute_type
+            )
+
+            print("STT model loaded successfully.")
+        except Exception as e:
+            print(f"An error occurred while loading STT {type(e).__name__}: {e}")
+            stt_local_model = None
+            messagebox.showerror("Error", f"An error occurred while loading Voice to Text {type(e).__name__}: {e}")
+        finally:
+            stt_loading_window.destroy()
+            print("Closing STT loading window.")
 
 def unload_stt_model():
     """
@@ -1390,9 +1545,9 @@ def unload_stt_model():
     global stt_local_model
     if stt_local_model is not None:
         print("Unloading STT model from device.")
-        del stt_local_model
-        gc.collect()
+        # no risk of temporary "stt_local_model in globals() is False" with same gc effect
         stt_local_model = None
+        gc.collect()
         print("STT model unloaded successfully.")
     else:
         print("STT model is already unloaded.")
@@ -1459,7 +1614,7 @@ def set_cuda_paths():
     architecture is selected. Updates CUDA_PATH, CUDA_PATH_V12_4, and PATH
     environment variables with the appropriate NVIDIA driver paths.
     """
-    if (get_selected_whisper_architecture() != Architectures.CUDA.architecture_value) or (app_settings.editable_settings["Architecture"] != Architectures.CUDA.label):
+    if (get_selected_whisper_architecture() != Architectures.CUDA.architecture_value) or (app_settings.editable_settings[SettingsKeys.LLM_ARCHITECTURE.value] != Architectures.CUDA.label):
         return
 
     nvidia_base_path = Path(get_file_path('nvidia-drivers'))
@@ -1564,9 +1719,16 @@ timestamp_listbox.insert(tk.END, "Temporary Note History")
 timestamp_listbox.config(fg='grey')
 
 # Add microphone test frame
-
 mic_test = MicrophoneTestFrame(parent=history_frame, p=p, app_settings=app_settings, root=root)
 mic_test.frame.grid(row=4, column=0, pady=10, sticky='nsew')  # Use grid to place the frame
+
+# Add a footer frame at the bottom of the window
+footer_frame = tk.Frame(root, bg="lightgray", height=30)
+footer_frame.grid(row=100, column=0, columnspan=100, sticky="ew")  # Use grid instead of pack
+
+# Add "Version 2" label in the center of the footer
+version = get_application_version()
+version_label = tk.Label(footer_frame, text=f"FreeScribe Client {version}",bg="lightgray",fg="black").pack(side="left", expand=True, padx=2, pady=5)
 
 window.update_aiscribe_texts(None)
 # Bind Alt+P to send_and_receive function
