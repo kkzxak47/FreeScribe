@@ -774,3 +774,10 @@ class SettingsWindowUI:
                 self.cutoff_slider.destroy()
 
         self.settings_window.destroy()
+
+        # bring parent to focus
+        self.root.focus_force()
+        # Lift up to the top of all windows open
+        self.root.lift()
+        # Focus on the root window again incase lost
+        self.root.focus_force()
