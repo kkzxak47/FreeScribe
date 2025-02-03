@@ -760,6 +760,17 @@ class SettingsWindowUI:
         text_area.grid(row=row, column=0, columnspan=2, padx=10, pady=5, sticky="w")
         return text_area, row + 1
 
+    def __focus_and_lift_root_window(self):
+        """
+        Focuses and lifts the root window above other windows.
+        """
+        # Focus on the root window
+        self.root.focus_force()
+        # Lift up to the top of all windows open
+        self.root.lift()
+        # Focus on the root window again incase lost
+        self.root.focus_force()
+
     def close_window(self):
         """
         Cleans up the settings window.
@@ -775,9 +786,4 @@ class SettingsWindowUI:
 
         self.settings_window.destroy()
 
-        # bring parent to focus
-        self.root.focus_force()
-        # Lift up to the top of all windows open
-        self.root.lift()
-        # Focus on the root window again incase lost
-        self.root.focus_force()
+        self.__focus_and_lift_root_window()
