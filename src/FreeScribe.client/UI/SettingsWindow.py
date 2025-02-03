@@ -451,7 +451,6 @@ class SettingsWindow():
                     SettingsKeys.LOCAL_WHISPER.value: self.editable_settings[SettingsKeys.LOCAL_WHISPER.value],
                     SettingsKeys.WHISPER_ENDPOINT.value: self.editable_settings[SettingsKeys.WHISPER_ENDPOINT.value],
                     SettingsKeys.WHISPER_SERVER_API_KEY.value: self.editable_settings[SettingsKeys.WHISPER_SERVER_API_KEY.value],
-                    "AI Server Self-Signed Certificates": self.editable_settings["AI Server Self-Signed Certificates"],
                     SettingsKeys.S2T_SELF_SIGNED_CERT.value: self.editable_settings[SettingsKeys.S2T_SELF_SIGNED_CERT.value],
 
                 }
