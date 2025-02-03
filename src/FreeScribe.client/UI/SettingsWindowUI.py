@@ -764,8 +764,6 @@ class SettingsWindowUI:
         """
         Focuses and lifts the root window above other windows.
         """
-        # Focus on the root window
-        self.root.focus_force()
         # Lift up to the top of all windows open
         self.root.lift()
         # Focus on the root window again incase lost
