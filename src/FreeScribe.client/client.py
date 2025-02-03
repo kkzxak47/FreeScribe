@@ -43,13 +43,13 @@ from UI.MainWindowUI import MainWindowUI
 from UI.SettingsWindow import SettingsWindow, SettingsKeys, Architectures
 from UI.Widgets.CustomTextBox import CustomTextBox
 from UI.LoadingWindow import LoadingWindow
-from UI.Widgets.MicrophoneSelector import MicrophoneState
 from Model import  ModelManager
 from utils.ip_utils import is_private_ip
 from utils.file_utils import get_file_path, get_resource_path
 from utils.OneInstance import OneInstance
 from utils.utils import get_application_version
 from UI.DebugWindow import DualOutput
+from UI.Widgets.MicrophoneTestFrame import MicrophoneTestFrame
 from utils.utils import window_has_running_instance, bring_to_front, close_mutex
 from WhisperModel import TranscribeError
 from UI.Widgets.PopupBox import PopupBox
@@ -63,7 +63,6 @@ logging.basicConfig(
     level=LOG_LEVEL,
     format='%(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(message)s'
 )
-
 
 dual = DualOutput()
 sys.stdout = dual
@@ -287,20 +286,16 @@ def record_audio():
     global is_paused, frames, audio_queue
 
     try:
+        selected_index = MicrophoneTestFrame.get_selected_microphone_index()
         stream = p.open(
             format=FORMAT, 
             channels=1, 
             rate=RATE, 
             input=True,
             frames_per_buffer=CHUNK, 
-            input_device_index=int(MicrophoneState.SELECTED_MICROPHONE_INDEX))
+            input_device_index=int(selected_index))
     except (OSError, IOError) as e:
-        messagebox.showerror("Audio Error", f"Please check your microphone settings under whisper settings. Error opening audio stream: {e}")
-        print(f"Error opening audio stream: {e}")
-        return
-    except (ValueError, TypeError) as e:
-        messagebox.showerror("Audio Error", f"Please check your microphone settings under whisper settings. Error opening audio stream: {e}")
-        print(f"Error opening audio stream: {e}")
+        messagebox.showerror("Audio Error", f"Please check your microphone settings. Error opening audio stream: {e}")
         return
 
     try:
@@ -919,17 +914,17 @@ def update_gui_with_response(response_text):
     global response_history, user_message, IS_FIRST_LOG
 
     if IS_FIRST_LOG:
-        timestamp_listbox.delete(0, tk.END)
-        timestamp_listbox.config(fg='black')
+        history_frame.delete(0, tk.END)
+        history_frame.config(fg='black')
         IS_FIRST_LOG = False
 
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     response_history.insert(0, (timestamp, user_message, response_text))
 
     # Update the timestamp listbox
-    timestamp_listbox.delete(0, tk.END)
+    history_frame.delete(0, tk.END)
     for time, _, _ in response_history:
-        timestamp_listbox.insert(tk.END, time)
+        history_frame.insert(tk.END, time)
 
     display_text(response_text)
     pyperclip.copy(response_text)
@@ -1333,7 +1328,7 @@ def set_full_view():
     toggle_button.grid()
     upload_button.grid()
     response_display.grid()
-    timestamp_listbox.grid()
+    history_frame.grid()
     mic_button.grid(row=1, column=1, pady=5, padx=0,sticky='nsew')
     pause_button.grid(row=1, column=2, pady=5, padx=0,sticky='nsew')
     switch_view_button.grid(row=1, column=7, pady=5, padx=0,sticky='nsew')
@@ -1398,7 +1393,7 @@ def set_minimal_view():
     toggle_button.grid_remove()
     upload_button.grid_remove()
     response_display.grid_remove()
-    timestamp_listbox.grid_remove()
+    history_frame.grid_remove()
     blinking_circle_canvas.grid_remove()
     footer_frame.grid_remove()
     # Configure minimal view button sizes and placements
@@ -1707,11 +1702,25 @@ response_display.scrolled_text.configure(state='disabled')
 if app_settings.editable_settings["Enable Scribe Template"]:
     window.create_scribe_template()
 
-timestamp_listbox = tk.Listbox(root, height=30)
-timestamp_listbox.grid(row=0, column=9, columnspan=2, rowspan=3, padx=5, pady=15, sticky='nsew')
+# Create a frame to hold both timestamp listbox and mic test
+history_frame = ttk.Frame(root)
+history_frame.grid(row=0, column=9, columnspan=2, rowspan=5, padx=5, pady=10, sticky='nsew')
+
+# Configure the frame's grid
+history_frame.grid_columnconfigure(0, weight=1)
+history_frame.grid_rowconfigure(0, weight=4)  # Timestamp takes more space
+history_frame.grid_rowconfigure(1, weight=1)  # Mic test takes less space
+
+# Add the timestamp listbox
+timestamp_listbox = tk.Listbox(history_frame, height=30)
+timestamp_listbox.grid(row=0, column=0, rowspan=3,sticky='nsew')
 timestamp_listbox.bind('<<ListboxSelect>>', show_response)
 timestamp_listbox.insert(tk.END, "Temporary Note History")
 timestamp_listbox.config(fg='grey')
+
+# Add microphone test frame
+mic_test = MicrophoneTestFrame(parent=history_frame, p=p, app_settings=app_settings, root=root)
+mic_test.frame.grid(row=4, column=0, pady=10, sticky='nsew')  # Use grid to place the frame
 
 # Add a footer frame at the bottom of the window
 footer_frame = tk.Frame(root, bg="lightgray", height=30)
