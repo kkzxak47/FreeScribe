@@ -39,12 +39,10 @@ class MarkdownWindow:
 
         # Footer frame to hold checkbox and close button
         footer_frame = tk.Frame(self.window,bg="lightgray")
-        footer_frame.pack(side=tk.BOTTOM, fill="x", padx=10, pady=10)
-
+        footer_frame.pack(side=tk.BOTTOM, fill="x")
         # Add a version label to the footer
         version = get_application_version()
-        version_label = tk.Label(footer_frame, text=f"FreeScribe Client {version}",bg="lightgray",fg="black").pack(side="left", expand=True, padx=2, pady=5)
-
+        
 
         # Create a frame to hold the HTMLLabel and scrollbar
         frame = tk.Frame(self.window)
@@ -64,18 +62,26 @@ class MarkdownWindow:
         # Optional checkbox and callback handling
         if callback:
             var = tk.BooleanVar()
-            tk.Checkbutton(
-                footer_frame, text="Don't show this message again", variable=var
-            ).pack(side=tk.BOTTOM, padx=5)
-
-            close_button = tk.Button(
-                footer_frame, text="Close", command=lambda: self._on_close(var, callback),font=("Arial", 12),width=6,height=1
-            )
+            # Center the checkbox
+            check_button = tk.Checkbutton(footer_frame, text="Don't show this message again", variable=var, bg="lightgray").grid(row=0, column=1, padx=5, pady=3)
+            # Center the close button
+            close_button = tk.Button(footer_frame, text="Close", command=lambda: self._on_close(var, callback), width=6).grid(row=1, column=1, padx=5, pady=3)
+            # version_label with sunken relief, smaller and right-aligned within footer_frame
+            version_label = tk.Label(footer_frame, text=f"Version: {get_application_version()}", pady=2, padx=5, relief="sunken", font=("Arial", 8)).grid(row=1, column=2, sticky='se')
+            # Adjust column weights to center elements
+            footer_frame.grid_columnconfigure(0, weight=1)
+            footer_frame.grid_columnconfigure(1, weight=1)
+            footer_frame.grid_columnconfigure(2, weight=0)
         else:
-            close_button = tk.Button(footer_frame, text="Close", command=self.window.destroy,font=("Arial", 12),width=6,height=1)
-
-        # Add the close button
-        close_button.pack(side=tk.BOTTOM, padx=5, pady=5)
+            # Center the close button
+            close_button = tk.Button(footer_frame, text="Close", command=self.window.destroy, width=6).grid(row=0, column=1, columnspan=2, padx=5, pady=3)
+            # Place the version label in the bottom right corner
+            version_label = tk.Label(footer_frame, text=f"Version: {get_application_version()}", pady=2, padx=5, relief="sunken", font=("Arial", 8)).grid(row=0, column=3, sticky='e')
+            # Adjust column weights to center the close button and anchor the version label to the right
+            footer_frame.grid_columnconfigure(0, weight=1)
+            footer_frame.grid_columnconfigure(1, weight=1)
+            footer_frame.grid_columnconfigure(2, weight=1)
+            footer_frame.grid_columnconfigure(3, weight=0)  
 
         # Adjust window size based on content with constraints
         self._adjust_window_size(html_label, scrollbar)
