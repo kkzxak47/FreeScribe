@@ -110,6 +110,69 @@ class SettingsWindow():
     DEFAULT_LLM_ARCHITECTURE = Architectures.CPU.architecture_value
     AUTO_DETECT_LANGUAGE_CODES = ["", "auto", "Auto Detect", "None", "None (Auto Detect)"]
 
+    DEFAULT_SETTINGS_TABLE = {
+            "Model": "gemma2:2b-instruct-q8_0",
+            "Model Endpoint": "https://localhost:3334/v1",
+            "Use Local LLM": True,
+            SettingsKeys.LLM_ARCHITECTURE.value: DEFAULT_LLM_ARCHITECTURE,
+            "use_story": False,
+            "use_memory": False,
+            "use_authors_note": False,
+            "use_world_info": False,
+            "max_context_length": 5000,
+            "max_length": 400,
+            "rep_pen": 1.1,
+            "rep_pen_range": 5000,
+            "rep_pen_slope": 0.7,
+            "temperature": 0.1,
+            "tfs": 0.97,
+            "top_a": 0.8,
+            "top_k": 30,
+            "top_p": 0.4,
+            "typical": 0.19,
+            "sampler_order": "[6, 0, 1, 3, 4, 2, 5]",
+            "singleline": False,
+            "frmttriminc": False,
+            "frmtrmblln": False,
+            "best_of": 2,
+            "Use best_of": False,
+            SettingsKeys.LOCAL_WHISPER.value: True,
+            SettingsKeys.WHISPER_ENDPOINT.value: "https://localhost:2224/whisperaudio",
+            SettingsKeys.WHISPER_SERVER_API_KEY.value: "",
+            SettingsKeys.WHISPER_ARCHITECTURE.value: DEFAULT_WHISPER_ARCHITECTURE,
+            SettingsKeys.WHISPER_BEAM_SIZE.value: 5,
+            SettingsKeys.WHISPER_CPU_COUNT.value: multiprocessing.cpu_count(),
+            SettingsKeys.WHISPER_VAD_FILTER.value: False,
+            SettingsKeys.WHISPER_COMPUTE_TYPE.value: "float16",
+            "Whisper Model": "medium",
+            "Current Mic": "None",
+            "Real Time": True,
+            "Real Time Audio Length": 10,
+            "Real Time Silence Length": 1,
+            "Silence cut-off": 0.035,
+            "LLM Container Name": "ollama",
+            "LLM Caddy Container Name": "caddy-ollama",
+            "LLM Authentication Container Name": "authentication-ollama",
+            "Whisper Container Name": "speech-container",
+            "Whisper Caddy Container Name": "caddy",
+            "Auto Shutdown Containers on Exit": True,
+            "Use Docker Status Bar": False,
+            "Show Welcome Message": True,
+            "Enable Scribe Template": False,
+            "Use Pre-Processing": True,
+            "Use Post-Processing": False, # Disabled for now causes unexcepted behaviour
+            "AI Server Self-Signed Certificates": False,
+            SettingsKeys.S2T_SELF_SIGNED_CERT.value: False,
+            "Pre-Processing": "Please break down the conversation into a list of facts. Take the conversation and transform it to a easy to read list:\n\n",
+            "Post-Processing": "\n\nUsing the provided list of facts, review the SOAP note for accuracy. Verify that all details align with the information provided in the list of facts and ensure consistency throughout. Update or adjust the SOAP note as necessary to reflect the listed facts without offering opinions or subjective commentary. Ensure that the revised note excludes a \"Notes\" section and does not include a header for the SOAP note. Provide the revised note after making any necessary corrections.",
+            "Show Scrub PHI": False,
+            SettingsKeys.AUDIO_PROCESSING_TIMEOUT_LENGTH.value: 180,
+            SettingsKeys.SILERO_SPEECH_THRESHOLD.value: 0.5,
+            SettingsKeys.USE_TRANSLATE_TASK.value: False,
+            SettingsKeys.WHISPER_LANGUAGE_CODE.value: "None (Auto Detect)",
+            SettingsKeys.USE_PRESCREEN_AI_INPUT.value: True,
+        }
+
     def __init__(self):
         """Initializes the ApplicationSettings with default values."""
 
@@ -191,68 +254,7 @@ class SettingsWindow():
             SettingsKeys.AUDIO_PROCESSING_TIMEOUT_LENGTH.value,
         ]
 
-        self.editable_settings = {
-            "Model": "gemma2:2b-instruct-q8_0",
-            "Model Endpoint": "https://localhost:3334/v1",
-            "Use Local LLM": True,
-            SettingsKeys.LLM_ARCHITECTURE.value: SettingsWindow.DEFAULT_LLM_ARCHITECTURE,
-            "use_story": False,
-            "use_memory": False,
-            "use_authors_note": False,
-            "use_world_info": False,
-            "max_context_length": 5000,
-            "max_length": 400,
-            "rep_pen": 1.1,
-            "rep_pen_range": 5000,
-            "rep_pen_slope": 0.7,
-            "temperature": 0.1,
-            "tfs": 0.97,
-            "top_a": 0.8,
-            "top_k": 30,
-            "top_p": 0.4,
-            "typical": 0.19,
-            "sampler_order": "[6, 0, 1, 3, 4, 2, 5]",
-            "singleline": False,
-            "frmttriminc": False,
-            "frmtrmblln": False,
-            "best_of": 2,
-            "Use best_of": False,
-            SettingsKeys.LOCAL_WHISPER.value: True,
-            SettingsKeys.WHISPER_ENDPOINT.value: "https://localhost:2224/whisperaudio",
-            SettingsKeys.WHISPER_SERVER_API_KEY.value: "",
-            SettingsKeys.WHISPER_ARCHITECTURE.value: SettingsWindow.DEFAULT_WHISPER_ARCHITECTURE,
-            SettingsKeys.WHISPER_BEAM_SIZE.value: 5,
-            SettingsKeys.WHISPER_CPU_COUNT.value: multiprocessing.cpu_count(),
-            SettingsKeys.WHISPER_VAD_FILTER.value: False,
-            SettingsKeys.WHISPER_COMPUTE_TYPE.value: "float16",
-            "Whisper Model": "medium",
-            "Current Mic": "None",
-            "Real Time": True,
-            "Real Time Audio Length": 10,
-            "Real Time Silence Length": 1,
-            "Silence cut-off": 0.035,
-            "LLM Container Name": "ollama",
-            "LLM Caddy Container Name": "caddy-ollama",
-            "LLM Authentication Container Name": "authentication-ollama",
-            "Whisper Container Name": "speech-container",
-            "Whisper Caddy Container Name": "caddy",
-            "Auto Shutdown Containers on Exit": True,
-            "Use Docker Status Bar": False,
-            "Show Welcome Message": True,
-            "Enable Scribe Template": False,
-            "Use Pre-Processing": True,
-            "Use Post-Processing": False, # Disabled for now causes unexcepted behaviour
-            "AI Server Self-Signed Certificates": False,
-            SettingsKeys.S2T_SELF_SIGNED_CERT.value: False,
-            "Pre-Processing": "Please break down the conversation into a list of facts. Take the conversation and transform it to a easy to read list:\n\n",
-            "Post-Processing": "\n\nUsing the provided list of facts, review the SOAP note for accuracy. Verify that all details align with the information provided in the list of facts and ensure consistency throughout. Update or adjust the SOAP note as necessary to reflect the listed facts without offering opinions or subjective commentary. Ensure that the revised note excludes a \"Notes\" section and does not include a header for the SOAP note. Provide the revised note after making any necessary corrections.",
-            "Show Scrub PHI": False,
-            SettingsKeys.AUDIO_PROCESSING_TIMEOUT_LENGTH.value: 180,
-            SettingsKeys.SILERO_SPEECH_THRESHOLD.value: 0.5,
-            SettingsKeys.USE_TRANSLATE_TASK.value: False,
-            SettingsKeys.WHISPER_LANGUAGE_CODE.value: "None (Auto Detect)",
-            SettingsKeys.USE_PRESCREEN_AI_INPUT.value: True,
-        }
+        self.editable_settings = SettingsWindow.DEFAULT_SETTINGS_TABLE
 
         self.docker_settings = [
             "LLM Container Name",
@@ -422,7 +424,7 @@ class SettingsWindow():
             return None
 
   
-    def clear_settings_file(self, settings_window):
+    def clear_settings_file(self, settings_window, keep_network_settings=False):
         """
         Clears the content of settings files and closes the settings window.
 
@@ -440,14 +442,34 @@ class SettingsWindow():
 
         """
         try:
-            # Open the files and immediately close them to clear their contents.
-            open(get_resource_path('settings.txt'), 'w').close()  
-            open(get_resource_path('aiscribe.txt'), 'w').close()
-            open(get_resource_path('aiscribe2.txt'), 'w').close()
+            if keep_network_settings:
+                # Keep the network settings and clear the rest
+                settings_to_keep = {
+                    "Model Endpoint": self.editable_settings["Model Endpoint"],
+                    "AI Server Self-Signed Certificates": self.editable_settings["AI Server Self-Signed Certificates"],
+                    "Use Local LLM": self.editable_settings["Use Local LLM"],
+                    SettingsKeys.LOCAL_WHISPER.value: self.editable_settings[SettingsKeys.LOCAL_WHISPER.value],
+                    SettingsKeys.WHISPER_ENDPOINT.value: self.editable_settings[SettingsKeys.WHISPER_ENDPOINT.value],
+                    SettingsKeys.WHISPER_SERVER_API_KEY.value: self.editable_settings[SettingsKeys.WHISPER_SERVER_API_KEY.value],
+                    "AI Server Self-Signed Certificates": self.editable_settings["AI Server Self-Signed Certificates"],
+                    SettingsKeys.S2T_SELF_SIGNED_CERT.value: self.editable_settings[SettingsKeys.S2T_SELF_SIGNED_CERT.value],
+
+                }
+                self.editable_settings.clear()
+                self.editable_settings.update(SettingsWindow.DEFAULT_SETTINGS_TABLE)
+                self.editable_settings.update(settings_to_keep)
+                print("Settings file cleared except network settings.")
+
+                self.save_settings_to_file()
+            else:
+                # Open the files and immediately close them to clear their contents.
+                open(get_resource_path('settings.txt'), 'w').close()  
+                open(get_resource_path('aiscribe.txt'), 'w').close()
+                open(get_resource_path('aiscribe2.txt'), 'w').close()
+                print("Settings file cleared.")
 
             # Display a message box informing the user of successful reset.
-            messagebox.showinfo("Settings Reset", "Settings have been reset. Please restart.")
-            print("Settings file cleared.")
+            messagebox.showinfo("Settings Reset", "Settings have been reset. Please restart application.")
 
             # Close the settings window.
             settings_window.destroy()

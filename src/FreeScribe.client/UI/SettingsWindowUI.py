@@ -30,6 +30,7 @@ from utils.utils import get_application_version
 from UI.MarkdownWindow import MarkdownWindow
 from UI.Widgets.MicrophoneSelector import MicrophoneSelector
 from UI.SettingsWindow import SettingsKeys, FeatureToggle, Architectures, SettingsWindow
+from UI.Widgets.PopupBox import PopupBox
 
 
 class SettingsWindowUI:
@@ -636,14 +637,28 @@ class SettingsWindowUI:
             self.close_window()
 
 
-    def reset_to_default(self):
+    def reset_to_default(self, show_confirmation=True):
         """
         Resets the settings to their default values.
 
         This method calls the `clear_settings_file` method of the `settings` object
         to reset the settings to their default values.
         """
-        self.settings.clear_settings_file(self.settings_window)
+
+        if show_confirmation:
+            popup = PopupBox(parent=self.settings_window, 
+                message="Are you sure you want to reset all settings to default?", 
+                title="Reset to Default", 
+                button_text_2="Cancel",
+                button_text_1="Reset to Default", 
+                button_text_3="Keep Network Settings")
+            if popup.response == "button_2":
+                return
+            elif popup.response == "button_3":
+                self.settings.clear_settings_file(self.settings_window, keep_network_settings=True)
+                return
+            elif popup.response == "button_1":
+                self.settings.clear_settings_file(self.settings_window)
 
     def _create_general_settings(self):
         """
