@@ -5,6 +5,7 @@ on:
     tags:
       - "v*.*.*"
       - "v*.*.*.alpha"
+      - "v*.*.*-RC*"
 
 jobs:
   build-windows:
