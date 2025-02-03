@@ -914,17 +914,17 @@ def update_gui_with_response(response_text):
     global response_history, user_message, IS_FIRST_LOG
 
     if IS_FIRST_LOG:
-        history_frame.delete(0, tk.END)
-        history_frame.config(fg='black')
+        timestamp_listbox.delete(0, tk.END)
+        timestamp_listbox.config(fg='black')
         IS_FIRST_LOG = False
 
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     response_history.insert(0, (timestamp, user_message, response_text))
 
     # Update the timestamp listbox
-    history_frame.delete(0, tk.END)
+    timestamp_listbox.delete(0, tk.END)
     for time, _, _ in response_history:
-        history_frame.insert(tk.END, time)
+        timestamp_listbox.insert(tk.END, time)
 
     display_text(response_text)
     pyperclip.copy(response_text)
