@@ -511,7 +511,7 @@ class SettingsWindowUI:
         
         # Prompting Settings
         row = self._create_section_header("Prompting Settings", row, text_colour="black")
-        self.aiscribe_text, row = self._create_text_area("Pre Prompting", self.settings.AISCRIBE, row)
+        self.aiscribe_text, row = self._create_text_area("Note Generation Prompt", self.settings.AISCRIBE, row)
         self.aiscribe2_text, row = self._create_text_area("Post Prompting", self.settings.AISCRIBE2, row)
         
         # Processing Sections
@@ -571,7 +571,7 @@ class SettingsWindowUI:
         tk.Label(footer_frame, text=f"FreeScribe Client {version}",bg="lightgray",fg="black").pack(side="left", expand=True, padx=2, pady=5)
 
         # Create a frame for the right-side elements
-        right_frame = tk.Frame(footer_frame)
+        right_frame = tk.Frame(footer_frame,bg="lightgray")
         right_frame.pack(side="right")
 
         # Pack all other buttons into the right frame
@@ -726,7 +726,7 @@ class SettingsWindowUI:
         """
         tk.Label(frame, text=label).grid(row=row_idx, column=0, padx=0, pady=5, sticky="w")
         value = self.settings.editable_settings[setting_name]
-        entry = tk.Entry(frame, width=25)
+        entry = tk.Entry(frame, width=17)
         entry.insert(0, str(value))
         entry.grid(row=row_idx, column=1, padx=0, pady=5, sticky="w")
         self.settings.editable_settings_entries[setting_name] = entry
