@@ -24,6 +24,7 @@ from tkinter import ttk, messagebox
 import requests
 import numpy as np
 from utils.file_utils import get_resource_path, get_file_path
+from utils.utils import get_application_version
 from Model import ModelManager
 import threading
 from UI.Widgets.MicrophoneSelector import MicrophoneState
@@ -352,7 +353,7 @@ class SettingsWindow():
             "openai_api_key": self.OPENAI_API_KEY,
             "editable_settings": self.editable_settings,
             # "api_style": self.API_STYLE # FUTURE FEATURE REVISION
-            "app_version": self.get_application_version()
+            "app_version": get_application_version()
         }
         with open(get_resource_path('settings.txt'), 'w') as file:
             json.dump(settings, file)
