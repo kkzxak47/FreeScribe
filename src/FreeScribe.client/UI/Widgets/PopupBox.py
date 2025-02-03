@@ -19,7 +19,9 @@ class PopupBox:
                  title="Message", 
                  message="Message text", 
                  button_text_1="OK", 
-                 button_text_2="Cancel", 
+                 button_text_2="Cancel",
+                 button_text_3=None,
+                 delete_window_button_action=1,
                  button_1_callback=None, 
                  button_2_callback=None):
         """
@@ -33,31 +35,24 @@ class PopupBox:
         :param button_1_callback: Optional callback function for the first button.
         :param button_2_callback: Optional callback function for the second button.
         """
-        self.response = None  # Stores the response indicating which button was clicked
+        # Stores the response indicating which button was clicked
+        self.response = None
         # Create a top-level window for the popup
         self.dialog = Toplevel(parent)
-        # Make the exit button behave like the second button
-        self.dialog.protocol("WM_DELETE_WINDOW", self.on_button_1)
+        # Make the exit button behave like the specified button
+        delete_window_action = None
+        if delete_window_button_action == 1:
+            delete_window_action = self.on_button_1
+        elif delete_window_button_action == 2:
+            delete_window_action = self.on_button_2
+        elif delete_window_button_action == 3:
+            delete_window_action = self.on_button_3
+        
+        if delete_window_action:
+            self.dialog.protocol("WM_DELETE_WINDOW", delete_window_action)
         # Set the window title
         self.dialog.title(title)
-        # Set the size of the window
-        window_width = 300
-        window_height = 150
-        self.dialog.geometry(f"{window_width}x{window_height}")
-        # Disable window resizing
-        self.dialog.resizable(False, False)
-
-        # Center the dialog relative to the parent window
-        parent_x = parent.winfo_rootx()
-        parent_y = parent.winfo_rooty()
-        parent_width = parent.winfo_width()
-        parent_height = parent.winfo_height()
-
-        center_x = parent_x + (parent_width // 2) - (window_width // 2)
-        center_y = parent_y + (parent_height // 2) - (window_height // 2)
-
-        self.dialog.geometry(f"+{center_x}+{center_y}")
-
+        
         # Create and pack the message label
         label = tk.Label(self.dialog, text=message, wraplength=250)
         label.pack(pady=20)
@@ -74,12 +69,35 @@ class PopupBox:
         button_2 = tk.Button(button_frame, text=button_text_2, command=self.on_button_2)
         button_2.pack(side=tk.RIGHT, padx=10)
 
+        if button_text_3:
+            # Create and pack the third button
+            button_3 = tk.Button(button_frame, text=button_text_3, command=self.on_button_3)
+            button_3.pack(side=tk.RIGHT, padx=10)
+
+        # Update dialog to calculate required height
+        self.dialog.update()
+        window_height = self.dialog.winfo_reqheight()
+        #Width will be widgets plus 10 on each side for padding
+        window_width = self.dialog.winfo_reqwidth() + 20
+
+        # Disable window resizing
+        self.dialog.resizable(False, False)
+
+        # Center the dialog relative to the parent window
+        parent_x = parent.winfo_rootx()
+        parent_y = parent.winfo_rooty()
+        parent_width = parent.winfo_width()
+        parent_height = parent.winfo_height()
+
+        center_x = parent_x + (parent_width // 2) - (window_width // 2)
+        center_y = parent_y + (parent_height // 2) - (window_height // 2)
+
+        # Set final geometry with calculated height
+        self.dialog.geometry(f"{window_width}x{window_height}+{center_x}+{center_y}")
+
         # Configure the dialog as a modal window
-        # Make the dialog appear on top of the parent window
         self.dialog.transient(parent)
-        # Prevent interaction with other windows until this dialog is closed
         self.dialog.grab_set()
-        # Wait until the dialog window is closed
         parent.wait_window(self.dialog)
 
     def on_button_1(self):
@@ -96,4 +114,12 @@ class PopupBox:
         Sets the response to 'button_2' and closes the dialog.
         """
         self.response = "button_2"
+        self.dialog.destroy()
+
+    def on_button_3(self):
+        """
+        Handle the event when the third button is clicked.
+        Sets the response to 'button_3' and closes the dialog.
+        """
+        self.response = "button_3"
         self.dialog.destroy()
