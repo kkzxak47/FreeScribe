@@ -423,7 +423,47 @@ class SettingsWindow():
         except FileNotFoundError:
             return None
 
-  
+    def __clear_settings_file(self):
+        """
+        Clears the content of settings files and closes the settings window.
+        """
+        # Open the files and immediately close them to clear their contents.
+        open(get_resource_path('settings.txt'), 'w').close()  
+        open(get_resource_path('aiscribe.txt'), 'w').close()
+        open(get_resource_path('aiscribe2.txt'), 'w').close()
+        print("Settings file cleared.")
+
+    def __keep_network_clear_settings(self):
+        """
+        Clears the content of settings files while maintaining network settings.
+        Such as API keys and endpoints.
+        This method is intended for internal use only.
+        """
+        # Keep the network settings and clear the rest
+        settings_to_keep = {
+            "Model Endpoint": self.editable_settings["Model Endpoint"],
+            "AI Server Self-Signed Certificates": self.editable_settings["AI Server Self-Signed Certificates"],
+            "Use Local LLM": self.editable_settings["Use Local LLM"],
+            SettingsKeys.LOCAL_WHISPER.value: self.editable_settings[SettingsKeys.LOCAL_WHISPER.value],
+            SettingsKeys.WHISPER_ENDPOINT.value: self.editable_settings[SettingsKeys.WHISPER_ENDPOINT.value],
+            SettingsKeys.WHISPER_SERVER_API_KEY.value: self.editable_settings[SettingsKeys.WHISPER_SERVER_API_KEY.value],
+            SettingsKeys.S2T_SELF_SIGNED_CERT.value: self.editable_settings[SettingsKeys.S2T_SELF_SIGNED_CERT.value],
+
+        }
+        
+        # reset to defaults
+        self.editable_settings = SettingsWindow.DEFAULT_SETTINGS_TABLE
+        
+        # Clear the AI scribe stuff to and empty the settings file
+        self.__clear_settings_file()
+
+        # Update the settings with the network settings
+        self.editable_settings.update(settings_to_keep)
+        print("Settings file cleared except network settings.")
+
+        # Save the settings to file
+        self.save_settings_to_file()
+
     def clear_settings_file(self, settings_window, keep_network_settings=False):
         """
         Clears the content of settings files and closes the settings window.
@@ -443,38 +483,19 @@ class SettingsWindow():
         """
         try:
             if keep_network_settings:
-                # Keep the network settings and clear the rest
-                settings_to_keep = {
-                    "Model Endpoint": self.editable_settings["Model Endpoint"],
-                    "AI Server Self-Signed Certificates": self.editable_settings["AI Server Self-Signed Certificates"],
-                    "Use Local LLM": self.editable_settings["Use Local LLM"],
-                    SettingsKeys.LOCAL_WHISPER.value: self.editable_settings[SettingsKeys.LOCAL_WHISPER.value],
-                    SettingsKeys.WHISPER_ENDPOINT.value: self.editable_settings[SettingsKeys.WHISPER_ENDPOINT.value],
-                    SettingsKeys.WHISPER_SERVER_API_KEY.value: self.editable_settings[SettingsKeys.WHISPER_SERVER_API_KEY.value],
-                    SettingsKeys.S2T_SELF_SIGNED_CERT.value: self.editable_settings[SettingsKeys.S2T_SELF_SIGNED_CERT.value],
-
-                }
-                self.editable_settings.clear()
-                self.editable_settings.update(SettingsWindow.DEFAULT_SETTINGS_TABLE)
-                self.editable_settings.update(settings_to_keep)
-                print("Settings file cleared except network settings.")
-
-                self.save_settings_to_file()
+                self.__keep_network_clear_settings()
             else:
-                # Open the files and immediately close them to clear their contents.
-                open(get_resource_path('settings.txt'), 'w').close()  
-                open(get_resource_path('aiscribe.txt'), 'w').close()
-                open(get_resource_path('aiscribe2.txt'), 'w').close()
-                print("Settings file cleared.")
+                self.__clear_settings_file()
 
             # Display a message box informing the user of successful reset.
-            messagebox.showinfo("Settings Reset", "Settings have been reset. Please restart application.")
+            messagebox.showinfo("Settings Reset", "Settings have been reset. Please restart application. Unexpected behaviour may occur if you continue using the application.")
 
             # Close the settings window.
             settings_window.destroy()
         except Exception as e:
             # Print any exception that occurs during file handling or window destruction.
             print(f"Error clearing settings files: {e}")
+            messagebox.showerror("Error", "An error occurred while clearing settings. Please try again.")
 
     def get_available_models(self,endpoint=None):
         """
