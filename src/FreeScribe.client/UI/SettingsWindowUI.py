@@ -22,13 +22,11 @@ Classes:
 import json
 import tkinter as tk
 from tkinter import ttk, messagebox
-from UI.Widgets.AudioMeter import AudioMeter
 import threading
 from Model import Model, ModelManager
 from utils.file_utils import get_file_path
 from utils.utils import get_application_version
 from UI.MarkdownWindow import MarkdownWindow
-from UI.Widgets.MicrophoneSelector import MicrophoneSelector
 from UI.SettingsWindow import SettingsKeys, FeatureToggle, Architectures, SettingsWindow
 from UI.Widgets.PopupBox import PopupBox
 
@@ -213,12 +211,7 @@ class SettingsWindowUI:
         self.settings.editable_settings_entries["Whisper Model"] = self.whisper_models_drop_down
 
         # create the whisper model dropdown slection
-        # microphone_select = MicrophoneSelector(left_frame, left_row, 0, self.settings)
-        # self.settings.editable_settings_entries["Current Mic"] = microphone_select
-
-        
         right_row += 1
-
         # Whisper Architecture Dropdown
         self.whisper_architecture_label = tk.Label(left_frame, text=SettingsKeys.WHISPER_ARCHITECTURE.value)
         self.whisper_architecture_label.grid(row=left_row, column=0, padx=0, pady=5, sticky="w")
