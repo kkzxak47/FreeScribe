@@ -1718,6 +1718,93 @@ timestamp_listbox.bind('<<ListboxSelect>>', show_response)
 timestamp_listbox.insert(tk.END, "Temporary Note History")
 timestamp_listbox.config(fg='grey')
 
+
+# Add right-click menu for renaming
+timestamp_menu = tk.Menu(timestamp_listbox, tearoff=0)
+timestamp_menu.add_command(label="Rename", command=lambda: start_edit_timestamp(None))
+
+
+def on_right_click(event):
+    # Select the item that was right-clicked
+    index = timestamp_listbox.nearest(event.y)
+    timestamp_listbox.selection_clear(0, tk.END)
+    timestamp_listbox.selection_set(index)
+    timestamp_listbox.activate(index)
+    show_response(event)
+    # Show the menu
+    timestamp_menu.post(event.x_root, event.y_root)
+
+
+# Bind right-click
+timestamp_listbox.bind("<Button-3>", on_right_click)
+
+# Variables for editing
+timestamp_rename_edit_index = None
+timestamp_rename_edit_entry = None
+
+
+def start_edit_timestamp(event=None):
+    """Start editing the selected timestamp"""
+    global timestamp_rename_edit_index, timestamp_rename_edit_entry
+    try:
+        selection = timestamp_listbox.curselection()
+        if not selection:
+            return
+        timestamp_rename_edit_index = selection[0]
+
+        current_text = timestamp_listbox.get(timestamp_rename_edit_index)
+
+        # Create entry widget for editing
+        bbox = timestamp_listbox.bbox(timestamp_rename_edit_index)
+        timestamp_rename_edit_entry = tk.Entry(timestamp_listbox, width=bbox[2])
+        timestamp_rename_edit_entry.insert(0, current_text)
+        timestamp_rename_edit_entry.select_range(0, tk.END)
+        timestamp_rename_edit_entry.focus_set()
+
+        # Place entry widget over listbox item
+        timestamp_rename_edit_entry.place(x=bbox[0], y=bbox[1], width=bbox[2], height=bbox[3])
+        timestamp_rename_edit_entry.bind("<FocusOut>", lambda e: confirm_edit_timestamp())
+        timestamp_rename_edit_entry.bind("<Return>", lambda e: confirm_edit_timestamp())
+        timestamp_rename_edit_entry.bind("<Escape>", lambda e: cancel_edit_timestamp())
+
+    except Exception as e:
+        print(f"Error starting edit: {e}")
+
+
+def confirm_edit_timestamp():
+    """Confirm and save the edited timestamp"""
+    global timestamp_rename_edit_index, timestamp_rename_edit_entry
+    try:
+        if timestamp_rename_edit_entry and timestamp_rename_edit_index is not None:
+            new_text = timestamp_rename_edit_entry.get()
+            timestamp_listbox.delete(timestamp_rename_edit_index)
+            timestamp_listbox.insert(timestamp_rename_edit_index, new_text)
+
+            # Update the corresponding response history
+            if timestamp_rename_edit_index < len(response_history):
+                timestamp, _, response = response_history[timestamp_rename_edit_index]
+                response_history[timestamp_rename_edit_index] = (new_text, _, response)
+
+            timestamp_rename_edit_entry.destroy()
+            timestamp_rename_edit_entry = None
+            timestamp_rename_edit_index = None
+
+    except Exception as e:
+        print(f"Error confirming edit: {e}")
+
+
+def cancel_edit_timestamp():
+    """Cancel the editing operation"""
+    global timestamp_rename_edit_index, timestamp_rename_edit_entry
+    try:
+        if timestamp_rename_edit_entry and timestamp_rename_edit_index is not None:
+            timestamp_rename_edit_entry.destroy()
+            timestamp_rename_edit_entry = None
+            timestamp_rename_edit_index = None
+    except Exception as e:
+        print(f"Error canceling edit: {e}")
+
+
 # Add microphone test frame
 mic_test = MicrophoneTestFrame(parent=history_frame, p=p, app_settings=app_settings, root=root)
 mic_test.frame.grid(row=4, column=0, pady=10, sticky='nsew')  # Use grid to place the frame
