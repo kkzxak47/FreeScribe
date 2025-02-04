@@ -201,13 +201,17 @@ def threaded_toggle_recording():
 
 
 def double_check_stt_model_loading(task_done_var, task_cancel_var):
+    print(f"*** Double Checking STT model - Model Current Status: {stt_local_model}")
     stt_loading_window = None
     try:
         if is_recording:
+            print(f"*** Recording in progress, skipping double check")
             return
         if not app_settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value]:
+            print(f"*** Local Whisper is disabled, skipping double check")
             return
         if stt_local_model:
+            print(f"*** STT model already loaded, skipping double check")
             return
         # if using local whisper and model is not loaded, when starting recording
         if stt_model_loading_thread_lock.locked():
@@ -244,6 +248,7 @@ def double_check_stt_model_loading(task_done_var, task_cancel_var):
         messagebox.showerror("Error",
                              f"An error occurred while loading Voice to Text model synchronously {type(e).__name__}: {e}")
     finally:
+        print(f"*** Double Checking STT model Complete - Model Current Status: {stt_local_model}")
         if stt_loading_window:
             stt_loading_window.destroy()
         task_done_var.set(True)
@@ -580,6 +585,8 @@ def toggle_recording():
             realtime_thread.join()
 
         save_audio()
+
+        print("*** Recording Stopped")
 
         if current_view == "full":
             mic_button.config(bg=DEFAULT_BUTTON_COLOUR, text="Start\nRecording")
