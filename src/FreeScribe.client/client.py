@@ -1754,8 +1754,14 @@ def start_edit_timestamp(event=None):
 
         current_text = timestamp_listbox.get(timestamp_rename_edit_index)
 
+        # Ensure item is visible
+        timestamp_listbox.see(timestamp_rename_edit_index)
+
         # Create entry widget for editing
         bbox = timestamp_listbox.bbox(timestamp_rename_edit_index)
+        if bbox is None:
+            return  # Exit if we still can't get bbox
+
         timestamp_rename_edit_entry = tk.Entry(timestamp_listbox, width=bbox[2])
         timestamp_rename_edit_entry.insert(0, current_text)
         timestamp_rename_edit_entry.select_range(0, tk.END)
