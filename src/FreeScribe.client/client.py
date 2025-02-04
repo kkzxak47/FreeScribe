@@ -877,6 +877,7 @@ def kill_thread(thread_id):
     :raises ValueError: If the thread ID is invalid.
     :raises SystemError: If the operation fails due to an unexpected state.
     """
+    print("*** Attempting to kill thread with ID:", thread_id)
     # Call the C function `PyThreadState_SetAsyncExc` to asynchronously raise
     # an exception in the target thread's context.
     res = ctypes.pythonapi.PyThreadState_SetAsyncExc(
@@ -893,6 +894,8 @@ def kill_thread(thread_id):
         # Reset the state to prevent corrupting other threads.
         ctypes.pythonapi.PyThreadState_SetAsyncExc(thread_id, None)
         raise SystemError("PyThreadState_SetAsyncExc failed")
+    
+    print("*** Killed thread with ID:", thread_id)
 
 def send_and_receive():
     global use_aiscribe, user_message
@@ -1125,6 +1128,16 @@ def screen_input(user_message):
     #else return true always
     return True
 
+def threaded_screen_input(user_message, screen_return):
+    """
+    Screen the user's input message based on the application's settings in a separate thread.
+
+    :param user_message: The message to be screened.
+    :param screen_return: A boolean variable to store the result of the screening.
+    """
+    input_return = screen_input(user_message)
+    screen_return.set(input_return)
+
 def send_text_to_chatgpt(edited_text): 
     if app_settings.editable_settings["Use Local LLM"]:
         return send_text_to_localmodel(edited_text)
@@ -1230,10 +1243,21 @@ def generate_note_thread(text: str):
         finally:
             GENERATION_THREAD_ID = None
 
-    loading_window = LoadingWindow(root, "Generating Note.", "Generating Note. Please wait.", on_cancel=lambda: cancel_note_generation(GENERATION_THREAD_ID))
+    # Track the screen input thread
+    screen_thread = None
+    # The return value from the screen input thread
+    screen_return = tk.BooleanVar()
+
+    loading_window = LoadingWindow(root, "Generating Note.", "Generating Note. Please wait.", on_cancel=lambda: (cancel_note_generation(GENERATION_THREAD_ID), kill_thread(screen_thread.ident)))
     
-    # screen input
-    if screen_input(text) is False:
+    # screen input in its own thread so we can cancel it
+    screen_thread = threading.Thread(target=threaded_screen_input, args=(text, screen_return))
+    screen_thread.start()
+    #wait for the thread to join/cancel so we can continue
+    screen_thread.join()
+
+    # Check if the screen input was canceled or force overridden by the user
+    if screen_return.get() is False:
         loading_window.destroy()
         return
 
