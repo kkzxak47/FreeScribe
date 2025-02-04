@@ -303,8 +303,20 @@ def toggle_pause():
     
 SILENCE_WARNING_LENGTH = 10 # seconds, warn the user after 10s of no input something might be wrong
 
-def record_audio():
-    global is_paused, frames, audio_queue
+def open_microphone_stream():
+    """
+    Opens an audio stream from the selected microphone.
+
+    This function retrieves the index of the selected microphone from the
+    MicrophoneTestFrame and attempts to open an audio stream using the pyaudio
+    library. If successful, it returns the stream object and None. In case of
+    an error (either OSError or IOError), it logs the error message and returns
+    None along with the error object.
+
+    Returns:
+        tuple: A tuple containing the stream object (or None if an error occurs)
+               and the error object (or None if no error occurs).
+    """
 
     try:
         selected_index = MicrophoneTestFrame.get_selected_microphone_index()
@@ -315,13 +327,28 @@ def record_audio():
             input=True,
             frames_per_buffer=CHUNK, 
             input_device_index=int(selected_index))
+
+        return stream, None
     except (OSError, IOError) as e:
         # Log the error message
         # TODO System logger
-        print(f"An error occurred opening the stream: {e}")
-        clear_application_press()
-        stream = None
-        messagebox.showerror("Error", f"An error occurred while trying to record audio: {e}")
+        print(f"An error occurred opening the stream({type(e).__name__}): {e}")
+        return None, e
+
+def record_audio():
+    """
+    Records audio from the selected microphone, processes the audio to detect silence, 
+    and manages the recording state.
+
+    Global Variables:
+        is_paused (bool): Indicates whether the recording is paused.
+        frames (list): List of audio data frames.
+        audio_queue (queue.Queue): Queue to store recorded audio chunks.
+
+    Returns:
+        None: The function does not return a value. It interacts with global variables.
+    """
+    global is_paused, frames, audio_queue
 
     try:
         current_chunk = []
@@ -330,6 +357,12 @@ def record_audio():
         record_duration = 0
         minimum_silent_duration = int(app_settings.editable_settings["Real Time Silence Length"])
         minimum_audio_duration = int(app_settings.editable_settings["Real Time Audio Length"])
+
+        stream, stream_exception = open_microphone_stream()
+
+        if stream is None:
+            clear_application_press()
+            messagebox.showerror("Error", f"An error occurred while trying to record audio: {stream_exception}")
         
         while is_recording and stream is not None:
             if not is_paused:
