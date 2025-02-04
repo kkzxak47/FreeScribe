@@ -1226,7 +1226,7 @@ def generate_note_thread(text: str):
 
     GENERATION_THREAD_ID = None
 
-    def cancel_note_generation(thread_id):
+    def cancel_note_generation(thread_id, screen_thread):
         """Cancels any ongoing note generation.
         
         Sets the global flag to stop note generation operations.
@@ -1236,6 +1236,10 @@ def generate_note_thread(text: str):
         try:
             if thread_id:
                 kill_thread(thread_id)
+            
+            # check if screen thread is active before killing it
+            if screen_thread and screen_thread.is_alive():
+                kill_thread(screen_thread.ident)
         except Exception as e:
             # Log the error message
             # TODO implment system logger
@@ -1248,7 +1252,7 @@ def generate_note_thread(text: str):
     # The return value from the screen input thread
     screen_return = tk.BooleanVar()
 
-    loading_window = LoadingWindow(root, "Generating Note.", "Generating Note. Please wait.", on_cancel=lambda: (cancel_note_generation(GENERATION_THREAD_ID), kill_thread(screen_thread.ident)))
+    loading_window = LoadingWindow(root, "Generating Note.", "Generating Note. Please wait.", on_cancel=lambda: (cancel_note_generation(GENERATION_THREAD_ID, screen_thread)))
     
     # screen input in its own thread so we can cancel it
     screen_thread = threading.Thread(target=threaded_screen_input, args=(text, screen_return))
