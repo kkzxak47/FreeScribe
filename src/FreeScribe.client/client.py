@@ -1782,8 +1782,8 @@ def confirm_edit_timestamp():
 
             # Update the corresponding response history
             if timestamp_rename_edit_index < len(response_history):
-                timestamp, _, response = response_history[timestamp_rename_edit_index]
-                response_history[timestamp_rename_edit_index] = (new_text, _, response)
+                timestamp, user_message, response = response_history[timestamp_rename_edit_index]
+                response_history[timestamp_rename_edit_index] = (new_text, user_message, response)
 
             timestamp_rename_edit_entry.destroy()
             timestamp_rename_edit_entry = None
