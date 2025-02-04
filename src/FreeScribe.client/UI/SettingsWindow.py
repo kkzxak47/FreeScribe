@@ -67,6 +67,8 @@ class Architectures(Enum):
 class FeatureToggle:
     DOCKER_SETTINGS_TAB = False
     DOCKER_STATUS_BAR = False
+    POST_PROCESSING = False
+    PRE_PROCESSING = False
 
 class SettingsWindow():
     """
@@ -160,8 +162,8 @@ class SettingsWindow():
             "Use Docker Status Bar": False,
             "Show Welcome Message": True,
             "Enable Scribe Template": False,
-            "Use Pre-Processing": True,
-            "Use Post-Processing": False, # Disabled for now causes unexcepted behaviour
+            "Use Pre-Processing": FeatureToggle.PRE_PROCESSING,
+            "Use Post-Processing": FeatureToggle.POST_PROCESSING, # Disabled for now causes unexcepted behaviour
             "AI Server Self-Signed Certificates": False,
             SettingsKeys.S2T_SELF_SIGNED_CERT.value: False,
             "Pre-Processing": "Please break down the conversation into a list of facts. Take the conversation and transform it to a easy to read list:\n\n",
