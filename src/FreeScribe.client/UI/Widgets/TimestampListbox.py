@@ -63,7 +63,7 @@ class TimestampListbox(tk.Listbox):
                 self.edit_entry = None
                 self.edit_index = None
         except Exception as e:
-            logging.exception(str(e))
+            logging.exception(f"Error confirm edit {str(e)}")
 
     def cancel_edit(self):
         """Cancel the editing operation"""
@@ -73,4 +73,4 @@ class TimestampListbox(tk.Listbox):
                 self.edit_entry = None
                 self.edit_index = None
         except Exception as e:
-            print(f"Error canceling edit: {e}")
+            logging.exception(f"Error canceling edit: {e}")
