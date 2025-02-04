@@ -221,13 +221,13 @@ def double_check_stt_model_loading(task_done_var, task_cancel_var):
     stt_loading_window = None
     try:
         if is_recording:
-            print(f"*** Recording in progress, skipping double check")
+            print("*** Recording in progress, skipping double check")
             return
         if not app_settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value]:
-            print(f"*** Local Whisper is disabled, skipping double check")
+            print("*** Local Whisper is disabled, skipping double check")
             return
         if stt_local_model:
-            print(f"*** STT model already loaded, skipping double check")
+            print("*** STT model already loaded, skipping double check")
             return
         # if using local whisper and model is not loaded, when starting recording
         if stt_model_loading_thread_lock.locked():
