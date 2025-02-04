@@ -316,8 +316,12 @@ def record_audio():
             frames_per_buffer=CHUNK, 
             input_device_index=int(selected_index))
     except (OSError, IOError) as e:
-        messagebox.showerror("Audio Error", f"Please check your microphone settings. Error opening audio stream: {e}")
-        return
+        # Log the error message
+        # TODO System logger
+        print(f"An error occurred opening the stream: {e}")
+        clear_application_press()
+        stream = None
+        messagebox.showerror("Error", f"An error occurred while trying to record audio: {e}")
 
     try:
         current_chunk = []
@@ -327,7 +331,7 @@ def record_audio():
         minimum_silent_duration = int(app_settings.editable_settings["Real Time Silence Length"])
         minimum_audio_duration = int(app_settings.editable_settings["Real Time Audio Length"])
         
-        while is_recording:
+        while is_recording and stream is not None:
             if not is_paused:
                 data = stream.read(CHUNK, exception_on_overflow=False)
                 frames.append(data)
@@ -371,8 +375,9 @@ def record_audio():
         # For now general catch on any problems
         print(f"An error occurred: {e}")
     finally:
-        stream.stop_stream()
-        stream.close()
+        if stream:
+            stream.stop_stream()
+            stream.close()
         audio_queue.put(None)
 
         # If the warning bar is displayed, remove it
