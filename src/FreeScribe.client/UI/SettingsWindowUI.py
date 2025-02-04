@@ -509,20 +509,22 @@ class SettingsWindowUI:
         self.aiscribe_text, row = self._create_text_area("Note Generation Prompt", self.settings.AISCRIBE, row)
         self.aiscribe2_text, row = self._create_text_area("Post Prompting", self.settings.AISCRIBE2, row)
         
-        # Processing Sections
-        self.preprocess_text, row = create_processing_section(
-            "Pre-Processing", 
-            "Use Pre-Processing",
-            self.settings.editable_settings["Pre-Processing"],
-            row
-        )
+        if FeatureToggle.PRE_PROCESSING is True:
+            # Processing Sections
+            self.preprocess_text, row = create_processing_section(
+                "Pre-Processing", 
+                "Use Pre-Processing",
+                self.settings.editable_settings["Pre-Processing"],
+                row
+            )
         
-        self.postprocess_text, _ = create_processing_section(
-            "Post-Processing (Experimental. Use with caution.)",
-            "Use Post-Processing", 
-            self.settings.editable_settings["Post-Processing"],
-            row
-        )
+        if FeatureToggle.POST_PROCESSING is True:
+            self.postprocess_text, _ = create_processing_section(
+                "Post-Processing (Experimental. Use with caution.)",
+                "Use Post-Processing", 
+                self.settings.editable_settings["Post-Processing"],
+                row
+            )
 
 
     def create_docker_settings(self):
