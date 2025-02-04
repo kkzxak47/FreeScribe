@@ -185,29 +185,49 @@ def get_prompt(formatted_message):
         "frmtrmblln": app_settings.editable_settings["frmtrmblln"]
     }
 
-def threaded_toggle_recording():
-    logging.debug(f"*** Toggle Recording - Recording status: {is_recording}, STT local model: {stt_local_model}")
+def threaded_check_stt_model():
+    """
+    Starts a new thread to check the status of the speech-to-text (STT) model loading process.
+    
+    A separate thread is spawned to run the `double_check_stt_model_loading` function,
+    which monitors the loading of the STT model. The function waits for the task to be completed and
+    handles cancellation if requested.
+    """
+    # Create a Boolean variable to track if the task is done/canceled
     task_done_var = tk.BooleanVar(value=False)
     task_cancel_var = tk.BooleanVar(value=False)
+    
+    # Start a new thread to run the double_check_stt_model_loading function
     stt_thread = threading.Thread(target=double_check_stt_model_loading, args=(task_done_var, task_cancel_var))
     stt_thread.start()
+    
+    # Wait for the task_done_var to be set to True (indicating task completion)
     root.wait_variable(task_done_var)
+    
+    # Check if the task was canceled via task_cancel_var
     if task_cancel_var.get():
         logging.debug(f"double checking canceled")
         return
 
+def threaded_toggle_recording():
+    logging.debug(f"*** Toggle Recording - Recording status: {is_recording}, STT local model: {stt_local_model}")
+    threaded_check_stt_model()
     thread = threading.Thread(target=toggle_recording)
     thread.start()
 
 
 def double_check_stt_model_loading(task_done_var, task_cancel_var):
+    print(f"*** Double Checking STT model - Model Current Status: {stt_local_model}")
     stt_loading_window = None
     try:
         if is_recording:
+            print("*** Recording in progress, skipping double check")
             return
         if not app_settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value]:
+            print("*** Local Whisper is disabled, skipping double check")
             return
         if stt_local_model:
+            print("*** STT model already loaded, skipping double check")
             return
         # if using local whisper and model is not loaded, when starting recording
         if stt_model_loading_thread_lock.locked():
@@ -244,6 +264,7 @@ def double_check_stt_model_loading(task_done_var, task_cancel_var):
         messagebox.showerror("Error",
                              f"An error occurred while loading Voice to Text model synchronously {type(e).__name__}: {e}")
     finally:
+        print(f"*** Double Checking STT model Complete - Model Current Status: {stt_local_model}")
         if stt_loading_window:
             stt_loading_window.destroy()
         task_done_var.set(True)
@@ -282,8 +303,20 @@ def toggle_pause():
     
 SILENCE_WARNING_LENGTH = 10 # seconds, warn the user after 10s of no input something might be wrong
 
-def record_audio():
-    global is_paused, frames, audio_queue
+def open_microphone_stream():
+    """
+    Opens an audio stream from the selected microphone.
+
+    This function retrieves the index of the selected microphone from the
+    MicrophoneTestFrame and attempts to open an audio stream using the pyaudio
+    library. If successful, it returns the stream object and None. In case of
+    an error (either OSError or IOError), it logs the error message and returns
+    None along with the error object.
+
+    Returns:
+        tuple: A tuple containing the stream object (or None if an error occurs)
+               and the error object (or None if no error occurs).
+    """
 
     try:
         selected_index = MicrophoneTestFrame.get_selected_microphone_index()
@@ -294,9 +327,28 @@ def record_audio():
             input=True,
             frames_per_buffer=CHUNK, 
             input_device_index=int(selected_index))
+
+        return stream, None
     except (OSError, IOError) as e:
-        messagebox.showerror("Audio Error", f"Please check your microphone settings. Error opening audio stream: {e}")
-        return
+        # Log the error message
+        # TODO System logger
+        print(f"An error occurred opening the stream({type(e).__name__}): {e}")
+        return None, e
+
+def record_audio():
+    """
+    Records audio from the selected microphone, processes the audio to detect silence, 
+    and manages the recording state.
+
+    Global Variables:
+        is_paused (bool): Indicates whether the recording is paused.
+        frames (list): List of audio data frames.
+        audio_queue (queue.Queue): Queue to store recorded audio chunks.
+
+    Returns:
+        None: The function does not return a value. It interacts with global variables.
+    """
+    global is_paused, frames, audio_queue
 
     try:
         current_chunk = []
@@ -305,8 +357,14 @@ def record_audio():
         record_duration = 0
         minimum_silent_duration = int(app_settings.editable_settings["Real Time Silence Length"])
         minimum_audio_duration = int(app_settings.editable_settings["Real Time Audio Length"])
+
+        stream, stream_exception = open_microphone_stream()
+
+        if stream is None:
+            clear_application_press()
+            messagebox.showerror("Error", f"An error occurred while trying to record audio: {stream_exception}")
         
-        while is_recording:
+        while is_recording and stream is not None:
             if not is_paused:
                 data = stream.read(CHUNK, exception_on_overflow=False)
                 frames.append(data)
@@ -350,8 +408,9 @@ def record_audio():
         # For now general catch on any problems
         print(f"An error occurred: {e}")
     finally:
-        stream.stop_stream()
-        stream.close()
+        if stream:
+            stream.stop_stream()
+            stream.close()
         audio_queue.put(None)
 
         # If the warning bar is displayed, remove it
@@ -580,6 +639,8 @@ def toggle_recording():
             realtime_thread.join()
 
         save_audio()
+
+        print("*** Recording Stopped")
 
         if current_view == "full":
             mic_button.config(bg=DEFAULT_BUTTON_COLOUR, text="Start\nRecording")
