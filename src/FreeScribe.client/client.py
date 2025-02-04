@@ -1712,7 +1712,7 @@ history_frame.grid_rowconfigure(0, weight=4)  # Timestamp takes more space
 history_frame.grid_rowconfigure(1, weight=1)  # Mic test takes less space
 
 # Add the timestamp listbox
-timestamp_listbox = tk.Listbox(history_frame, height=30)
+timestamp_listbox = tk.Listbox(history_frame, height=30, exportselection=False)
 timestamp_listbox.grid(row=0, column=0, rowspan=3,sticky='nsew')
 timestamp_listbox.bind('<<ListboxSelect>>', show_response)
 timestamp_listbox.insert(tk.END, "Temporary Note History")
