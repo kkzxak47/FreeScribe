@@ -185,17 +185,33 @@ def get_prompt(formatted_message):
         "frmtrmblln": app_settings.editable_settings["frmtrmblln"]
     }
 
-def threaded_toggle_recording():
-    logging.debug(f"*** Toggle Recording - Recording status: {is_recording}, STT local model: {stt_local_model}")
+def threaded_check_stt_model():
+    """
+    Starts a new thread to check the status of the speech-to-text (STT) model loading process.
+    
+    A separate thread is spawned to run the `double_check_stt_model_loading` function,
+    which monitors the loading of the STT model. The function waits for the task to be completed and
+    handles cancellation if requested.
+    """
+    # Create a Boolean variable to track if the task is done/canceled
     task_done_var = tk.BooleanVar(value=False)
     task_cancel_var = tk.BooleanVar(value=False)
+    
+    # Start a new thread to run the double_check_stt_model_loading function
     stt_thread = threading.Thread(target=double_check_stt_model_loading, args=(task_done_var, task_cancel_var))
     stt_thread.start()
+    
+    # Wait for the task_done_var to be set to True (indicating task completion)
     root.wait_variable(task_done_var)
+    
+    # Check if the task was canceled via task_cancel_var
     if task_cancel_var.get():
         logging.debug(f"double checking canceled")
         return
 
+def threaded_toggle_recording():
+    logging.debug(f"*** Toggle Recording - Recording status: {is_recording}, STT local model: {stt_local_model}")
+    threaded_check_stt_model()
     thread = threading.Thread(target=toggle_recording)
     thread.start()
 
