@@ -54,6 +54,7 @@ from utils.utils import window_has_running_instance, bring_to_front, close_mutex
 from WhisperModel import TranscribeError
 from UI.Widgets.PopupBox import PopupBox
 
+
 if os.environ.get("FREESCRIBE_DEBUG"):
     LOG_LEVEL = logging.DEBUG
 else:
@@ -104,6 +105,23 @@ def on_closing():
 
 # Register the close_mutex function to be called on exit
 atexit.register(on_closing)
+
+
+# This runs before on_closing, if not confirmed, nothing should be changed
+def exit_confirmation():
+    if not messagebox.askokcancel(
+            "Confirm Exit",
+            "Warning: Temporary Note History will be cleared when app closes.\n\n"
+            "Please make sure you have copied your important notes elsewhere "
+            "before closing.\n\n"
+            "Do you still want to exit?"
+    ):
+        return  # User cancelled - do nothing
+    root.destroy()
+
+
+# remind user notes will be gone after exiting
+root.protocol("WM_DELETE_WINDOW", exit_confirmation)
 
 # settings logic
 app_settings = SettingsWindow()
@@ -1793,16 +1811,30 @@ if app_settings.editable_settings["Enable Scribe Template"]:
 
 # Create a frame to hold both timestamp listbox and mic test
 history_frame = ttk.Frame(root)
-history_frame.grid(row=0, column=9, columnspan=2, rowspan=5, padx=5, pady=10, sticky='nsew')
+history_frame.grid(row=0, column=9, columnspan=2, rowspan=6, padx=5, pady=10, sticky='nsew')
 
 # Configure the frame's grid
 history_frame.grid_columnconfigure(0, weight=1)
 history_frame.grid_rowconfigure(0, weight=4)  # Timestamp takes more space
-history_frame.grid_rowconfigure(1, weight=1)  # Mic test takes less space
+history_frame.grid_rowconfigure(1, weight=1)
+history_frame.grid_rowconfigure(2, weight=1)  # Mic test takes less space
+
+system_font = tk.font.nametofont("TkDefaultFont")
+base_size = system_font.cget("size")
+scaled_size = int(base_size * 0.9)  # 90% of system font size
+# Add warning label
+warning_label = tk.Label(history_frame,
+                         text="Temporary Note History will be cleared when app closes",
+                         # fg="red",
+                         # wraplength=200,
+                         justify="left",
+                         font=tk.font.Font(size=scaled_size),
+                         )
+warning_label.grid(row=3, column=0, sticky='ew', pady=(0,5))
 
 # Add the timestamp listbox
 timestamp_listbox = tk.Listbox(history_frame, height=30, exportselection=False)
-timestamp_listbox.grid(row=0, column=0, rowspan=3,sticky='nsew')
+timestamp_listbox.grid(row=0, column=0, rowspan=3, sticky='nsew')
 timestamp_listbox.bind('<<ListboxSelect>>', show_response)
 timestamp_listbox.insert(tk.END, "Temporary Note History")
 timestamp_listbox.config(fg='grey')
