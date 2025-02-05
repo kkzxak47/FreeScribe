@@ -151,7 +151,7 @@ class SettingsWindow():
             SettingsKeys.WHISPER_CPU_COUNT.value: multiprocessing.cpu_count(),
             SettingsKeys.WHISPER_VAD_FILTER.value: False,
             SettingsKeys.WHISPER_COMPUTE_TYPE.value: "float16",
-            "Whisper Model": "medium",
+            SettingsKeys.WHISPER_MODEL.value: "medium",
             "Current Mic": "None",
             SettingsKeys.WHISPER_REAL_TIME.value: True,
             "Real Time Audio Length": 10,
@@ -639,7 +639,7 @@ class SettingsWindow():
         # save the old whisper model to compare with the new model later
         old_local_whisper = self.editable_settings[SettingsKeys.LOCAL_WHISPER.value]
         old_whisper_architecture = self.editable_settings[SettingsKeys.WHISPER_ARCHITECTURE.value]
-        old_model = self.editable_settings["Whisper Model"]
+        old_model = self.editable_settings[SettingsKeys.WHISPER_MODEL.value]
         old_cpu_count = self.editable_settings[SettingsKeys.WHISPER_CPU_COUNT.value]
         old_compute_type = self.editable_settings[SettingsKeys.WHISPER_COMPUTE_TYPE.value]
 
@@ -647,7 +647,7 @@ class SettingsWindow():
         # if Local Whisper is selected, compare the old model with the new model and reload the model if it has changed
         if self.editable_settings[SettingsKeys.LOCAL_WHISPER.value] and (
                 old_local_whisper != self.editable_settings_entries[SettingsKeys.LOCAL_WHISPER.value].get() or 
-                old_model != self.editable_settings_entries["Whisper Model"].get() or 
+                old_model != self.editable_settings_entries[SettingsKeys.WHISPER_MODEL.value].get() or 
                 old_whisper_architecture != self.editable_settings_entries[SettingsKeys.WHISPER_ARCHITECTURE.value].get() or 
                 old_cpu_count != self.editable_settings_entries[SettingsKeys.WHISPER_CPU_COUNT.value].get() or
                 old_compute_type != self.editable_settings_entries[SettingsKeys.WHISPER_COMPUTE_TYPE.value].get()):

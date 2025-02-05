@@ -196,19 +196,19 @@ class SettingsWindowUI:
 
         left_row, right_row = self.create_editable_settings_col(left_frame, right_frame, left_row, right_row, self.settings.whisper_settings)
         # create the whisper model dropdown slection
-        tk.Label(left_frame, text="Whisper Model").grid(row=3, column=0, padx=0, pady=5, sticky="w")
+        tk.Label(left_frame, text=SettingsKeys.WHISPER_MODEL.value).grid(row=3, column=0, padx=0, pady=5, sticky="w")
         whisper_models_drop_down_options = ["medium", "small", "tiny", "tiny.en", "base", "base.en", "small.en", "medium.en", "large"]
         self.whisper_models_drop_down = ttk.Combobox(left_frame, values=whisper_models_drop_down_options, width=20)
         self.whisper_models_drop_down.grid(row=3, column=1, padx=0, pady=5, sticky="w")
 
         try:
             # Try to set the whisper model dropdown to the current model
-            self.whisper_models_drop_down.current(whisper_models_drop_down_options.index(self.settings.editable_settings["Whisper Model"]))
+            self.whisper_models_drop_down.current(whisper_models_drop_down_options.index(self.settings.editable_settings[SettingsKeys.WHISPER_MODEL.value]))
         except ValueError:
             # If not in list then just force set text
-            self.whisper_models_drop_down.set(self.settings.editable_settings["Whisper Model"])
+            self.whisper_models_drop_down.set(self.settings.editable_settings[SettingsKeys.WHISPER_MODEL.value])
 
-        self.settings.editable_settings_entries["Whisper Model"] = self.whisper_models_drop_down
+        self.settings.editable_settings_entries[SettingsKeys.WHISPER_MODEL.value] = self.whisper_models_drop_down
 
         # create the whisper model dropdown slection
         right_row += 1

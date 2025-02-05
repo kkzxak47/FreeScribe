@@ -231,7 +231,7 @@ def double_check_stt_model_loading(task_done_var, task_cancel_var):
             return
         # if using local whisper and model is not loaded, when starting recording
         if stt_model_loading_thread_lock.locked():
-            model_name = app_settings.editable_settings["Whisper Model"].strip()
+            model_name = app_settings.editable_settings[SettingsKeys.WHISPER_MODEL.value].strip()
             stt_loading_window = LoadingWindow(root, "Loading Voice to Text model",
                                                f"Loading {model_name} model. Please wait.",
                                                on_cancel=lambda: task_cancel_var.set(True))
@@ -1594,7 +1594,7 @@ def _load_stt_model_thread():
     """
     with stt_model_loading_thread_lock:
         global stt_local_model
-        model = app_settings.editable_settings["Whisper Model"].strip()
+        model = app_settings.editable_settings[SettingsKeys.WHISPER_MODEL.value].strip()
         stt_loading_window = LoadingWindow(root, "Voice to Text", f"Loading Voice to Text {model} model. Please wait.")
         print(f"Loading STT model: {model}")
         try:
