@@ -51,6 +51,7 @@ from utils.utils import get_application_version
 from UI.DebugWindow import DualOutput
 from UI.Widgets.MicrophoneTestFrame import MicrophoneTestFrame
 from utils.utils import window_has_running_instance, bring_to_front, close_mutex
+from utils.window_utils import remove_min_max, add_min_max
 from WhisperModel import TranscribeError
 from UI.Widgets.PopupBox import PopupBox
 
@@ -1440,6 +1441,9 @@ def set_full_view():
     root.minsize(900, 400)
     current_view = "full"
 
+    # add the minimal view geometry and remove the last full view geometry
+    add_min_max(root)
+
     # create docker_status bar if enabled
     if app_settings.editable_settings["Use Docker Status Bar"]:
         window.create_docker_status_bar()
@@ -1458,7 +1462,6 @@ def set_full_view():
 
     # Disable to make the window an app(show taskbar icon)
     # root.attributes('-toolwindow', False)
-
 
 def set_minimal_view():
 
@@ -1529,15 +1532,15 @@ def set_minimal_view():
         window.destroy_scribe_template()
         window.create_scribe_template(row=1, column=0, columnspan=3, pady=5)
 
+    # Remove the minimal view geometry and save the current full view geometry
+    remove_min_max(root)
+
     # Save full view geometry and restore last minimal view geometry
     last_full_position = root.geometry()
     if last_minimal_position:
         root.geometry(last_minimal_position)
     else:
         root.geometry("125x50")  # Set the window size to the minimal view size
-
-    # Enable to make the window a tool window (no taskbar icon)
-    # root.attributes('-toolwindow', True)
 
 def copy_text(widget):
     """
