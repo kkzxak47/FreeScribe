@@ -97,6 +97,7 @@ class MicrophoneTestFrame:
 
         # Create styles for all elements
         style = ttk.Style()
+        style.configure('Disabled.TFrame', background='lightgray')  # Gray background for disabled state 
         style.configure('Mic.TCombobox', padding=(5, 5, 5, 5))
         style.configure('Green.TFrame', background='#2ecc71')
         style.configure('Yellow.TFrame', background='#f1c40f')
@@ -303,6 +304,15 @@ class MicrophoneTestFrame:
         Get the selected microphone index.
         """
         return MicrophoneState.SELECTED_MICROPHONE_INDEX
+
+    def set_mic_test_state(self, enabled):         
+        self.mic_dropdown.state(['!disabled' if enabled else 'disabled']) 
+        self.status_label.state(['!disabled' if enabled else 'disabled']) 
+        for segment in self.segments: 
+            if isinstance(segment, (ttk.Frame, tk.Frame)): 
+                # ttk.Frame and tk.Frame do not support the 'state' option 
+                continue 
+            segment.state(['!disabled' if enabled else 'disabled'])  
 
     def __del__(self):
         """
