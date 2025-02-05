@@ -50,7 +50,7 @@ class SettingsKeys(Enum):
     LLM_ARCHITECTURE = "Built-in AI Architecture"
     USE_PRESCREEN_AI_INPUT = "Use Pre-Screen AI Input"
     LOCAL_LLM = "Built-in AI Processing"
-    LOCAL_LLM_MODEL = "Built-in AI Model"
+    LOCAL_LLM_MODEL = "AI Model"
     LLM_ENDPOINT = "AI Server Endpoint"
     LLM_SERVER_API_KEY = "AI Server API Key"
 
