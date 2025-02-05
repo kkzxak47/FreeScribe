@@ -1128,13 +1128,9 @@ def screen_input_with_llm(conversation):
         # Split the words into chunks
         chunks = [' '.join(words[i:i + words_per_chunk]) for i in range(0, len(words), words_per_chunk)]
         print(f"Total chunks count: {len(chunks)}")
-        iteration_count = 0
         # Process each chunk sequentially
-        for chunk in chunks:
-            iteration_count += 1  # Increment the iteration counter
-            process_value = process_chunk(chunk)  # Process the chunk
-            print(f"Iteration Count: {iteration_count}, Process Value: {process_value}")
-            if process_value:
+        for chunk in chunks:                               
+            if process_chunk(chunk):
                 # If any chunk is valid, return True
                 return True
         # If no chunk is valid, return False
