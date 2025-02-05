@@ -1450,8 +1450,11 @@ def set_full_view():
 
     # Save minimal view geometry and restore last full view geometry
     last_minimal_position = root.geometry()
-    if last_full_position is not None:
+    root.update_idletasks()
+    if last_full_position:
         root.geometry(last_full_position)
+    else:
+        root.geometry("900x400")
 
     # Disable to make the window an app(show taskbar icon)
     # root.attributes('-toolwindow', False)
@@ -1530,6 +1533,8 @@ def set_minimal_view():
     last_full_position = root.geometry()
     if last_minimal_position:
         root.geometry(last_minimal_position)
+    else:
+        root.geometry("125x50")  # Set the window size to the minimal view size
 
     # Enable to make the window a tool window (no taskbar icon)
     # root.attributes('-toolwindow', True)
