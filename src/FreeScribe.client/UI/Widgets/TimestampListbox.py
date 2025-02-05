@@ -1,5 +1,6 @@
 import logging
 import tkinter as tk
+import tkinter.messagebox as messagebox
 
 
 class TimestampListbox(tk.Listbox):
@@ -62,8 +63,16 @@ class TimestampListbox(tk.Listbox):
                 self.edit_entry.destroy()
                 self.edit_entry = None
                 self.edit_index = None
+        except tk.TclError as e:
+            # Handle Tkinter-specific errors (e.g., widget-related issues)
+            messagebox.showerror("UI Error", f"Failed to update timestamp: {str(e)}")
+        except ValueError as e:
+            # Handle validation errors
+            messagebox.showwarning("Invalid Input", f"Invalid timestamp format: {str(e)}")
         except Exception as e:
-            logging.exception(f"Error confirm edit {str(e)}")
+            # Log unexpected errors and re-raise them
+            logging.error(f"Critical error while confirming timestamp edit: {str(e)}")
+            raise  # Re-raise unexpected exceptions to prevent silent failures
 
     def cancel_edit(self):
         """Cancel the editing operation"""
@@ -72,5 +81,13 @@ class TimestampListbox(tk.Listbox):
                 self.edit_entry.destroy()
                 self.edit_entry = None
                 self.edit_index = None
+        except tk.TclError as e:
+            # Handle Tkinter-specific errors (e.g., widget-related issues)
+            messagebox.showerror("UI Error", f"Failed to update timestamp: {str(e)}")
+        except ValueError as e:
+            # Handle validation errors
+            messagebox.showwarning("Invalid Input", f"Invalid timestamp format: {str(e)}")
         except Exception as e:
-            logging.exception(f"Error canceling edit: {e}")
+            # Log unexpected errors and re-raise them
+            logging.error(f"Critical error while confirming timestamp edit: {str(e)}")
+            raise  # Re-raise unexpected exceptions to prevent silent failures
