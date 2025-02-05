@@ -173,6 +173,8 @@ class SettingsWindow():
             SettingsKeys.USE_TRANSLATE_TASK.value: False,
             SettingsKeys.WHISPER_LANGUAGE_CODE.value: "None (Auto Detect)",
             SettingsKeys.USE_PRESCREEN_AI_INPUT.value: True,
+            "Enable Word Count Validation": True,  # Default to enabled
+            "Enable AI Conversation Validation": False,  # Default to disabled
         }
 
     def __init__(self):
@@ -234,6 +236,8 @@ class SettingsWindow():
             # "singleline",
             # "frmttriminc",
             # "frmtrmblln",
+            "Enable Word Count Validation",
+            "Enable AI Conversation Validation",
         ]
 
         self.adv_whisper_settings = [
