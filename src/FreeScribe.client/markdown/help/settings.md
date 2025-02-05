@@ -76,7 +76,7 @@
 **Default**: `CPU`  
 **Type**: dropdown
 
-### Builtin AI model processing
+### Builtin AI Model
 
 **Description**: Select the local LLM model to use.  
 **Default**: `gemma-2-2b-it-Q8_0.gguf`  

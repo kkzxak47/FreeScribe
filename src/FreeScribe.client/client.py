@@ -1027,7 +1027,7 @@ def send_text_to_api(edited_text):
 
     try:
         payload = {
-            "model": app_settings.editable_settings["Model"].strip(),
+            "model": app_settings.editable_settings[SettingsKeys.LOCAL_LLM_MODEL.value].strip(),
             "messages": [
                 {"role": "user", "content": edited_text}
             ],
@@ -1042,7 +1042,7 @@ def send_text_to_api(edited_text):
             
     except ValueError as e:
         payload = {
-            "model": app_settings.editable_settings["Model"].strip(),
+            "model": app_settings.editable_settings[SettingsKeys.LOCAL_LLM_MODEL.value].strip(),
             "messages": [
                 {"role": "user", "content": edited_text}
             ],

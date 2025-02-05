@@ -45,9 +45,10 @@ class SettingsKeys(Enum):
     USE_TRANSLATE_TASK = "Translate Speech to English Text"
     WHISPER_LANGUAGE_CODE = "Whisper Language Code"
     S2T_SELF_SIGNED_CERT = "S2T Server Self-Signed Certificates"
-    LLM_ARCHITECTURE = "Architecture"
+    LLM_ARCHITECTURE = "Builtin AI Architecture"
     USE_PRESCREEN_AI_INPUT = "Use Pre-Screen AI Input"
     LOCAL_LLM = "Built-in AI Processing"
+    LOCAL_LLM_MODEL = "Builtin AI Model"
     
 
 
@@ -115,7 +116,7 @@ class SettingsWindow():
     AUTO_DETECT_LANGUAGE_CODES = ["", "auto", "Auto Detect", "None", "None (Auto Detect)"]
 
     DEFAULT_SETTINGS_TABLE = {
-            "Model": "gemma2:2b-instruct-q8_0",
+            SettingsKeys.LOCAL_LLM_MODEL.value: "gemma2:2b-instruct-q8_0",
             "Model Endpoint": "https://localhost:3334/v1",
             SettingsKeys.LOCAL_LLM.value: True,
             SettingsKeys.LLM_ARCHITECTURE.value: DEFAULT_LLM_ARCHITECTURE,
@@ -553,8 +554,8 @@ class SettingsWindow():
             dropdown.set("Loading models...")
             models = self.get_available_models(endpoint=endpoint)
             dropdown["values"] = models
-            if self.editable_settings["Model"] in models:
-                dropdown.set(self.editable_settings["Model"])
+            if self.editable_settings[SettingsKeys.LOCAL_LLM_MODEL.value] in models:
+                dropdown.set(self.editable_settings[SettingsKeys.LOCAL_LLM_MODEL.value])
             else:
                 dropdown.set(models[0])
         

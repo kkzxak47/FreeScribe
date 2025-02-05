@@ -306,7 +306,7 @@ class SettingsWindowUI:
 
         # Create custom model entry (initially hidden)
         self.custom_model_entry = tk.Entry(left_frame, width=15)
-        self.custom_model_entry.insert(0, self.settings.editable_settings["Model"])
+        self.custom_model_entry.insert(0, self.settings.editable_settings[SettingsKeys.LOCAL_LLM_MODEL.value])
 
         refresh_button = ttk.Button(left_frame, text="↻", 
                                 command=lambda: (self.save_settings(False), threading.Thread(target=self.settings.update_models_dropdown, args=(self.models_drop_down,)).start(), self.on_model_selection_change(None)), 
@@ -591,7 +591,7 @@ class SettingsWindowUI:
         This method retrieves the values from the UI elements and calls the
         `save_settings` method of the `settings` object to save the settings.
         """
-        self.settings.load_or_unload_model(self.settings.editable_settings["Model"],
+        self.settings.load_or_unload_model(self.settings.editable_settings[SettingsKeys.LOCAL_LLM_MODEL.value],
             self.get_selected_model(),
             self.settings.editable_settings[SettingsKeys.LOCAL_LLM.value],
             self.settings.editable_settings_entries[SettingsKeys.LOCAL_LLM.value].get(),
@@ -599,7 +599,7 @@ class SettingsWindowUI:
             self.architecture_dropdown.get())
 
         if self.get_selected_model() not in ["Loading models...", "Failed to load models"]:
-            self.settings.editable_settings["Model"] = self.get_selected_model()
+            self.settings.editable_settings[SettingsKeys.LOCAL_LLM_MODEL.value] = self.get_selected_model()
 
         self.settings.update_whisper_model()
 
