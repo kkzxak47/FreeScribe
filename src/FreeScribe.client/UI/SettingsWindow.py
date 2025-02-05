@@ -37,7 +37,7 @@ class SettingsKeys(Enum):
     WHISPER_SERVER_API_KEY = "Speech2Text (Whisper) API Key"
     WHISPER_REAL_TIME = "Real Time Speech Transcription"
     WHISPER_MODEL = "Builtin Speech2Text Model"
-    WHISPER_ARCHITECTURE = "Speech2Text (Whisper) Architecture"
+    WHISPER_ARCHITECTURE = "Builtin Speech2Text Architecture"
     WHISPER_CPU_COUNT = "Whisper CPU Thread Count (Experimental)"
     WHISPER_COMPUTE_TYPE = "Whisper Compute Type (Experimental)"
     WHISPER_BEAM_SIZE = "Whisper Beam Size (Experimental)"

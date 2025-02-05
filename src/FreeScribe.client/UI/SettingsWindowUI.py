@@ -102,8 +102,8 @@ class SettingsWindowUI:
         self.docker_settings_frame = ttk.Frame(self.notebook)
 
         self.notebook.add(self.general_settings_frame, text="General Settings")
-        self.notebook.add(self.whisper_settings_frame, text="Speech-to-Text Settings")
-        self.notebook.add(self.llm_settings_frame, text="AI Settings")
+        self.notebook.add(self.whisper_settings_frame, text="Speech-to-Text Settings (Whisper)")
+        self.notebook.add(self.llm_settings_frame, text="AI Settings (LLM)")
         self.notebook.add(self.advanced_frame, text="Advanced Settings")
 
         self.settings_window.protocol("WM_DELETE_WINDOW", self.close_window)
