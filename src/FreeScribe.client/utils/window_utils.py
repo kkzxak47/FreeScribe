@@ -14,7 +14,9 @@ Alex Simko, Pemba Sherpa, Naitik Patel, Yogesh Kumar and Xun Zhong.
 import tkinter as tk
 import platform
 from ctypes import windll
+from utils.decorators import windows_only
 
+@windows_only
 def remove_min_max(window):
     """
     Removes the minimize and maximize buttons from a window's title bar on Windows systems.
@@ -33,10 +35,6 @@ def remove_min_max(window):
         This function requires the windll module from ctypes and only works on Windows systems.
         The window style changes are applied immediately.
     """
-    if platform.system() != "Windows":
-        print("This feature is only supported on Windows.")
-        return
-
     hwnd = windll.user32.GetParent(window.winfo_id())
 
     GWL_STYLE = -16
@@ -56,6 +54,7 @@ def remove_min_max(window):
     windll.user32.SetWindowPos(hwnd, 0, 0, 0, 0, 0, 
                                0x0027)
 
+@windows_only
 def add_min_max(window):
     """
     Adds the minimize and maximize buttons to a window's title bar on Windows systems.
@@ -74,10 +73,6 @@ def add_min_max(window):
         This function requires the windll module from ctypes and only works on Windows systems.
         The window style changes are applied immediately.
     """
-    if platform.system() != "Windows":
-        print("This feature is only supported on Windows.")
-        return
-
     hwnd = windll.user32.GetParent(window.winfo_id())
 
     GWL_STYLE = -16
