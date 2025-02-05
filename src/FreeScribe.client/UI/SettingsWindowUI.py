@@ -267,10 +267,10 @@ class SettingsWindowUI:
 
         # Use local llm button with custom handler
         tk.Label(left_frame, text="Local LLM").grid(row=left_row, column=0, padx=0, pady=5, sticky="w")
-        value = tk.IntVar(value=(self.settings.editable_settings["Use Local LLM"]))
+        value = tk.IntVar(value=(self.settings.editable_settings[SettingsKeys.LOCAL_LLM.value]))
         self.local_llm_checkbox = tk.Checkbutton(left_frame, variable=value, command=self.toggle_remote_llm_settings)
         self.local_llm_checkbox.grid(row=left_row, column=1, padx=0, pady=5, sticky="w")
-        self.settings.editable_settings_entries["Use Local LLM"] = value
+        self.settings.editable_settings_entries[SettingsKeys.LOCAL_LLM.value] = value
 
         left_row += 1
 
@@ -346,7 +346,7 @@ class SettingsWindowUI:
         self.toggle_remote_llm_settings()
  
     def toggle_remote_llm_settings(self):
-        current_state = self.settings.editable_settings_entries["Use Local LLM"].get()
+        current_state = self.settings.editable_settings_entries[SettingsKeys.LOCAL_LLM.value].get()
         
         state = "normal" if current_state == 0 else "disabled"
 
@@ -593,8 +593,8 @@ class SettingsWindowUI:
         """
         self.settings.load_or_unload_model(self.settings.editable_settings["Model"],
             self.get_selected_model(),
-            self.settings.editable_settings["Use Local LLM"],
-            self.settings.editable_settings_entries["Use Local LLM"].get(),
+            self.settings.editable_settings[SettingsKeys.LOCAL_LLM.value],
+            self.settings.editable_settings_entries[SettingsKeys.LOCAL_LLM.value].get(),
             self.settings.editable_settings[SettingsKeys.LLM_ARCHITECTURE.value],
             self.architecture_dropdown.get())
 

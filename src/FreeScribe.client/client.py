@@ -1200,7 +1200,7 @@ def threaded_screen_input(user_message, screen_return):
     screen_return.set(input_return)
 
 def send_text_to_chatgpt(edited_text): 
-    if app_settings.editable_settings["Use Local LLM"]:
+    if app_settings.editable_settings[SettingsKeys.LOCAL_LLM.value]:
         return send_text_to_localmodel(edited_text)
     else:
         return send_text_to_api(edited_text)
@@ -1251,7 +1251,7 @@ def show_edit_transcription_popup(formatted_message):
     pattern = r'\b\d{10}\b'     # Any 10 digit number, looks like OHIP
     cleaned_message = re.sub(pattern,'{{OHIP}}',scrubbed_message)
 
-    if (app_settings.editable_settings["Use Local LLM"] or is_private_ip(app_settings.editable_settings["Model Endpoint"])) and not app_settings.editable_settings["Show Scrub PHI"]:
+    if (app_settings.editable_settings[SettingsKeys.LOCAL_LLM.value] or is_private_ip(app_settings.editable_settings["Model Endpoint"])) and not app_settings.editable_settings["Show Scrub PHI"]:
         generate_note_thread(cleaned_message)
         return
     
@@ -1833,7 +1833,7 @@ if (app_settings.editable_settings['Show Welcome Message']):
     window.show_welcome_message()
 
 #Wait for the UI root to be intialized then load the model. If using local llm.
-if app_settings.editable_settings["Use Local LLM"]:
+if app_settings.editable_settings[SettingsKeys.LOCAL_LLM.value]:
     root.after(100, lambda:(ModelManager.setup_model(app_settings=app_settings, root=root)))  
 
 if app_settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value]:

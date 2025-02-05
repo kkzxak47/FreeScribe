@@ -47,6 +47,8 @@ class SettingsKeys(Enum):
     S2T_SELF_SIGNED_CERT = "S2T Server Self-Signed Certificates"
     LLM_ARCHITECTURE = "Architecture"
     USE_PRESCREEN_AI_INPUT = "Use Pre-Screen AI Input"
+    LOCAL_LLM = "Built-in AI Processing"
+    
 
 
 class Architectures(Enum):
@@ -115,7 +117,7 @@ class SettingsWindow():
     DEFAULT_SETTINGS_TABLE = {
             "Model": "gemma2:2b-instruct-q8_0",
             "Model Endpoint": "https://localhost:3334/v1",
-            "Use Local LLM": True,
+            SettingsKeys.LOCAL_LLM.value: True,
             SettingsKeys.LLM_ARCHITECTURE.value: DEFAULT_LLM_ARCHITECTURE,
             "use_story": False,
             "use_memory": False,
@@ -441,7 +443,7 @@ class SettingsWindow():
         settings_to_keep = {
             "Model Endpoint": self.editable_settings["Model Endpoint"],
             "AI Server Self-Signed Certificates": self.editable_settings["AI Server Self-Signed Certificates"],
-            "Use Local LLM": self.editable_settings["Use Local LLM"],
+            SettingsKeys.LOCAL_LLM.value: self.editable_settings[SettingsKeys.LOCAL_LLM.value],
             SettingsKeys.LOCAL_WHISPER.value: self.editable_settings[SettingsKeys.LOCAL_WHISPER.value],
             SettingsKeys.WHISPER_ENDPOINT.value: self.editable_settings[SettingsKeys.WHISPER_ENDPOINT.value],
             SettingsKeys.WHISPER_SERVER_API_KEY.value: self.editable_settings[SettingsKeys.WHISPER_SERVER_API_KEY.value],
@@ -543,7 +545,7 @@ class SettingsWindow():
         This method fetches the available models from the AI Scribe service and updates
         the dropdown widget in the settings window with the new list of models.
         """
-        if self.editable_settings_entries["Use Local LLM"].get():
+        if self.editable_settings_entries[SettingsKeys.LOCAL_LLM.value].get():
             dropdown["values"] = ["gemma-2-2b-it-Q8_0.gguf"]
             dropdown.set("gemma-2-2b-it-Q8_0.gguf")
         else:
