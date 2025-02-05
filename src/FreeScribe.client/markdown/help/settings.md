@@ -64,19 +64,19 @@
 
 ## AI Settings
 
-### Builtin AI processing
+### Built-in AI processing
 
 **Description**: Enable or disable the use of a local large language model. This will run on your device if enabled.  
 **Default**: `true`  
 **Type**: boolean
 
-### Builtin AI Architecture
+### Built-in AI Architecture
 
 **Description**: Choose the hardware architecture for running the local LLM. Options may include `CUDA (Nvidia GPU)` and `CPU`.  
 **Default**: `CPU`  
 **Type**: dropdown
 
-### Builtin AI Model
+### Built-in AI Model
 
 **Description**: Select the local LLM model to use.  
 **Default**: `gemma-2-2b-it-Q8_0.gguf`  
