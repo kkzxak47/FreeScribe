@@ -266,7 +266,7 @@ class SettingsWindowUI:
         right_row = 0
 
         # Use local llm button with custom handler
-        tk.Label(left_frame, text="Local LLM").grid(row=left_row, column=0, padx=0, pady=5, sticky="w")
+        tk.Label(left_frame, text=SettingsKeys.LOCAL_LLM.value).grid(row=left_row, column=0, padx=0, pady=5, sticky="w")
         value = tk.IntVar(value=(self.settings.editable_settings[SettingsKeys.LOCAL_LLM.value]))
         self.local_llm_checkbox = tk.Checkbutton(left_frame, variable=value, command=self.toggle_remote_llm_settings)
         self.local_llm_checkbox.grid(row=left_row, column=1, padx=0, pady=5, sticky="w")
@@ -275,7 +275,7 @@ class SettingsWindowUI:
         left_row += 1
 
         #6. GPU OR CPU SELECTION (Right Column)
-        self.local_architecture_label = tk.Label(left_frame, text="Local Architecture")
+        self.local_architecture_label = tk.Label(left_frame, text=SettingsKeys.LLM_ARCHITECTURE.value)
         self.local_architecture_label.grid(row=left_row, column=0, padx=0, pady=5, sticky="w")
         architecture_options = self.settings.get_available_architectures()
         self.architecture_dropdown = ttk.Combobox(left_frame, values=architecture_options, width=20, state="readonly")
@@ -296,7 +296,7 @@ class SettingsWindowUI:
         left_row += 1
 
         # 5. Models (Left Column)
-        tk.Label(left_frame, text="Models").grid(row=left_row, column=0, padx=0, pady=5, sticky="w")
+        tk.Label(left_frame, text=SettingsKeys.LOCAL_LLM_MODEL.value).grid(row=left_row, column=0, padx=0, pady=5, sticky="w")
         models_drop_down_options = []
         self.models_drop_down = ttk.Combobox(left_frame, values=models_drop_down_options, width=20, state="readonly")
         self.models_drop_down.grid(row=left_row, column=1, padx=0, pady=5, sticky="w")
@@ -318,7 +318,7 @@ class SettingsWindowUI:
         right_frame, right_row = self.create_editable_settings(right_frame, self.settings.llm_settings, padx=0, pady=0)
 
         # 2. OpenAI API Key (Right Column)
-        tk.Label(right_frame, text="OpenAI API Key:").grid(row=right_row, column=0, padx=0, pady=5, sticky="w")
+        tk.Label(right_frame, text=SettingsKeys.LLM_SERVER_API_KEY.value).grid(row=right_row, column=0, padx=0, pady=5, sticky="w")
         self.openai_api_key_entry = tk.Entry(right_frame, width=25)
         self.openai_api_key_entry.insert(0, self.settings.OPENAI_API_KEY)
         self.openai_api_key_entry.grid(row=right_row, column=1, columnspan=2, padx=0, pady=5, sticky="w")

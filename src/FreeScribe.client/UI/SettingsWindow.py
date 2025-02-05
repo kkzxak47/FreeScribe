@@ -50,6 +50,8 @@ class SettingsKeys(Enum):
     LOCAL_LLM = "Built-in AI Processing"
     LOCAL_LLM_MODEL = "Builtin AI Model"
     LLM_ENDPOINT = "AI Server Endpoint"
+    LLM_SERVER_API_KEY = "AI Server API Key"
+
     
 
 
