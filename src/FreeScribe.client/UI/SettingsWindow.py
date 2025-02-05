@@ -27,7 +27,6 @@ from utils.file_utils import get_resource_path, get_file_path
 from utils.utils import get_application_version
 from Model import ModelManager
 import threading
-from UI.Widgets.MicrophoneSelector import MicrophoneState
 from utils.ip_utils import is_valid_url
 from enum import Enum
 import multiprocessing
@@ -67,6 +66,8 @@ class Architectures(Enum):
 class FeatureToggle:
     DOCKER_SETTINGS_TAB = False
     DOCKER_STATUS_BAR = False
+    POST_PROCESSING = False
+    PRE_PROCESSING = False
 
 class SettingsWindow():
     """
@@ -160,8 +161,8 @@ class SettingsWindow():
             "Use Docker Status Bar": False,
             "Show Welcome Message": True,
             "Enable Scribe Template": False,
-            "Use Pre-Processing": True,
-            "Use Post-Processing": False, # Disabled for now causes unexcepted behaviour
+            "Use Pre-Processing": FeatureToggle.PRE_PROCESSING,
+            "Use Post-Processing": FeatureToggle.POST_PROCESSING,
             "AI Server Self-Signed Certificates": False,
             SettingsKeys.S2T_SELF_SIGNED_CERT.value: False,
             "Pre-Processing": "Please break down the conversation into a list of facts. Take the conversation and transform it to a easy to read list:\n\n",
@@ -268,16 +269,12 @@ class SettingsWindow():
         ]
 
         self.editable_settings_entries = {}
-
         self.load_settings_from_file()
         self.AISCRIBE = self.load_aiscribe_from_file() or "AI, please transform the following conversation into a concise SOAP note. Do not assume any medical data, vital signs, or lab values. Base the note strictly on the information provided in the conversation. Ensure that the SOAP note is structured appropriately with Subjective, Objective, Assessment, and Plan sections. Strictly extract facts from the conversation. Here's the conversation:"
         self.AISCRIBE2 = self.load_aiscribe2_from_file() or "Remember, the Subjective section should reflect the patient's perspective and complaints as mentioned in the conversation. The Objective section should only include observable or measurable data from the conversation. The Assessment should be a summary of your understanding and potential diagnoses, considering the conversation's content. The Plan should outline the proposed management, strictly based on the dialogue provided. Do not add any information that did not occur and do not make assumptions. Strictly extract facts from the conversation."
-
         self.get_dropdown_values_and_mapping()
-        self._create_settings_and_aiscribe_if_not_exist()
-
-        MicrophoneState.load_microphone_from_settings(self)
-
+        self._create_settings_and_aiscribe_if_not_exist()    
+        
     def get_dropdown_values_and_mapping(self):
         """
         Reads the 'options.txt' file to populate dropdown values and their mappings.
@@ -365,7 +362,7 @@ class SettingsWindow():
             json.dump(settings, file)
 
     def save_settings(self, openai_api_key, aiscribe_text, aiscribe2_text, settings_window,
-                      silence_cutoff):
+                    silence_cutoff):
         """
         Save the current settings, including IP addresses, API keys, and user-defined parameters.
 
@@ -397,7 +394,7 @@ class SettingsWindow():
             f.write(self.AISCRIBE)
         with open(get_resource_path('aiscribe2.txt'), 'w') as f:
             f.write(self.AISCRIBE2)
-      
+
     def load_aiscribe_from_file(self):
         """
         Load the AI Scribe text from a file.

@@ -187,29 +187,49 @@ def get_prompt(formatted_message):
         "frmtrmblln": app_settings.editable_settings["frmtrmblln"]
     }
 
-def threaded_toggle_recording():
-    logging.debug(f"*** Toggle Recording - Recording status: {is_recording}, STT local model: {stt_local_model}")
+def threaded_check_stt_model():
+    """
+    Starts a new thread to check the status of the speech-to-text (STT) model loading process.
+    
+    A separate thread is spawned to run the `double_check_stt_model_loading` function,
+    which monitors the loading of the STT model. The function waits for the task to be completed and
+    handles cancellation if requested.
+    """
+    # Create a Boolean variable to track if the task is done/canceled
     task_done_var = tk.BooleanVar(value=False)
     task_cancel_var = tk.BooleanVar(value=False)
+    
+    # Start a new thread to run the double_check_stt_model_loading function
     stt_thread = threading.Thread(target=double_check_stt_model_loading, args=(task_done_var, task_cancel_var))
     stt_thread.start()
+    
+    # Wait for the task_done_var to be set to True (indicating task completion)
     root.wait_variable(task_done_var)
+    
+    # Check if the task was canceled via task_cancel_var
     if task_cancel_var.get():
         logging.debug(f"double checking canceled")
         return
 
+def threaded_toggle_recording():
+    logging.debug(f"*** Toggle Recording - Recording status: {is_recording}, STT local model: {stt_local_model}")
+    threaded_check_stt_model()
     thread = threading.Thread(target=toggle_recording)
     thread.start()
 
 
 def double_check_stt_model_loading(task_done_var, task_cancel_var):
+    print(f"*** Double Checking STT model - Model Current Status: {stt_local_model}")
     stt_loading_window = None
     try:
         if is_recording:
+            print("*** Recording in progress, skipping double check")
             return
         if not app_settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value]:
+            print("*** Local Whisper is disabled, skipping double check")
             return
         if stt_local_model:
+            print("*** STT model already loaded, skipping double check")
             return
         # if using local whisper and model is not loaded, when starting recording
         if stt_model_loading_thread_lock.locked():
@@ -246,6 +266,7 @@ def double_check_stt_model_loading(task_done_var, task_cancel_var):
         messagebox.showerror("Error",
                              f"An error occurred while loading Voice to Text model synchronously {type(e).__name__}: {e}")
     finally:
+        print(f"*** Double Checking STT model Complete - Model Current Status: {stt_local_model}")
         if stt_loading_window:
             stt_loading_window.destroy()
         task_done_var.set(True)
@@ -284,8 +305,20 @@ def toggle_pause():
     
 SILENCE_WARNING_LENGTH = 10 # seconds, warn the user after 10s of no input something might be wrong
 
-def record_audio():
-    global is_paused, frames, audio_queue
+def open_microphone_stream():
+    """
+    Opens an audio stream from the selected microphone.
+
+    This function retrieves the index of the selected microphone from the
+    MicrophoneTestFrame and attempts to open an audio stream using the pyaudio
+    library. If successful, it returns the stream object and None. In case of
+    an error (either OSError or IOError), it logs the error message and returns
+    None along with the error object.
+
+    Returns:
+        tuple: A tuple containing the stream object (or None if an error occurs)
+               and the error object (or None if no error occurs).
+    """
 
     try:
         selected_index = MicrophoneTestFrame.get_selected_microphone_index()
@@ -296,9 +329,28 @@ def record_audio():
             input=True,
             frames_per_buffer=CHUNK, 
             input_device_index=int(selected_index))
+
+        return stream, None
     except (OSError, IOError) as e:
-        messagebox.showerror("Audio Error", f"Please check your microphone settings. Error opening audio stream: {e}")
-        return
+        # Log the error message
+        # TODO System logger
+        print(f"An error occurred opening the stream({type(e).__name__}): {e}")
+        return None, e
+
+def record_audio():
+    """
+    Records audio from the selected microphone, processes the audio to detect silence, 
+    and manages the recording state.
+
+    Global Variables:
+        is_paused (bool): Indicates whether the recording is paused.
+        frames (list): List of audio data frames.
+        audio_queue (queue.Queue): Queue to store recorded audio chunks.
+
+    Returns:
+        None: The function does not return a value. It interacts with global variables.
+    """
+    global is_paused, frames, audio_queue
 
     try:
         current_chunk = []
@@ -307,8 +359,14 @@ def record_audio():
         record_duration = 0
         minimum_silent_duration = int(app_settings.editable_settings["Real Time Silence Length"])
         minimum_audio_duration = int(app_settings.editable_settings["Real Time Audio Length"])
+
+        stream, stream_exception = open_microphone_stream()
+
+        if stream is None:
+            clear_application_press()
+            messagebox.showerror("Error", f"An error occurred while trying to record audio: {stream_exception}")
         
-        while is_recording:
+        while is_recording and stream is not None:
             if not is_paused:
                 data = stream.read(CHUNK, exception_on_overflow=False)
                 frames.append(data)
@@ -352,8 +410,9 @@ def record_audio():
         # For now general catch on any problems
         print(f"An error occurred: {e}")
     finally:
-        stream.stop_stream()
-        stream.close()
+        if stream:
+            stream.stop_stream()
+            stream.close()
         audio_queue.put(None)
 
         # If the warning bar is displayed, remove it
@@ -582,6 +641,8 @@ def toggle_recording():
             realtime_thread.join()
 
         save_audio()
+
+        print("*** Recording Stopped")
 
         if current_view == "full":
             mic_button.config(bg=DEFAULT_BUTTON_COLOUR, text="Start\nRecording")
@@ -879,6 +940,7 @@ def kill_thread(thread_id):
     :raises ValueError: If the thread ID is invalid.
     :raises SystemError: If the operation fails due to an unexpected state.
     """
+    print("*** Attempting to kill thread with ID:", thread_id)
     # Call the C function `PyThreadState_SetAsyncExc` to asynchronously raise
     # an exception in the target thread's context.
     res = ctypes.pythonapi.PyThreadState_SetAsyncExc(
@@ -895,6 +957,8 @@ def kill_thread(thread_id):
         # Reset the state to prevent corrupting other threads.
         ctypes.pythonapi.PyThreadState_SetAsyncExc(thread_id, None)
         raise SystemError("PyThreadState_SetAsyncExc failed")
+    
+    print("*** Killed thread with ID:", thread_id)
 
 def send_and_receive():
     global use_aiscribe, user_message
@@ -916,17 +980,17 @@ def update_gui_with_response(response_text):
     global response_history, user_message, IS_FIRST_LOG
 
     if IS_FIRST_LOG:
-        history_frame.delete(0, tk.END)
-        history_frame.config(fg='black')
+        timestamp_listbox.delete(0, tk.END)
+        timestamp_listbox.config(fg='black')
         IS_FIRST_LOG = False
 
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     response_history.insert(0, (timestamp, user_message, response_text))
 
     # Update the timestamp listbox
-    history_frame.delete(0, tk.END)
+    timestamp_listbox.delete(0, tk.END)
     for time, _, _ in response_history:
-        history_frame.insert(tk.END, time)
+        timestamp_listbox.insert(tk.END, time)
 
     display_text(response_text)
     pyperclip.copy(response_text)
@@ -1127,6 +1191,16 @@ def screen_input(user_message):
     #else return true always
     return True
 
+def threaded_screen_input(user_message, screen_return):
+    """
+    Screen the user's input message based on the application's settings in a separate thread.
+
+    :param user_message: The message to be screened.
+    :param screen_return: A boolean variable to store the result of the screening.
+    """
+    input_return = screen_input(user_message)
+    screen_return.set(input_return)
+
 def send_text_to_chatgpt(edited_text): 
     if app_settings.editable_settings["Use Local LLM"]:
         return send_text_to_localmodel(edited_text)
@@ -1215,7 +1289,7 @@ def generate_note_thread(text: str):
 
     GENERATION_THREAD_ID = None
 
-    def cancel_note_generation(thread_id):
+    def cancel_note_generation(thread_id, screen_thread):
         """Cancels any ongoing note generation.
         
         Sets the global flag to stop note generation operations.
@@ -1225,6 +1299,10 @@ def generate_note_thread(text: str):
         try:
             if thread_id:
                 kill_thread(thread_id)
+            
+            # check if screen thread is active before killing it
+            if screen_thread and screen_thread.is_alive():
+                kill_thread(screen_thread.ident)
         except Exception as e:
             # Log the error message
             # TODO implment system logger
@@ -1232,10 +1310,21 @@ def generate_note_thread(text: str):
         finally:
             GENERATION_THREAD_ID = None
 
-    loading_window = LoadingWindow(root, "Generating Note.", "Generating Note. Please wait.", on_cancel=lambda: cancel_note_generation(GENERATION_THREAD_ID))
+    # Track the screen input thread
+    screen_thread = None
+    # The return value from the screen input thread
+    screen_return = tk.BooleanVar()
+
+    loading_window = LoadingWindow(root, "Generating Note.", "Generating Note. Please wait.", on_cancel=lambda: (cancel_note_generation(GENERATION_THREAD_ID, screen_thread)))
     
-    # screen input
-    if screen_input(text) is False:
+    # screen input in its own thread so we can cancel it
+    screen_thread = threading.Thread(target=threaded_screen_input, args=(text, screen_return))
+    screen_thread.start()
+    #wait for the thread to join/cancel so we can continue
+    screen_thread.join()
+
+    # Check if the screen input was canceled or force overridden by the user
+    if screen_return.get() is False:
         loading_window.destroy()
         return
 
@@ -1715,7 +1804,7 @@ history_frame.grid_rowconfigure(1, weight=1)  # Mic test takes less space
 
 
 # Add the timestamp listbox
-timestamp_listbox = TimestampListbox(history_frame, height=30, response_history=response_history)
+timestamp_listbox = TimestampListbox(history_frame, height=30, exportselection=False, response_history=response_history)
 timestamp_listbox.grid(row=0, column=0, rowspan=3,sticky='nsew')
 timestamp_listbox.bind('<<ListboxSelect>>', show_response)
 timestamp_listbox.insert(tk.END, "Temporary Note History")

@@ -22,13 +22,11 @@ Classes:
 import json
 import tkinter as tk
 from tkinter import ttk, messagebox
-from UI.Widgets.AudioMeter import AudioMeter
 import threading
 from Model import Model, ModelManager
 from utils.file_utils import get_file_path
 from utils.utils import get_application_version
 from UI.MarkdownWindow import MarkdownWindow
-from UI.Widgets.MicrophoneSelector import MicrophoneSelector
 from UI.SettingsWindow import SettingsKeys, FeatureToggle, Architectures, SettingsWindow
 from UI.Widgets.PopupBox import PopupBox
 
@@ -213,12 +211,7 @@ class SettingsWindowUI:
         self.settings.editable_settings_entries["Whisper Model"] = self.whisper_models_drop_down
 
         # create the whisper model dropdown slection
-        # microphone_select = MicrophoneSelector(left_frame, left_row, 0, self.settings)
-        # self.settings.editable_settings_entries["Current Mic"] = microphone_select
-
-        
         right_row += 1
-
         # Whisper Architecture Dropdown
         self.whisper_architecture_label = tk.Label(left_frame, text=SettingsKeys.WHISPER_ARCHITECTURE.value)
         self.whisper_architecture_label.grid(row=left_row, column=0, padx=0, pady=5, sticky="w")
@@ -516,20 +509,22 @@ class SettingsWindowUI:
         self.aiscribe_text, row = self._create_text_area("Note Generation Prompt", self.settings.AISCRIBE, row)
         self.aiscribe2_text, row = self._create_text_area("Post Prompting", self.settings.AISCRIBE2, row)
         
-        # Processing Sections
-        self.preprocess_text, row = create_processing_section(
-            "Pre-Processing", 
-            "Use Pre-Processing",
-            self.settings.editable_settings["Pre-Processing"],
-            row
-        )
+        if FeatureToggle.PRE_PROCESSING is True:
+            # Processing Sections
+            self.preprocess_text, row = create_processing_section(
+                "Pre-Processing", 
+                "Use Pre-Processing",
+                self.settings.editable_settings["Pre-Processing"],
+                row
+            )
         
-        self.postprocess_text, _ = create_processing_section(
-            "Post-Processing (Experimental. Use with caution.)",
-            "Use Post-Processing", 
-            self.settings.editable_settings["Post-Processing"],
-            row
-        )
+        if FeatureToggle.POST_PROCESSING is True:
+            self.postprocess_text, _ = create_processing_section(
+                "Post-Processing (Experimental. Use with caution.)",
+                "Use Post-Processing", 
+                self.settings.editable_settings["Post-Processing"],
+                row
+            )
 
 
     def create_docker_settings(self):
