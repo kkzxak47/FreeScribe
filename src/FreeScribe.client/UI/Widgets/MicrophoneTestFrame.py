@@ -48,6 +48,7 @@ class MicrophoneTestFrame:
 
         # Initialize the selected microphone
         self.initialize_selected_microphone()
+        self._frame_original_styles = {}
 
     def initialize_microphones(self):
         """
@@ -309,10 +310,19 @@ class MicrophoneTestFrame:
         self.mic_dropdown.state(['!disabled' if enabled else 'disabled']) 
         self.status_label.state(['!disabled' if enabled else 'disabled']) 
         for segment in self.segments: 
-            if isinstance(segment, (ttk.Frame, tk.Frame)): 
-                # ttk.Frame and tk.Frame do not support the 'state' option 
-                continue 
-            segment.state(['!disabled' if enabled else 'disabled'])  
+            if isinstance(segment, (ttk.Frame, tk.Frame)):
+                if enabled:
+                    # Restore original style if it exists
+                    original_style = self._frame_original_styles.get(segment, '')
+                    segment.configure(style=original_style)
+                else:
+                    # Store original style and apply disabled style
+                    current_style = segment.cget('style')
+                    if segment not in self._frame_original_styles:
+                        self._frame_original_styles[segment] = current_style
+                    segment.configure(style='Disabled.TFrame')
+            else:
+                segment.state(['!disabled' if enabled else 'disabled'])  
 
     def __del__(self):
         """
