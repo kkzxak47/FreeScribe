@@ -1120,7 +1120,7 @@ def screen_input_with_llm(conversation):
     :param conversation: A string containing the conversation to be screened.
     :return: A boolean indicating whether the conversation is valid.
     """
-    if app_settings.editable_settings["Enable AI Conversation Validation"]:
+    if app_settings.editable_settings[SettingsKeys.Enable_AI_Conversation_Validation.value]:
         # Define the chunk size (number of words per chunk)
         words_per_chunk = 60  # Adjust this value based on your results
         # Split the conversation into words
@@ -1162,7 +1162,7 @@ def process_chunk(chunk):
     return prescreen.strip().lower() == "true"
 
 def has_more_than_50_words(text: str) -> bool:
-    if app_settings.editable_settings["Enable Word Count Validation"]:
+    if app_settings.editable_settings[SettingsKeys.Enable_Word_Count_Validation.value]:
         # Split the text into words using whitespace as the delimiter
         words = text.split()        
         # Print the number of words

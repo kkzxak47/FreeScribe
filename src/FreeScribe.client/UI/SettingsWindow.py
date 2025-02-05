@@ -47,6 +47,8 @@ class SettingsKeys(Enum):
     S2T_SELF_SIGNED_CERT = "S2T Server Self-Signed Certificates"
     LLM_ARCHITECTURE = "Architecture"
     USE_PRESCREEN_AI_INPUT = "Use Pre-Screen AI Input"
+    Enable_Word_Count_Validation = "Enable Word Count Validation"
+    Enable_AI_Conversation_Validation = "Enable AI Conversation Validation"
 
 
 class Architectures(Enum):
@@ -173,8 +175,8 @@ class SettingsWindow():
             SettingsKeys.USE_TRANSLATE_TASK.value: False,
             SettingsKeys.WHISPER_LANGUAGE_CODE.value: "None (Auto Detect)",
             SettingsKeys.USE_PRESCREEN_AI_INPUT.value: True,
-            "Enable Word Count Validation": True,  # Default to enabled
-            "Enable AI Conversation Validation": False,  # Default to disabled
+            SettingsKeys.Enable_Word_Count_Validation.value : True,  # Default to enabled
+            SettingsKeys.Enable_AI_Conversation_Validation.value : False,  # Default to disabled
         }
 
     def __init__(self):
@@ -236,8 +238,8 @@ class SettingsWindow():
             # "singleline",
             # "frmttriminc",
             # "frmtrmblln",
-            "Enable Word Count Validation",
-            "Enable AI Conversation Validation",
+            SettingsKeys.Enable_Word_Count_Validation.value,
+            SettingsKeys.Enable_AI_Conversation_Validation.value
         ]
 
         self.adv_whisper_settings = [
