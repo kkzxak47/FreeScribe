@@ -32,7 +32,7 @@
 
 ### Whisper Model
 
-**Description**: Select the model size for Whisper transcription. Options include small, medium, and large models.  
+**Description**: Select the model size for Whisper transcription. Options include small, medium, and large model sizes.  
 **Default**: `medium`  
 **Type**: dropdown
 
@@ -130,7 +130,7 @@
 
 ### Whisper Compute Type (Experimental)
 
-**Description**: Specify the data type for Whisper's computations, e.g., `float16`. This may get force to a different compute type if it is incompatible with your system.
+**Description**: Specify the data type for Whisper's computations (e.g., `float16`, `float32`). Note that your selected compute type may be automatically overridden and forced to a different type if it's not compatible with your system's hardware or configuration.
 **Default**: `float16`  
 **Type**: string
 
