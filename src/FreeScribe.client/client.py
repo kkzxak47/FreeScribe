@@ -393,7 +393,7 @@ def record_audio():
 
                 # 1 second of silence at the end so we dont cut off speech
                 if silent_duration >= minimum_silent_duration:
-                    if app_settings.editable_settings["Real Time"] and current_chunk:
+                    if app_settings.editable_settings[SettingsKeys.WHISPER_REAL_TIME.value] and current_chunk:
                         audio_queue.put(b''.join(current_chunk))
                     current_chunk = []
                     silent_duration = 0
@@ -459,7 +459,7 @@ def realtime_text():
             audio_data = audio_queue.get()
             if audio_data is None:
                 break
-            if app_settings.editable_settings["Real Time"] == True:
+            if app_settings.editable_settings[SettingsKeys.WHISPER_REAL_TIME.value] == True:
                 print("Real Time Audio to Text")
                 audio_buffer = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768
                 if app_settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value] == True:
@@ -538,9 +538,9 @@ def save_audio():
             wf.writeframes(b''.join(frames))
         frames = []  # Clear recorded data
 
-    if app_settings.editable_settings["Real Time"] == True and is_audio_processing_realtime_canceled.is_set() is False:
+    if app_settings.editable_settings[SettingsKeys.WHISPER_REAL_TIME.value] == True and is_audio_processing_realtime_canceled.is_set() is False:
         send_and_receive()
-    elif app_settings.editable_settings["Real Time"] == False and is_audio_processing_whole_canceled.is_set() is False:
+    elif app_settings.editable_settings[SettingsKeys.WHISPER_REAL_TIME.value] == False and is_audio_processing_whole_canceled.is_set() is False:
         threaded_send_audio_to_server()
 
 def toggle_recording():
@@ -561,7 +561,7 @@ def toggle_recording():
         REALTIME_TRANSCRIBE_THREAD_ID = realtime_thread.ident
         user_input.scrolled_text.configure(state='normal')
         user_input.scrolled_text.delete("1.0", tk.END)
-        if not app_settings.editable_settings["Real Time"]:
+        if not app_settings.editable_settings[SettingsKeys.WHISPER_REAL_TIME.value]:
             user_input.scrolled_text.insert(tk.END, "Recording")
         response_display.scrolled_text.configure(state='normal')
         response_display.scrolled_text.delete("1.0", tk.END)
@@ -587,7 +587,7 @@ def toggle_recording():
         if recording_thread.is_alive():
             recording_thread.join()  # Ensure the recording thread is terminated
         
-        if app_settings.editable_settings["Real Time"] and not is_audio_processing_realtime_canceled.is_set():
+        if app_settings.editable_settings[SettingsKeys.WHISPER_REAL_TIME.value] and not is_audio_processing_realtime_canceled.is_set():
             def cancel_realtime_processing(thread_id):
                 """Cancels any ongoing audio processing.
                 
@@ -674,7 +674,7 @@ def cancel_processing():
     """
     print("Processing canceled.")
 
-    if app_settings.editable_settings["Real Time"]:
+    if app_settings.editable_settings[SettingsKeys.WHISPER_REAL_TIME.value]:
         is_audio_processing_realtime_canceled.set() # Flag to terminate processing
     else:
         is_audio_processing_whole_canceled.set()  # Flag to terminate processing

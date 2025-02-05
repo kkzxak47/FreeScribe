@@ -35,6 +35,8 @@ class SettingsKeys(Enum):
     LOCAL_WHISPER = "Built-in Speech2Text"
     WHISPER_ENDPOINT = "Speech2Text (Whisper) Endpoint"
     WHISPER_SERVER_API_KEY = "Speech2Text (Whisper) API Key"
+    WHISPER_REAL_TIME = "Real Time Speech Transcription"
+    WHISPER_MODEL = "Builtin Speech2Text Model"
     WHISPER_ARCHITECTURE = "Speech2Text (Whisper) Architecture"
     WHISPER_CPU_COUNT = "Whisper CPU Thread Count (Experimental)"
     WHISPER_COMPUTE_TYPE = "Whisper Compute Type (Experimental)"
@@ -51,9 +53,6 @@ class SettingsKeys(Enum):
     LOCAL_LLM_MODEL = "Builtin AI Model"
     LLM_ENDPOINT = "AI Server Endpoint"
     LLM_SERVER_API_KEY = "AI Server API Key"
-
-    
-
 
 class Architectures(Enum):
     CPU = ("CPU", "cpu")
@@ -154,7 +153,7 @@ class SettingsWindow():
             SettingsKeys.WHISPER_COMPUTE_TYPE.value: "float16",
             "Whisper Model": "medium",
             "Current Mic": "None",
-            "Real Time": True,
+            SettingsKeys.WHISPER_REAL_TIME.value: True,
             "Real Time Audio Length": 10,
             "Real Time Silence Length": 1,
             "Silence cut-off": 0.035,
@@ -199,7 +198,7 @@ class SettingsWindow():
 
         self.whisper_settings = [
             "BlankSpace", # Represents the SettingsKeys.LOCAL_WHISPER.value checkbox that is manually placed
-            "Real Time",
+            SettingsKeys.WHISPER_REAL_TIME.value,
             "BlankSpace", # Represents the model dropdown that is manually placed
             "BlankSpace", # Represents the mic dropdown
             SettingsKeys.WHISPER_ENDPOINT.value,

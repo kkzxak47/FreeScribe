@@ -235,7 +235,7 @@ class SettingsWindowUI:
         current_state = self.settings.editable_settings_entries[SettingsKeys.LOCAL_WHISPER.value].get()
         
         for setting in self.settings.whisper_settings:
-            if setting in ["Real Time", "BlankSpace"]:
+            if setting in [SettingsKeys.WHISPER_REAL_TIME.value, "BlankSpace"]:
                 continue
             
             state = "normal" if current_state == 0 else "disabled"
