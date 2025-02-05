@@ -49,6 +49,7 @@ class SettingsKeys(Enum):
     USE_PRESCREEN_AI_INPUT = "Use Pre-Screen AI Input"
     LOCAL_LLM = "Built-in AI Processing"
     LOCAL_LLM_MODEL = "Builtin AI Model"
+    LLM_ENDPOINT = "AI Server Endpoint"
     
 
 
@@ -117,7 +118,7 @@ class SettingsWindow():
 
     DEFAULT_SETTINGS_TABLE = {
             SettingsKeys.LOCAL_LLM_MODEL.value: "gemma2:2b-instruct-q8_0",
-            "Model Endpoint": "https://localhost:3334/v1",
+            SettingsKeys.LLM_ENDPOINT.value: "https://localhost:3334/v1",
             SettingsKeys.LOCAL_LLM.value: True,
             SettingsKeys.LLM_ARCHITECTURE.value: DEFAULT_LLM_ARCHITECTURE,
             "use_story": False,
@@ -206,7 +207,7 @@ class SettingsWindow():
         ]
 
         self.llm_settings = [
-            "Model Endpoint",
+            SettingsKeys.LLM_ENDPOINT.value,
             "AI Server Self-Signed Certificates",
         ]
 
@@ -442,7 +443,7 @@ class SettingsWindow():
         """
         # Keep the network settings and clear the rest
         settings_to_keep = {
-            "Model Endpoint": self.editable_settings["Model Endpoint"],
+            SettingsKeys.LLM_ENDPOINT.value: self.editable_settings[SettingsKeys.LLM_ENDPOINT.value],
             "AI Server Self-Signed Certificates": self.editable_settings["AI Server Self-Signed Certificates"],
             SettingsKeys.LOCAL_LLM.value: self.editable_settings[SettingsKeys.LOCAL_LLM.value],
             SettingsKeys.LOCAL_WHISPER.value: self.editable_settings[SettingsKeys.LOCAL_WHISPER.value],
@@ -515,7 +516,7 @@ class SettingsWindow():
             "X-API-Key": self.OPENAI_API_KEY
         }
 
-        endpoint = endpoint or self.editable_settings_entries["Model Endpoint"].get()
+        endpoint = endpoint or self.editable_settings_entries[SettingsKeys.LLM_ENDPOINT.value].get()
 
         # url validate the endpoint
         if not is_valid_url(endpoint):

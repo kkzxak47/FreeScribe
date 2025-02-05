@@ -1060,12 +1060,12 @@ def send_text_to_api(edited_text):
 
     try:
 
-        if app_settings.editable_settings["Model Endpoint"].endswith('/'):
-            app_settings.editable_settings["Model Endpoint"] = app_settings.editable_settings["Model Endpoint"][:-1]
+        if app_settings.editable_settings[SettingsKeys.LLM_ENDPOINT.value].endswith('/'):
+            app_settings.editable_settings[SettingsKeys.LLM_ENDPOINT.value] = app_settings.editable_settings[SettingsKeys.LLM_ENDPOINT.value][:-1]
 
         # Open API Style
         verify = not app_settings.editable_settings["AI Server Self-Signed Certificates"]
-        response = requests.post(app_settings.editable_settings["Model Endpoint"]+"/chat/completions", headers=headers, json=payload, verify=verify)
+        response = requests.post(app_settings.editable_settings[SettingsKeys.LLM_ENDPOINT.value]+"/chat/completions", headers=headers, json=payload, verify=verify)
 
         response.raise_for_status()
         response_data = response.json()
@@ -1084,7 +1084,7 @@ def send_text_to_api(edited_text):
         #     prompt = get_prompt(edited_text)
 
         #     verify = not app_settings.editable_settings["AI Server Self-Signed Certificates"]
-        #     response = requests.post(app_settings.editable_settings["Model Endpoint"] + "/api/v1/generate", json=prompt, verify=verify)
+        #     response = requests.post(app_settings.editable_settings[SettingsKeys.LLM_ENDPOINT.value] + "/api/v1/generate", json=prompt, verify=verify)
 
         #     if response.status_code == 200:
         #         results = response.json()['results']
@@ -1251,7 +1251,7 @@ def show_edit_transcription_popup(formatted_message):
     pattern = r'\b\d{10}\b'     # Any 10 digit number, looks like OHIP
     cleaned_message = re.sub(pattern,'{{OHIP}}',scrubbed_message)
 
-    if (app_settings.editable_settings[SettingsKeys.LOCAL_LLM.value] or is_private_ip(app_settings.editable_settings["Model Endpoint"])) and not app_settings.editable_settings["Show Scrub PHI"]:
+    if (app_settings.editable_settings[SettingsKeys.LOCAL_LLM.value] or is_private_ip(app_settings.editable_settings[SettingsKeys.LLM_ENDPOINT.value])) and not app_settings.editable_settings["Show Scrub PHI"]:
         generate_note_thread(cleaned_message)
         return
     

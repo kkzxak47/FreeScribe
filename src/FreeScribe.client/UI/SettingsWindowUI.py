@@ -366,7 +366,7 @@ class SettingsWindowUI:
         
         #flag used for determining if window was just opened so we dont spam the API.
         if not self.settings_opened:
-            threading.Thread(target=self.settings.update_models_dropdown, args=(self.models_drop_down,self.settings.editable_settings_entries["Model Endpoint"].get(),)).start()
+            threading.Thread(target=self.settings.update_models_dropdown, args=(self.models_drop_down,self.settings.editable_settings_entries[SettingsKeys.LLM_ENDPOINT.value].get(),)).start()
         else:
             self.settings_opened = False
             
