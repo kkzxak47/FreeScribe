@@ -40,7 +40,7 @@ class TimestampListbox(tk.Listbox):
         self.edit_entry = tk.Entry(self)
         self.edit_entry.insert(0, current_text)
         self.edit_entry.select_range(0, tk.END)
-        self.edit_entry.place(x=bbox[0], y=bbox[1], width=bbox[2], height=bbox[3])
+        self.edit_entry.place(x=bbox[0], y=bbox[1], width=self.winfo_width(), height=bbox[3])
         self.edit_entry.focus_set()
 
         self.edit_entry.bind("<Return>", lambda e: self.confirm_edit())
