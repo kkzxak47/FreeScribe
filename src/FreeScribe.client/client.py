@@ -1514,6 +1514,9 @@ def set_minimal_view():
     root.minsize(125, 50)  # Smaller minimum size for minimal view
     current_view = "minimal"
 
+    if root.wm_state() == 'zoomed':  # Check if window is maximized
+        root.wm_state('normal')       # Restore the window
+
     # Set hover transparency events
     def on_enter(e):
         if e.widget == root:  # Ensure the event is from the root window
