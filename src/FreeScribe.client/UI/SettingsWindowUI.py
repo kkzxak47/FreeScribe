@@ -31,6 +31,10 @@ from UI.SettingsWindow import SettingsKeys, FeatureToggle, Architectures, Settin
 from UI.Widgets.PopupBox import PopupBox
 
 
+LONG_ENTRY_WIDTH = 30
+SHORT_ENTRY_WIDTH = 20
+
+
 class SettingsWindowUI:
     """
     Manages the settings window UI.
@@ -102,8 +106,8 @@ class SettingsWindowUI:
         self.docker_settings_frame = ttk.Frame(self.notebook)
 
         self.notebook.add(self.general_settings_frame, text="General Settings")
-        self.notebook.add(self.whisper_settings_frame, text="Speech-to-Text Settings")
-        self.notebook.add(self.llm_settings_frame, text="AI Settings")
+        self.notebook.add(self.whisper_settings_frame, text="Speech-to-Text Settings (Whisper)")
+        self.notebook.add(self.llm_settings_frame, text="AI Settings (LLM)")
         self.notebook.add(self.advanced_frame, text="Advanced Settings")
 
         self.settings_window.protocol("WM_DELETE_WINDOW", self.close_window)
@@ -196,19 +200,19 @@ class SettingsWindowUI:
 
         left_row, right_row = self.create_editable_settings_col(left_frame, right_frame, left_row, right_row, self.settings.whisper_settings)
         # create the whisper model dropdown slection
-        tk.Label(left_frame, text="Whisper Model").grid(row=3, column=0, padx=0, pady=5, sticky="w")
+        tk.Label(left_frame, text=SettingsKeys.WHISPER_MODEL.value).grid(row=3, column=0, padx=0, pady=5, sticky="w")
         whisper_models_drop_down_options = ["medium", "small", "tiny", "tiny.en", "base", "base.en", "small.en", "medium.en", "large"]
-        self.whisper_models_drop_down = ttk.Combobox(left_frame, values=whisper_models_drop_down_options, width=20)
+        self.whisper_models_drop_down = ttk.Combobox(left_frame, values=whisper_models_drop_down_options, width=SHORT_ENTRY_WIDTH)
         self.whisper_models_drop_down.grid(row=3, column=1, padx=0, pady=5, sticky="w")
 
         try:
             # Try to set the whisper model dropdown to the current model
-            self.whisper_models_drop_down.current(whisper_models_drop_down_options.index(self.settings.editable_settings["Whisper Model"]))
+            self.whisper_models_drop_down.current(whisper_models_drop_down_options.index(self.settings.editable_settings[SettingsKeys.WHISPER_MODEL.value]))
         except ValueError:
             # If not in list then just force set text
-            self.whisper_models_drop_down.set(self.settings.editable_settings["Whisper Model"])
+            self.whisper_models_drop_down.set(self.settings.editable_settings[SettingsKeys.WHISPER_MODEL.value])
 
-        self.settings.editable_settings_entries["Whisper Model"] = self.whisper_models_drop_down
+        self.settings.editable_settings_entries[SettingsKeys.WHISPER_MODEL.value] = self.whisper_models_drop_down
 
         # create the whisper model dropdown slection
         right_row += 1
@@ -216,7 +220,7 @@ class SettingsWindowUI:
         self.whisper_architecture_label = tk.Label(left_frame, text=SettingsKeys.WHISPER_ARCHITECTURE.value)
         self.whisper_architecture_label.grid(row=left_row, column=0, padx=0, pady=5, sticky="w")
         whisper_architecture_options = self.settings.get_available_architectures()
-        self.whisper_architecture_dropdown = ttk.Combobox(left_frame, values=whisper_architecture_options, width=20, state="readonly")
+        self.whisper_architecture_dropdown = ttk.Combobox(left_frame, values=whisper_architecture_options, width=SHORT_ENTRY_WIDTH, state="readonly")
         if self.settings.editable_settings[SettingsKeys.WHISPER_ARCHITECTURE.value] in whisper_architecture_options:
             self.whisper_architecture_dropdown.current(whisper_architecture_options.index(self.settings.editable_settings[SettingsKeys.WHISPER_ARCHITECTURE.value]))
         else:
@@ -235,7 +239,7 @@ class SettingsWindowUI:
         current_state = self.settings.editable_settings_entries[SettingsKeys.LOCAL_WHISPER.value].get()
         
         for setting in self.settings.whisper_settings:
-            if setting in ["Real Time", "BlankSpace"]:
+            if setting in [SettingsKeys.WHISPER_REAL_TIME.value, "BlankSpace"]:
                 continue
             
             state = "normal" if current_state == 0 else "disabled"
@@ -266,19 +270,19 @@ class SettingsWindowUI:
         right_row = 0
 
         # Use local llm button with custom handler
-        tk.Label(left_frame, text="Local LLM").grid(row=left_row, column=0, padx=0, pady=5, sticky="w")
-        value = tk.IntVar(value=(self.settings.editable_settings["Use Local LLM"]))
+        tk.Label(left_frame, text=SettingsKeys.LOCAL_LLM.value).grid(row=left_row, column=0, padx=0, pady=5, sticky="w")
+        value = tk.IntVar(value=(self.settings.editable_settings[SettingsKeys.LOCAL_LLM.value]))
         self.local_llm_checkbox = tk.Checkbutton(left_frame, variable=value, command=self.toggle_remote_llm_settings)
         self.local_llm_checkbox.grid(row=left_row, column=1, padx=0, pady=5, sticky="w")
-        self.settings.editable_settings_entries["Use Local LLM"] = value
+        self.settings.editable_settings_entries[SettingsKeys.LOCAL_LLM.value] = value
 
         left_row += 1
 
         #6. GPU OR CPU SELECTION (Right Column)
-        self.local_architecture_label = tk.Label(left_frame, text="Local Architecture")
+        self.local_architecture_label = tk.Label(left_frame, text=SettingsKeys.LLM_ARCHITECTURE.value)
         self.local_architecture_label.grid(row=left_row, column=0, padx=0, pady=5, sticky="w")
         architecture_options = self.settings.get_available_architectures()
-        self.architecture_dropdown = ttk.Combobox(left_frame, values=architecture_options, width=20, state="readonly")
+        self.architecture_dropdown = ttk.Combobox(left_frame, values=architecture_options, width=LONG_ENTRY_WIDTH, state="readonly")
         if self.settings.editable_settings[SettingsKeys.LLM_ARCHITECTURE.value] in architecture_options:
             self.architecture_dropdown.current(architecture_options.index(self.settings.editable_settings[SettingsKeys.LLM_ARCHITECTURE.value]))
         else:
@@ -296,9 +300,9 @@ class SettingsWindowUI:
         left_row += 1
 
         # 5. Models (Left Column)
-        tk.Label(left_frame, text="Models").grid(row=left_row, column=0, padx=0, pady=5, sticky="w")
+        tk.Label(left_frame, text=SettingsKeys.LOCAL_LLM_MODEL.value).grid(row=left_row, column=0, padx=0, pady=5, sticky="w")
         models_drop_down_options = []
-        self.models_drop_down = ttk.Combobox(left_frame, values=models_drop_down_options, width=20, state="readonly")
+        self.models_drop_down = ttk.Combobox(left_frame, values=models_drop_down_options, width=LONG_ENTRY_WIDTH, state="readonly")
         self.models_drop_down.grid(row=left_row, column=1, padx=0, pady=5, sticky="w")
         self.models_drop_down.bind('<<ComboboxSelected>>', self.on_model_selection_change)
         thread = threading.Thread(target=self.settings.update_models_dropdown, args=(self.models_drop_down,))
@@ -306,7 +310,7 @@ class SettingsWindowUI:
 
         # Create custom model entry (initially hidden)
         self.custom_model_entry = tk.Entry(left_frame, width=15)
-        self.custom_model_entry.insert(0, self.settings.editable_settings["Model"])
+        self.custom_model_entry.insert(0, self.settings.editable_settings[SettingsKeys.LOCAL_LLM_MODEL.value])
 
         refresh_button = ttk.Button(left_frame, text="↻", 
                                 command=lambda: (self.save_settings(False), threading.Thread(target=self.settings.update_models_dropdown, args=(self.models_drop_down,)).start(), self.on_model_selection_change(None)), 
@@ -318,8 +322,8 @@ class SettingsWindowUI:
         right_frame, right_row = self.create_editable_settings(right_frame, self.settings.llm_settings, padx=0, pady=0)
 
         # 2. OpenAI API Key (Right Column)
-        tk.Label(right_frame, text="OpenAI API Key:").grid(row=right_row, column=0, padx=0, pady=5, sticky="w")
-        self.openai_api_key_entry = tk.Entry(right_frame, width=25)
+        tk.Label(right_frame, text=SettingsKeys.LLM_SERVER_API_KEY.value).grid(row=right_row, column=0, padx=0, pady=5, sticky="w")
+        self.openai_api_key_entry = tk.Entry(right_frame, width=LONG_ENTRY_WIDTH)
         self.openai_api_key_entry.insert(0, self.settings.OPENAI_API_KEY)
         self.openai_api_key_entry.grid(row=right_row, column=1, columnspan=2, padx=0, pady=5, sticky="w")
         
@@ -346,7 +350,7 @@ class SettingsWindowUI:
         self.toggle_remote_llm_settings()
  
     def toggle_remote_llm_settings(self):
-        current_state = self.settings.editable_settings_entries["Use Local LLM"].get()
+        current_state = self.settings.editable_settings_entries[SettingsKeys.LOCAL_LLM.value].get()
         
         state = "normal" if current_state == 0 else "disabled"
 
@@ -366,7 +370,7 @@ class SettingsWindowUI:
         
         #flag used for determining if window was just opened so we dont spam the API.
         if not self.settings_opened:
-            threading.Thread(target=self.settings.update_models_dropdown, args=(self.models_drop_down,self.settings.editable_settings_entries["Model Endpoint"].get(),)).start()
+            threading.Thread(target=self.settings.update_models_dropdown, args=(self.models_drop_down,self.settings.editable_settings_entries[SettingsKeys.LLM_ENDPOINT.value].get(),)).start()
         else:
             self.settings_opened = False
             
@@ -591,15 +595,15 @@ class SettingsWindowUI:
         This method retrieves the values from the UI elements and calls the
         `save_settings` method of the `settings` object to save the settings.
         """
-        self.settings.load_or_unload_model(self.settings.editable_settings["Model"],
+        self.settings.load_or_unload_model(self.settings.editable_settings[SettingsKeys.LOCAL_LLM_MODEL.value],
             self.get_selected_model(),
-            self.settings.editable_settings["Use Local LLM"],
-            self.settings.editable_settings_entries["Use Local LLM"].get(),
+            self.settings.editable_settings[SettingsKeys.LOCAL_LLM.value],
+            self.settings.editable_settings_entries[SettingsKeys.LOCAL_LLM.value].get(),
             self.settings.editable_settings[SettingsKeys.LLM_ARCHITECTURE.value],
             self.architecture_dropdown.get())
 
         if self.get_selected_model() not in ["Loading models...", "Failed to load models"]:
-            self.settings.editable_settings["Model"] = self.get_selected_model()
+            self.settings.editable_settings[SettingsKeys.LOCAL_LLM_MODEL.value] = self.get_selected_model()
 
         self.settings.update_whisper_model()
 
@@ -726,7 +730,7 @@ class SettingsWindowUI:
         """
         tk.Label(frame, text=label).grid(row=row_idx, column=0, padx=0, pady=5, sticky="w")
         value = self.settings.editable_settings[setting_name]
-        entry = tk.Entry(frame, width=17)
+        entry = tk.Entry(frame, width=LONG_ENTRY_WIDTH)
         entry.insert(0, str(value))
         entry.grid(row=row_idx, column=1, padx=0, pady=5, sticky="w")
         self.settings.editable_settings_entries[setting_name] = entry

@@ -35,7 +35,9 @@ class SettingsKeys(Enum):
     LOCAL_WHISPER = "Built-in Speech2Text"
     WHISPER_ENDPOINT = "Speech2Text (Whisper) Endpoint"
     WHISPER_SERVER_API_KEY = "Speech2Text (Whisper) API Key"
-    WHISPER_ARCHITECTURE = "Speech2Text (Whisper) Architecture"
+    WHISPER_REAL_TIME = "Real Time Speech Transcription"
+    WHISPER_MODEL = "Built-in Speech2Text Model"
+    WHISPER_ARCHITECTURE = "Built-in Speech2Text Architecture"
     WHISPER_CPU_COUNT = "Whisper CPU Thread Count (Experimental)"
     WHISPER_COMPUTE_TYPE = "Whisper Compute Type (Experimental)"
     WHISPER_BEAM_SIZE = "Whisper Beam Size (Experimental)"
@@ -45,9 +47,12 @@ class SettingsKeys(Enum):
     USE_TRANSLATE_TASK = "Translate Speech to English Text"
     WHISPER_LANGUAGE_CODE = "Whisper Language Code"
     S2T_SELF_SIGNED_CERT = "S2T Server Self-Signed Certificates"
-    LLM_ARCHITECTURE = "Architecture"
+    LLM_ARCHITECTURE = "Built-in AI Architecture"
     USE_PRESCREEN_AI_INPUT = "Use Pre-Screen AI Input"
-
+    LOCAL_LLM = "Built-in AI Processing"
+    LOCAL_LLM_MODEL = "AI Model"
+    LLM_ENDPOINT = "AI Server Endpoint"
+    LLM_SERVER_API_KEY = "AI Server API Key"
 
 class Architectures(Enum):
     CPU = ("CPU", "cpu")
@@ -113,9 +118,9 @@ class SettingsWindow():
     AUTO_DETECT_LANGUAGE_CODES = ["", "auto", "Auto Detect", "None", "None (Auto Detect)"]
 
     DEFAULT_SETTINGS_TABLE = {
-            "Model": "gemma2:2b-instruct-q8_0",
-            "Model Endpoint": "https://localhost:3334/v1",
-            "Use Local LLM": True,
+            SettingsKeys.LOCAL_LLM_MODEL.value: "gemma2:2b-instruct-q8_0",
+            SettingsKeys.LLM_ENDPOINT.value: "https://localhost:3334/v1",
+            SettingsKeys.LOCAL_LLM.value: True,
             SettingsKeys.LLM_ARCHITECTURE.value: DEFAULT_LLM_ARCHITECTURE,
             "use_story": False,
             "use_memory": False,
@@ -146,9 +151,9 @@ class SettingsWindow():
             SettingsKeys.WHISPER_CPU_COUNT.value: multiprocessing.cpu_count(),
             SettingsKeys.WHISPER_VAD_FILTER.value: False,
             SettingsKeys.WHISPER_COMPUTE_TYPE.value: "float16",
-            "Whisper Model": "medium",
+            SettingsKeys.WHISPER_MODEL.value: "medium",
             "Current Mic": "None",
-            "Real Time": True,
+            SettingsKeys.WHISPER_REAL_TIME.value: True,
             "Real Time Audio Length": 10,
             "Real Time Silence Length": 1,
             "Silence cut-off": 0.035,
@@ -193,7 +198,7 @@ class SettingsWindow():
 
         self.whisper_settings = [
             "BlankSpace", # Represents the SettingsKeys.LOCAL_WHISPER.value checkbox that is manually placed
-            "Real Time",
+            SettingsKeys.WHISPER_REAL_TIME.value,
             "BlankSpace", # Represents the model dropdown that is manually placed
             "BlankSpace", # Represents the mic dropdown
             SettingsKeys.WHISPER_ENDPOINT.value,
@@ -203,7 +208,7 @@ class SettingsWindow():
         ]
 
         self.llm_settings = [
-            "Model Endpoint",
+            SettingsKeys.LLM_ENDPOINT.value,
             "AI Server Self-Signed Certificates",
         ]
 
@@ -217,8 +222,8 @@ class SettingsWindow():
             # "use_memory",
             # "use_authors_note",
             # "use_world_info",
-            "Use best_of",
-            "best_of",
+            # "Use best_of",
+            # "best_of",
             # "max_context_length",
             # "max_length",
             # "rep_pen",
@@ -439,9 +444,9 @@ class SettingsWindow():
         """
         # Keep the network settings and clear the rest
         settings_to_keep = {
-            "Model Endpoint": self.editable_settings["Model Endpoint"],
+            SettingsKeys.LLM_ENDPOINT.value: self.editable_settings[SettingsKeys.LLM_ENDPOINT.value],
             "AI Server Self-Signed Certificates": self.editable_settings["AI Server Self-Signed Certificates"],
-            "Use Local LLM": self.editable_settings["Use Local LLM"],
+            SettingsKeys.LOCAL_LLM.value: self.editable_settings[SettingsKeys.LOCAL_LLM.value],
             SettingsKeys.LOCAL_WHISPER.value: self.editable_settings[SettingsKeys.LOCAL_WHISPER.value],
             SettingsKeys.WHISPER_ENDPOINT.value: self.editable_settings[SettingsKeys.WHISPER_ENDPOINT.value],
             SettingsKeys.WHISPER_SERVER_API_KEY.value: self.editable_settings[SettingsKeys.WHISPER_SERVER_API_KEY.value],
@@ -512,7 +517,7 @@ class SettingsWindow():
             "X-API-Key": self.OPENAI_API_KEY
         }
 
-        endpoint = endpoint or self.editable_settings_entries["Model Endpoint"].get()
+        endpoint = endpoint or self.editable_settings_entries[SettingsKeys.LLM_ENDPOINT.value].get()
 
         # url validate the endpoint
         if not is_valid_url(endpoint):
@@ -543,7 +548,7 @@ class SettingsWindow():
         This method fetches the available models from the AI Scribe service and updates
         the dropdown widget in the settings window with the new list of models.
         """
-        if self.editable_settings_entries["Use Local LLM"].get():
+        if self.editable_settings_entries[SettingsKeys.LOCAL_LLM.value].get():
             dropdown["values"] = ["gemma-2-2b-it-Q8_0.gguf"]
             dropdown.set("gemma-2-2b-it-Q8_0.gguf")
         else:
@@ -551,8 +556,8 @@ class SettingsWindow():
             dropdown.set("Loading models...")
             models = self.get_available_models(endpoint=endpoint)
             dropdown["values"] = models
-            if self.editable_settings["Model"] in models:
-                dropdown.set(self.editable_settings["Model"])
+            if self.editable_settings[SettingsKeys.LOCAL_LLM_MODEL.value] in models:
+                dropdown.set(self.editable_settings[SettingsKeys.LOCAL_LLM_MODEL.value])
             else:
                 dropdown.set(models[0])
         
@@ -634,7 +639,7 @@ class SettingsWindow():
         # save the old whisper model to compare with the new model later
         old_local_whisper = self.editable_settings[SettingsKeys.LOCAL_WHISPER.value]
         old_whisper_architecture = self.editable_settings[SettingsKeys.WHISPER_ARCHITECTURE.value]
-        old_model = self.editable_settings["Whisper Model"]
+        old_model = self.editable_settings[SettingsKeys.WHISPER_MODEL.value]
         old_cpu_count = self.editable_settings[SettingsKeys.WHISPER_CPU_COUNT.value]
         old_compute_type = self.editable_settings[SettingsKeys.WHISPER_COMPUTE_TYPE.value]
 
@@ -642,7 +647,7 @@ class SettingsWindow():
         # if Local Whisper is selected, compare the old model with the new model and reload the model if it has changed
         if self.editable_settings[SettingsKeys.LOCAL_WHISPER.value] and (
                 old_local_whisper != self.editable_settings_entries[SettingsKeys.LOCAL_WHISPER.value].get() or 
-                old_model != self.editable_settings_entries["Whisper Model"].get() or 
+                old_model != self.editable_settings_entries[SettingsKeys.WHISPER_MODEL.value].get() or 
                 old_whisper_architecture != self.editable_settings_entries[SettingsKeys.WHISPER_ARCHITECTURE.value].get() or 
                 old_cpu_count != self.editable_settings_entries[SettingsKeys.WHISPER_CPU_COUNT.value].get() or
                 old_compute_type != self.editable_settings_entries[SettingsKeys.WHISPER_COMPUTE_TYPE.value].get()):
