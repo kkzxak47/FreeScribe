@@ -231,7 +231,7 @@ def double_check_stt_model_loading(task_done_var, task_cancel_var):
             return
         # if using local whisper and model is not loaded, when starting recording
         if stt_model_loading_thread_lock.locked():
-            model_name = app_settings.editable_settings["Whisper Model"].strip()
+            model_name = app_settings.editable_settings[SettingsKeys.WHISPER_MODEL.value].strip()
             stt_loading_window = LoadingWindow(root, "Loading Voice to Text model",
                                                f"Loading {model_name} model. Please wait.",
                                                on_cancel=lambda: task_cancel_var.set(True))
@@ -393,7 +393,7 @@ def record_audio():
 
                 # 1 second of silence at the end so we dont cut off speech
                 if silent_duration >= minimum_silent_duration:
-                    if app_settings.editable_settings["Real Time"] and current_chunk:
+                    if app_settings.editable_settings[SettingsKeys.WHISPER_REAL_TIME.value] and current_chunk:
                         audio_queue.put(b''.join(current_chunk))
                     current_chunk = []
                     silent_duration = 0
@@ -459,7 +459,7 @@ def realtime_text():
             audio_data = audio_queue.get()
             if audio_data is None:
                 break
-            if app_settings.editable_settings["Real Time"] == True:
+            if app_settings.editable_settings[SettingsKeys.WHISPER_REAL_TIME.value] == True:
                 print("Real Time Audio to Text")
                 audio_buffer = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768
                 if app_settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value] == True:
@@ -538,9 +538,9 @@ def save_audio():
             wf.writeframes(b''.join(frames))
         frames = []  # Clear recorded data
 
-    if app_settings.editable_settings["Real Time"] == True and is_audio_processing_realtime_canceled.is_set() is False:
+    if app_settings.editable_settings[SettingsKeys.WHISPER_REAL_TIME.value] == True and is_audio_processing_realtime_canceled.is_set() is False:
         send_and_receive()
-    elif app_settings.editable_settings["Real Time"] == False and is_audio_processing_whole_canceled.is_set() is False:
+    elif app_settings.editable_settings[SettingsKeys.WHISPER_REAL_TIME.value] == False and is_audio_processing_whole_canceled.is_set() is False:
         threaded_send_audio_to_server()
 
 def toggle_recording():
@@ -561,7 +561,7 @@ def toggle_recording():
         REALTIME_TRANSCRIBE_THREAD_ID = realtime_thread.ident
         user_input.scrolled_text.configure(state='normal')
         user_input.scrolled_text.delete("1.0", tk.END)
-        if not app_settings.editable_settings["Real Time"]:
+        if not app_settings.editable_settings[SettingsKeys.WHISPER_REAL_TIME.value]:
             user_input.scrolled_text.insert(tk.END, "Recording")
         response_display.scrolled_text.configure(state='normal')
         response_display.scrolled_text.delete("1.0", tk.END)
@@ -587,7 +587,7 @@ def toggle_recording():
         if recording_thread.is_alive():
             recording_thread.join()  # Ensure the recording thread is terminated
         
-        if app_settings.editable_settings["Real Time"] and not is_audio_processing_realtime_canceled.is_set():
+        if app_settings.editable_settings[SettingsKeys.WHISPER_REAL_TIME.value] and not is_audio_processing_realtime_canceled.is_set():
             def cancel_realtime_processing(thread_id):
                 """Cancels any ongoing audio processing.
                 
@@ -674,7 +674,7 @@ def cancel_processing():
     """
     print("Processing canceled.")
 
-    if app_settings.editable_settings["Real Time"]:
+    if app_settings.editable_settings[SettingsKeys.WHISPER_REAL_TIME.value]:
         is_audio_processing_realtime_canceled.set() # Flag to terminate processing
     else:
         is_audio_processing_whole_canceled.set()  # Flag to terminate processing
@@ -1027,7 +1027,7 @@ def send_text_to_api(edited_text):
 
     try:
         payload = {
-            "model": app_settings.editable_settings["Model"].strip(),
+            "model": app_settings.editable_settings[SettingsKeys.LOCAL_LLM_MODEL.value].strip(),
             "messages": [
                 {"role": "user", "content": edited_text}
             ],
@@ -1042,7 +1042,7 @@ def send_text_to_api(edited_text):
             
     except ValueError as e:
         payload = {
-            "model": app_settings.editable_settings["Model"].strip(),
+            "model": app_settings.editable_settings[SettingsKeys.LOCAL_LLM_MODEL.value].strip(),
             "messages": [
                 {"role": "user", "content": edited_text}
             ],
@@ -1060,12 +1060,12 @@ def send_text_to_api(edited_text):
 
     try:
 
-        if app_settings.editable_settings["Model Endpoint"].endswith('/'):
-            app_settings.editable_settings["Model Endpoint"] = app_settings.editable_settings["Model Endpoint"][:-1]
+        if app_settings.editable_settings[SettingsKeys.LLM_ENDPOINT.value].endswith('/'):
+            app_settings.editable_settings[SettingsKeys.LLM_ENDPOINT.value] = app_settings.editable_settings[SettingsKeys.LLM_ENDPOINT.value][:-1]
 
         # Open API Style
         verify = not app_settings.editable_settings["AI Server Self-Signed Certificates"]
-        response = requests.post(app_settings.editable_settings["Model Endpoint"]+"/chat/completions", headers=headers, json=payload, verify=verify)
+        response = requests.post(app_settings.editable_settings[SettingsKeys.LLM_ENDPOINT.value]+"/chat/completions", headers=headers, json=payload, verify=verify)
 
         response.raise_for_status()
         response_data = response.json()
@@ -1084,7 +1084,7 @@ def send_text_to_api(edited_text):
         #     prompt = get_prompt(edited_text)
 
         #     verify = not app_settings.editable_settings["AI Server Self-Signed Certificates"]
-        #     response = requests.post(app_settings.editable_settings["Model Endpoint"] + "/api/v1/generate", json=prompt, verify=verify)
+        #     response = requests.post(app_settings.editable_settings[SettingsKeys.LLM_ENDPOINT.value] + "/api/v1/generate", json=prompt, verify=verify)
 
         #     if response.status_code == 200:
         #         results = response.json()['results']
@@ -1200,7 +1200,7 @@ def threaded_screen_input(user_message, screen_return):
     screen_return.set(input_return)
 
 def send_text_to_chatgpt(edited_text): 
-    if app_settings.editable_settings["Use Local LLM"]:
+    if app_settings.editable_settings[SettingsKeys.LOCAL_LLM.value]:
         return send_text_to_localmodel(edited_text)
     else:
         return send_text_to_api(edited_text)
@@ -1251,7 +1251,7 @@ def show_edit_transcription_popup(formatted_message):
     pattern = r'\b\d{10}\b'     # Any 10 digit number, looks like OHIP
     cleaned_message = re.sub(pattern,'{{OHIP}}',scrubbed_message)
 
-    if (app_settings.editable_settings["Use Local LLM"] or is_private_ip(app_settings.editable_settings["Model Endpoint"])) and not app_settings.editable_settings["Show Scrub PHI"]:
+    if (app_settings.editable_settings[SettingsKeys.LOCAL_LLM.value] or is_private_ip(app_settings.editable_settings[SettingsKeys.LLM_ENDPOINT.value])) and not app_settings.editable_settings["Show Scrub PHI"]:
         generate_note_thread(cleaned_message)
         return
     
@@ -1594,7 +1594,7 @@ def _load_stt_model_thread():
     """
     with stt_model_loading_thread_lock:
         global stt_local_model
-        model = app_settings.editable_settings["Whisper Model"].strip()
+        model = app_settings.editable_settings[SettingsKeys.WHISPER_MODEL.value].strip()
         stt_loading_window = LoadingWindow(root, "Voice to Text", f"Loading Voice to Text {model} model. Please wait.")
         print(f"Loading STT model: {model}")
         try:
@@ -1833,7 +1833,7 @@ if (app_settings.editable_settings['Show Welcome Message']):
     window.show_welcome_message()
 
 #Wait for the UI root to be intialized then load the model. If using local llm.
-if app_settings.editable_settings["Use Local LLM"]:
+if app_settings.editable_settings[SettingsKeys.LOCAL_LLM.value]:
     root.after(100, lambda:(ModelManager.setup_model(app_settings=app_settings, root=root)))  
 
 if app_settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value]:
