@@ -109,20 +109,23 @@ atexit.register(on_closing)
 
 
 # This runs before on_closing, if not confirmed, nothing should be changed
-def exit_confirmation():
-    if not messagebox.askokcancel(
+def confirm_exit_and_destroy():
+    """Show confirmation dialog before exiting the application.
+    
+    If user confirms, triggers the same event as clicking the window close button.
+    """
+    if messagebox.askokcancel(
             "Confirm Exit",
             "Warning: Temporary Note History will be cleared when app closes.\n\n"
             "Please make sure you have copied your important notes elsewhere "
             "before closing.\n\n"
             "Do you still want to exit?"
     ):
-        return  # User cancelled - do nothing
-    root.destroy()
+        root.destroy()
 
 
 # remind user notes will be gone after exiting
-root.protocol("WM_DELETE_WINDOW", exit_confirmation)
+root.protocol("WM_DELETE_WINDOW", confirm_exit_and_destroy)
 
 # settings logic
 app_settings = SettingsWindow()
@@ -1829,6 +1832,7 @@ history_frame.grid_columnconfigure(0, weight=1)
 history_frame.grid_rowconfigure(0, weight=4)  # Timestamp takes more space
 history_frame.grid_rowconfigure(1, weight=1)
 history_frame.grid_rowconfigure(2, weight=1)  # Mic test takes less space
+history_frame.grid_rowconfigure(3, weight=1)
 
 system_font = tk.font.nametofont("TkDefaultFont")
 base_size = system_font.cget("size")
