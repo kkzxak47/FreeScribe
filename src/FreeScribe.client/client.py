@@ -652,7 +652,8 @@ def disable_recording_ui_elements():
     window.disable_settings_menu()
     user_input.scrolled_text.configure(state='disabled')
     send_button.config(state='disabled')
-    toggle_button.config(state='disabled')
+    #hidding the AI Scribe button actions
+    #toggle_button.config(state='disabled')
     upload_button.config(state='disabled')
     response_display.scrolled_text.configure(state='disabled')
     timestamp_listbox.config(state='disabled')
@@ -662,7 +663,8 @@ def enable_recording_ui_elements():
     window.enable_settings_menu()
     user_input.scrolled_text.configure(state='normal')
     send_button.config(state='normal')
-    toggle_button.config(state='normal')
+    #hidding the AI Scribe button actions
+    #toggle_button.config(state='normal')
     upload_button.config(state='normal')
     timestamp_listbox.config(state='normal')
     clear_button.config(state='normal')
@@ -746,10 +748,11 @@ def clear_all_text_fields():
     response_display.scrolled_text.config(fg='grey')
     response_display.scrolled_text.configure(state='disabled')
 
-def toggle_aiscribe():
-    global use_aiscribe
-    use_aiscribe = not use_aiscribe
-    toggle_button.config(text="AI Scribe\nON" if use_aiscribe else "AI Scribe\nOFF")
+#hidding the AI Scribe button Function
+# def toggle_aiscribe():
+#     global use_aiscribe
+#     use_aiscribe = not use_aiscribe
+#     toggle_button.config(text="AI Scribe\nON" if use_aiscribe else "AI Scribe\nOFF")
 
 def send_audio_to_server():
     """
@@ -1777,17 +1780,18 @@ pause_button.grid(row=1, column=2, pady=5, sticky='nsew')
 clear_button = tk.Button(root, text="Clear", command=clear_application_press, height=2, width=11)
 clear_button.grid(row=1, column=4, pady=5, sticky='nsew')
 
-toggle_button = tk.Button(root, text="AI Scribe\nON", command=toggle_aiscribe, height=2, width=11)
-toggle_button.grid(row=1, column=5, pady=5, sticky='nsew')
+#hidding the AI Scribe button
+# toggle_button = tk.Button(root, text="AI Scribe\nON", command=toggle_aiscribe, height=2, width=11)
+# toggle_button.grid(row=1, column=5, pady=5, sticky='nsew')
 
 upload_button = tk.Button(root, text="Upload Audio\nFor Transcription", command=upload_file, height=2, width=11)
-upload_button.grid(row=1, column=6, pady=5, sticky='nsew')
+upload_button.grid(row=1, column=5, pady=5, sticky='nsew')
 
 switch_view_button = tk.Button(root, text="Minimize View", command=toggle_view, height=2, width=11)
-switch_view_button.grid(row=1, column=7, pady=5, sticky='nsew')
+switch_view_button.grid(row=1, column=6, pady=5, sticky='nsew')
 
 blinking_circle_canvas = tk.Canvas(root, width=20, height=20)
-blinking_circle_canvas.grid(row=1, column=8, pady=5)
+blinking_circle_canvas.grid(row=1, column=7, pady=5)
 circle = blinking_circle_canvas.create_oval(5, 5, 15, 15, fill='white')
 
 response_display = CustomTextBox(root, height=13, state="disabled")
