@@ -54,6 +54,8 @@ from utils.utils import window_has_running_instance, bring_to_front, close_mutex
 from utils.window_utils import remove_min_max, add_min_max
 from WhisperModel import TranscribeError
 from UI.Widgets.PopupBox import PopupBox
+from UI.Widgets.TimestampListbox import TimestampListbox
+
 
 
 if os.environ.get("FREESCRIBE_DEBUG"):
@@ -1858,12 +1860,14 @@ warning_label = tk.Label(history_frame,
                          )
 warning_label.grid(row=3, column=0, sticky='ew', pady=(0,5))
 
+
 # Add the timestamp listbox
-timestamp_listbox = tk.Listbox(history_frame, height=30, exportselection=False)
-timestamp_listbox.grid(row=0, column=0, rowspan=3, sticky='nsew')
+timestamp_listbox = TimestampListbox(history_frame, height=30, exportselection=False, response_history=response_history)
+timestamp_listbox.grid(row=0, column=0, rowspan=3,sticky='nsew')
 timestamp_listbox.bind('<<ListboxSelect>>', show_response)
 timestamp_listbox.insert(tk.END, "Temporary Note History")
 timestamp_listbox.config(fg='grey')
+
 
 # Add microphone test frame
 mic_test = MicrophoneTestFrame(parent=history_frame, p=p, app_settings=app_settings, root=root)
