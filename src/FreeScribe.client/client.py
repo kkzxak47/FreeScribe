@@ -1268,7 +1268,8 @@ def show_edit_transcription_popup(formatted_message):
     def on_proceed():
         edited_text = text_area.get("1.0", tk.END).strip()
         popup.destroy()
-        generate_note_thread(edited_text)        
+        thread = threading.Thread(target=generate_note_thread, args=(edited_text,))
+        thread.start()   
 
     proceed_button = tk.Button(popup, text="Proceed", command=on_proceed)
     proceed_button.pack(side=tk.RIGHT, padx=10, pady=10)
