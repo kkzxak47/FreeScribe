@@ -111,8 +111,19 @@ atexit.register(on_closing)
 # This runs before on_closing, if not confirmed, nothing should be changed
 def confirm_exit_and_destroy():
     """Show confirmation dialog before exiting the application.
-    
-    If user confirms, triggers the same event as clicking the window close button.
+
+    Displays a warning message about temporary note history being cleared on exit.
+    If the user confirms, triggers the window close event. If canceled, the application
+    remains open.
+
+    .. note::
+        This function is bound to the window's close button (WM_DELETE_WINDOW protocol).
+
+    .. warning::
+        All temporary note history will be permanently cleared when the application closes.
+
+    :returns: None
+    :rtype: None
     """
     if messagebox.askokcancel(
             "Confirm Exit",
