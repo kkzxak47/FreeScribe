@@ -196,19 +196,19 @@ class SettingsWindowUI:
 
         left_row, right_row = self.create_editable_settings_col(left_frame, right_frame, left_row, right_row, self.settings.whisper_settings)
         # create the whisper model dropdown slection
-        tk.Label(left_frame, text="Whisper Model").grid(row=3, column=0, padx=0, pady=5, sticky="w")
+        tk.Label(left_frame, text=SettingsKeys.LOCAL_WHISPER_MODEL.value).grid(row=3, column=0, padx=0, pady=5, sticky="w")
         whisper_models_drop_down_options = ["medium", "small", "tiny", "tiny.en", "base", "base.en", "small.en", "medium.en", "large"]
         self.whisper_models_drop_down = ttk.Combobox(left_frame, values=whisper_models_drop_down_options, width=20)
         self.whisper_models_drop_down.grid(row=3, column=1, padx=0, pady=5, sticky="w")
 
         try:
             # Try to set the whisper model dropdown to the current model
-            self.whisper_models_drop_down.current(whisper_models_drop_down_options.index(self.settings.editable_settings["Whisper Model"]))
+            self.whisper_models_drop_down.current(whisper_models_drop_down_options.index(self.settings.editable_settings[SettingsKeys.LOCAL_WHISPER_MODEL.value]))
         except ValueError:
             # If not in list then just force set text
-            self.whisper_models_drop_down.set(self.settings.editable_settings["Whisper Model"])
+            self.whisper_models_drop_down.set(self.settings.editable_settings[SettingsKeys.LOCAL_WHISPER_MODEL.value])
 
-        self.settings.editable_settings_entries["Whisper Model"] = self.whisper_models_drop_down
+        self.settings.editable_settings_entries[SettingsKeys.LOCAL_WHISPER_MODEL.value] = self.whisper_models_drop_down
 
         # create the whisper model dropdown slection
         right_row += 1
@@ -601,7 +601,8 @@ class SettingsWindowUI:
         if self.get_selected_model() not in ["Loading models...", "Failed to load models"]:
             self.settings.editable_settings["Model"] = self.get_selected_model()
 
-        self.settings.update_whisper_model()
+        # delay update, or the update thread might be reading old settings value
+        update_whisper_model_flag = self.settings.update_whisper_model()
 
         if FeatureToggle.PRE_PROCESSING is True:
             self.settings.editable_settings["Pre-Processing"] = self.preprocess_text.get("1.0", "end-1c") # end-1c removes the trailing newline
@@ -621,6 +622,9 @@ class SettingsWindowUI:
             self.settings.editable_settings["Silence cut-off"], # Save the old one for whisper audio cutoff, will be removed in future, left in incase we go back to old cut off
             # self.cutoff_slider.threshold / 32768, # old threshold 
         )
+        # send load event after the settings are saved
+        if update_whisper_model_flag:
+            self.main_window.root.event_generate("<<LoadSttModel>>")
 
         if self.settings.editable_settings["Use Docker Status Bar"] and self.main_window.docker_status_bar is None:
             self.main_window.create_docker_status_bar()
