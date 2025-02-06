@@ -40,7 +40,8 @@ from tkinter import scrolledtext, ttk, filedialog
 import tkinter.messagebox as messagebox
 from faster_whisper import WhisperModel
 from UI.MainWindowUI import MainWindowUI
-from UI.SettingsWindow import SettingsWindow, SettingsKeys, Architectures
+from UI.SettingsWindow import SettingsWindow
+from UI.SettingsConstant import SettingsKeys, Architectures
 from UI.Widgets.CustomTextBox import CustomTextBox
 from UI.LoadingWindow import LoadingWindow
 from Model import  ModelManager
@@ -54,6 +55,9 @@ from utils.utils import window_has_running_instance, bring_to_front, close_mutex
 from utils.window_utils import remove_min_max, add_min_max
 from WhisperModel import TranscribeError
 from UI.Widgets.PopupBox import PopupBox
+from UI.Widgets.TimestampListbox import TimestampListbox
+
+
 
 if os.environ.get("FREESCRIBE_DEBUG"):
     LOG_LEVEL = logging.DEBUG
@@ -105,6 +109,37 @@ def on_closing():
 
 # Register the close_mutex function to be called on exit
 atexit.register(on_closing)
+
+
+# This runs before on_closing, if not confirmed, nothing should be changed
+def confirm_exit_and_destroy():
+    """Show confirmation dialog before exiting the application.
+
+    Displays a warning message about temporary note history being cleared on exit.
+    If the user confirms, triggers the window close event. If canceled, the application
+    remains open.
+
+    .. note::
+        This function is bound to the window's close button (WM_DELETE_WINDOW protocol).
+
+    .. warning::
+        All temporary note history will be permanently cleared when the application closes.
+
+    :returns: None
+    :rtype: None
+    """
+    if messagebox.askokcancel(
+            "Confirm Exit",
+            "Warning: Temporary Note History will be cleared when app closes.\n\n"
+            "Please make sure you have copied your important notes elsewhere "
+            "before closing.\n\n"
+            "Do you still want to exit?"
+    ):
+        root.destroy()
+
+
+# remind user notes will be gone after exiting
+root.protocol("WM_DELETE_WINDOW", confirm_exit_and_destroy)
 
 # settings logic
 app_settings = SettingsWindow()
@@ -233,7 +268,7 @@ def double_check_stt_model_loading(task_done_var, task_cancel_var):
         # if using local whisper and model is not loaded, when starting recording
         if stt_model_loading_thread_lock.locked():
             model_name = app_settings.editable_settings[SettingsKeys.WHISPER_MODEL.value].strip()
-            stt_loading_window = LoadingWindow(root, "Loading Voice to Text model",
+            stt_loading_window = LoadingWindow(root, "Loading Speech to Text model",
                                                f"Loading {model_name} model. Please wait.",
                                                on_cancel=lambda: task_cancel_var.set(True))
             timeout = 300
@@ -247,7 +282,7 @@ def double_check_stt_model_loading(task_done_var, task_cancel_var):
                     return
                 if time.monotonic() - time_start > timeout:
                     messagebox.showerror("Error",
-                                         f"Timed out while loading local Voice to Text model after {timeout} seconds.")
+                                         f"Timed out while loading local Speech to Text model after {timeout} seconds.")
                     task_cancel_var.set(True)
                     return
                 if not stt_model_loading_thread_lock.locked():
@@ -263,7 +298,7 @@ def double_check_stt_model_loading(task_done_var, task_cancel_var):
     except Exception as e:
         logging.exception(str(e))
         messagebox.showerror("Error",
-                             f"An error occurred while loading Voice to Text model synchronously {type(e).__name__}: {e}")
+                             f"An error occurred while loading Speech to Text model synchronously {type(e).__name__}: {e}")
     finally:
         print(f"*** Double Checking STT model Complete - Model Current Status: {stt_local_model}")
         if stt_loading_window:
@@ -652,7 +687,8 @@ def disable_recording_ui_elements():
     window.disable_settings_menu()
     user_input.scrolled_text.configure(state='disabled')
     send_button.config(state='disabled')
-    toggle_button.config(state='disabled')
+    #hidding the AI Scribe button actions
+    #toggle_button.config(state='disabled')
     upload_button.config(state='disabled')
     response_display.scrolled_text.configure(state='disabled')
     timestamp_listbox.config(state='disabled')
@@ -662,7 +698,8 @@ def enable_recording_ui_elements():
     window.enable_settings_menu()
     user_input.scrolled_text.configure(state='normal')
     send_button.config(state='normal')
-    toggle_button.config(state='normal')
+    #hidding the AI Scribe button actions
+    #toggle_button.config(state='normal')
     upload_button.config(state='normal')
     timestamp_listbox.config(state='normal')
     clear_button.config(state='normal')
@@ -746,10 +783,11 @@ def clear_all_text_fields():
     response_display.scrolled_text.config(fg='grey')
     response_display.scrolled_text.configure(state='disabled')
 
-def toggle_aiscribe():
-    global use_aiscribe
-    use_aiscribe = not use_aiscribe
-    toggle_button.config(text="AI Scribe\nON" if use_aiscribe else "AI Scribe\nOFF")
+#hidding the AI Scribe button Function
+# def toggle_aiscribe():
+#     global use_aiscribe
+#     use_aiscribe = not use_aiscribe
+#     toggle_button.config(text="AI Scribe\nON" if use_aiscribe else "AI Scribe\nOFF")
 
 def send_audio_to_server():
     """
@@ -1266,7 +1304,8 @@ def show_edit_transcription_popup(formatted_message):
     def on_proceed():
         edited_text = text_area.get("1.0", tk.END).strip()
         popup.destroy()
-        generate_note_thread(edited_text)        
+        thread = threading.Thread(target=generate_note_thread, args=(edited_text,))
+        thread.start()   
 
     proceed_button = tk.Button(popup, text="Proceed", command=on_proceed)
     proceed_button.pack(side=tk.RIGHT, padx=10, pady=10)
@@ -1607,7 +1646,7 @@ def _load_stt_model_thread():
         global stt_local_model
 
         model_name = app_settings.editable_settings[SettingsKeys.WHISPER_MODEL.value].strip()
-        stt_loading_window = LoadingWindow(root, "Voice to Text", f"Loading Voice to Text {model_name} model. Please wait.")
+        stt_loading_window = LoadingWindow(root, "Speech to Text", f"Loading Speech to Text {model_name} model. Please wait.")
         print(f"Loading STT model: {model_name}")
 
         try:
@@ -1632,7 +1671,7 @@ def _load_stt_model_thread():
         except Exception as e:
             print(f"An error occurred while loading STT {type(e).__name__}: {e}")
             stt_local_model = None
-            messagebox.showerror("Error", f"An error occurred while loading Voice to Text {type(e).__name__}: {e}")
+            messagebox.showerror("Error", f"An error occurred while loading Speech to Text {type(e).__name__}: {e}")
         finally:
             stt_loading_window.destroy()
             print("Closing STT loading window.")
@@ -1779,17 +1818,18 @@ pause_button.grid(row=1, column=2, pady=5, sticky='nsew')
 clear_button = tk.Button(root, text="Clear", command=clear_application_press, height=2, width=11)
 clear_button.grid(row=1, column=4, pady=5, sticky='nsew')
 
-toggle_button = tk.Button(root, text="AI Scribe\nON", command=toggle_aiscribe, height=2, width=11)
-toggle_button.grid(row=1, column=5, pady=5, sticky='nsew')
+#hidding the AI Scribe button
+# toggle_button = tk.Button(root, text="AI Scribe\nON", command=toggle_aiscribe, height=2, width=11)
+# toggle_button.grid(row=1, column=5, pady=5, sticky='nsew')
 
 upload_button = tk.Button(root, text="Upload Audio\nFor Transcription", command=upload_file, height=2, width=11)
-upload_button.grid(row=1, column=6, pady=5, sticky='nsew')
+upload_button.grid(row=1, column=5, pady=5, sticky='nsew')
 
 switch_view_button = tk.Button(root, text="Minimize View", command=toggle_view, height=2, width=11)
-switch_view_button.grid(row=1, column=7, pady=5, sticky='nsew')
+switch_view_button.grid(row=1, column=6, pady=5, sticky='nsew')
 
 blinking_circle_canvas = tk.Canvas(root, width=20, height=20)
-blinking_circle_canvas.grid(row=1, column=8, pady=5)
+blinking_circle_canvas.grid(row=1, column=7, pady=5)
 circle = blinking_circle_canvas.create_oval(5, 5, 15, 15, fill='white')
 
 response_display = CustomTextBox(root, height=13, state="disabled")
@@ -1806,19 +1846,36 @@ if app_settings.editable_settings["Enable Scribe Template"]:
 
 # Create a frame to hold both timestamp listbox and mic test
 history_frame = ttk.Frame(root)
-history_frame.grid(row=0, column=9, columnspan=2, rowspan=5, padx=5, pady=10, sticky='nsew')
+history_frame.grid(row=0, column=9, columnspan=2, rowspan=6, padx=5, pady=10, sticky='nsew')
 
 # Configure the frame's grid
 history_frame.grid_columnconfigure(0, weight=1)
 history_frame.grid_rowconfigure(0, weight=4)  # Timestamp takes more space
-history_frame.grid_rowconfigure(1, weight=1)  # Mic test takes less space
+history_frame.grid_rowconfigure(1, weight=1)
+history_frame.grid_rowconfigure(2, weight=1)  # Mic test takes less space
+history_frame.grid_rowconfigure(3, weight=1)
+
+system_font = tk.font.nametofont("TkDefaultFont")
+base_size = system_font.cget("size")
+scaled_size = int(base_size * 0.9)  # 90% of system font size
+# Add warning label
+warning_label = tk.Label(history_frame,
+                         text="Temporary Note History will be cleared when app closes",
+                         # fg="red",
+                         # wraplength=200,
+                         justify="left",
+                         font=tk.font.Font(size=scaled_size),
+                         )
+warning_label.grid(row=3, column=0, sticky='ew', pady=(0,5))
+
 
 # Add the timestamp listbox
-timestamp_listbox = tk.Listbox(history_frame, height=30, exportselection=False)
+timestamp_listbox = TimestampListbox(history_frame, height=30, exportselection=False, response_history=response_history)
 timestamp_listbox.grid(row=0, column=0, rowspan=3,sticky='nsew')
 timestamp_listbox.bind('<<ListboxSelect>>', show_response)
 timestamp_listbox.insert(tk.END, "Temporary Note History")
 timestamp_listbox.config(fg='grey')
+
 
 # Add microphone test frame
 mic_test = MicrophoneTestFrame(parent=history_frame, p=p, app_settings=app_settings, root=root)
