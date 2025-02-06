@@ -4,6 +4,7 @@ from typing import Optional, Dict, Any
 import threading
 from UI.LoadingWindow import LoadingWindow
 import tkinter.messagebox as messagebox
+from UI.SettingsConstant import SettingsKeys
 
 
 class Model:
