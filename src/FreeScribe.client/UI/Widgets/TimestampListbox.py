@@ -4,7 +4,26 @@ import tkinter.messagebox as messagebox
 
 
 class TimestampListbox(tk.Listbox):
+    """A custom Listbox widget that allows editing of timestamp entries.
+
+    This widget extends tk.Listbox to provide right-click editing functionality
+    for timestamp entries and maintains synchronization with a response history.
+
+    :param args: Variable length argument list passed to tk.Listbox
+    :param kwargs: Arbitrary keyword arguments, with special handling for:
+        - response_history: List of tuples containing (timestamp, user_message, response)
+    :type args: tuple
+    :type kwargs: dict
+    """
     def __init__(self, *args, **kwargs):
+        """Initialize the TimestampListbox widget.
+
+        :param args: Variable length argument list passed to tk.Listbox
+        :param kwargs: Arbitrary keyword arguments, with special handling for:
+            - response_history: List of tuples containing (timestamp, user_message, response)
+        :type args: tuple
+        :type kwargs: dict
+        """
         response_history = kwargs.pop('response_history')
         super().__init__(*args, **kwargs)
         self.response_history = response_history
@@ -17,6 +36,11 @@ class TimestampListbox(tk.Listbox):
         self.bind("<Button-3>", self.on_right_click)
 
     def on_right_click(self, event):
+        """Handle right-click events to show context menu.
+
+        :param event: The mouse event containing position information
+        :type event: tk.Event
+        """
         index = self.nearest(event.y)
         self.selection_clear(0, tk.END)
         self.selection_set(index)
@@ -25,6 +49,10 @@ class TimestampListbox(tk.Listbox):
         self.menu.post(event.x_root, event.y_root)
 
     def start_edit(self):
+        """Start editing the selected timestamp entry.
+
+        Creates an Entry widget over the selected list item and sets focus to it.
+        """
         selection = self.curselection()
         if not selection:
             return
@@ -48,7 +76,14 @@ class TimestampListbox(tk.Listbox):
         self.edit_entry.bind("<FocusOut>", lambda e: self.confirm_edit())
 
     def confirm_edit(self):
-        """Confirm and save the edited timestamp"""
+        """Confirm and save the edited timestamp.
+
+        Updates both the Listbox entry and the corresponding response history.
+
+        :raises tk.TclError: If there are widget-related issues
+        :raises ValueError: If the timestamp format is invalid
+        :raises Exception: For any other unexpected errors (logged and re-raised)
+        """
         try:
             if self.edit_entry and self.edit_index is not None:
                 new_text = self.edit_entry.get()
@@ -75,7 +110,14 @@ class TimestampListbox(tk.Listbox):
             raise  # Re-raise unexpected exceptions to prevent silent failures
 
     def cancel_edit(self):
-        """Cancel the editing operation"""
+        """Cancel the editing operation.
+
+        Destroys the edit Entry widget and resets editing state.
+
+        :raises tk.TclError: If there are widget-related issues
+        :raises ValueError: If the timestamp format is invalid
+        :raises Exception: For any other unexpected errors (logged and re-raised)
+        """
         try:
             if self.edit_entry and self.edit_index is not None:
                 self.edit_entry.destroy()
