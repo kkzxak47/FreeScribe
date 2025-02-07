@@ -243,11 +243,16 @@ def threaded_check_stt_model():
     # Check if the task was canceled via task_cancel_var
     if task_cancel_var.get():
         logging.debug(f"double checking canceled")
-        return
+        return False
+    return True
 
 def threaded_toggle_recording():
     logging.debug(f"*** Toggle Recording - Recording status: {is_recording}, STT local model: {stt_local_model}")
-    threaded_check_stt_model()
+    ready_flag = threaded_check_stt_model()
+    # there is no point start recording if we are using local STT model and it's not ready
+    # if user chooses to cancel the double check process, we need to return and not start recording
+    if not ready_flag:
+        return
     thread = threading.Thread(target=toggle_recording)
     thread.start()
 
