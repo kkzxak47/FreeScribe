@@ -206,16 +206,14 @@ class MicrophoneTestFrame:
             self.mic_dropdown.set(current_selected_name)
             # Reopen the stream with the current selected microphone
             self.reopen_stream()
-        else:
+        elif self.mic_list:
             # If the selected microphone is no longer available, select the first one
-            if self.mic_list:
-                self.update_selected_microphone(self.mic_list[0][0])
-                self.mic_dropdown.set(self.mic_list[0][1])
-            else:
-                self.status_label.config(text="Error: No microphones available", foreground="red")
-                MicrophoneState.SELECTED_MICROPHONE_INDEX = None
-                MicrophoneState.SELECTED_MICROPHONE_NAME = None
-
+            self.update_selected_microphone(self.mic_list[0][0])
+            self.mic_dropdown.set(self.mic_list[0][1])
+        else:
+            self.status_label.config(text="Error: No microphones available", foreground="red")
+            MicrophoneState.SELECTED_MICROPHONE_INDEX = None
+            MicrophoneState.SELECTED_MICROPHONE_NAME = None
     def update_selected_microphone(self, selected_index):
         """
         Update the selected microphone index and name.
