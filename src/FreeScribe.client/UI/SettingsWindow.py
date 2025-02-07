@@ -31,6 +31,47 @@ from utils.ip_utils import is_valid_url
 import multiprocessing
 
 
+class SettingsKeys(Enum):
+    LOCAL_WHISPER = "Built-in Speech2Text"
+    WHISPER_ENDPOINT = "Speech2Text (Whisper) Endpoint"
+    WHISPER_SERVER_API_KEY = "Speech2Text (Whisper) API Key"
+    WHISPER_ARCHITECTURE = "Speech2Text (Whisper) Architecture"
+    WHISPER_CPU_COUNT = "Whisper CPU Thread Count (Experimental)"
+    WHISPER_COMPUTE_TYPE = "Whisper Compute Type (Experimental)"
+    WHISPER_BEAM_SIZE = "Whisper Beam Size (Experimental)"
+    WHISPER_VAD_FILTER = "Use Whisper VAD Filter (Experimental)"
+    AUDIO_PROCESSING_TIMEOUT_LENGTH = "Audio Processing Timeout (seconds)"
+    SILERO_SPEECH_THRESHOLD = "Silero Speech Threshold"
+    USE_TRANSLATE_TASK = "Translate Speech to English Text"
+    WHISPER_LANGUAGE_CODE = "Whisper Language Code"
+    S2T_SELF_SIGNED_CERT = "S2T Server Self-Signed Certificates"
+    LLM_ARCHITECTURE = "Architecture"
+    USE_PRESCREEN_AI_INPUT = "Use Pre-Screen AI Input"
+    Enable_Word_Count_Validation = "Enable Word Count Validation"
+    Enable_AI_Conversation_Validation = "Enable AI Conversation Validation"
+
+
+class Architectures(Enum):
+    CPU = ("CPU", "cpu")
+    CUDA = ("CUDA (Nvidia GPU)", "cuda")
+
+    @property
+    def label(self):
+        return self._value_[0]
+
+    @property
+    def architecture_value(self):
+        return self._value_[1]
+
+
+
+class FeatureToggle:
+    DOCKER_SETTINGS_TAB = False
+    DOCKER_STATUS_BAR = False
+    POST_PROCESSING = False
+    PRE_PROCESSING = False
+
+
 class SettingsWindow():
     """
     Manages application settings related to audio processing and external API services.
@@ -135,6 +176,8 @@ class SettingsWindow():
             SettingsKeys.USE_TRANSLATE_TASK.value: False,
             SettingsKeys.WHISPER_LANGUAGE_CODE.value: "None (Auto Detect)",
             SettingsKeys.USE_PRESCREEN_AI_INPUT.value: True,
+            SettingsKeys.Enable_Word_Count_Validation.value : True,  # Default to enabled
+            SettingsKeys.Enable_AI_Conversation_Validation.value : False,  # Default to disabled
         }
 
     def __init__(self):
@@ -196,6 +239,8 @@ class SettingsWindow():
             # "singleline",
             # "frmttriminc",
             # "frmtrmblln",
+            SettingsKeys.Enable_Word_Count_Validation.value,
+            SettingsKeys.Enable_AI_Conversation_Validation.value
         ]
 
         self.adv_whisper_settings = [
