@@ -23,6 +23,8 @@ class SettingsKeys(Enum):
     LOCAL_LLM_MODEL = "AI Model"
     LLM_ENDPOINT = "AI Server Endpoint"
     LLM_SERVER_API_KEY = "AI Server API Key"
+    Enable_Word_Count_Validation = "Enable Word Count Validation"
+    Enable_AI_Conversation_Validation = "Enable AI Conversation Validation"
 
 
 class Architectures(Enum):
