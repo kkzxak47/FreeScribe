@@ -306,9 +306,29 @@ class MicrophoneTestFrame:
         """
         return MicrophoneState.SELECTED_MICROPHONE_INDEX
 
-    def set_mic_test_state(self, enabled):         
-        self.mic_dropdown.state(['!disabled' if enabled else 'disabled']) 
-        self.status_label.state(['!disabled' if enabled else 'disabled']) 
+    def set_mic_test_state(self, enabled):
+        """
+        Enable or disable the microphone test state for the UI components.
+
+        This method updates the state of the microphone dropdown, status label, and segments 
+        based on the `enabled` parameter. If `enabled` is True, the components are set to an 
+        enabled state. If `enabled` is False, the components are disabled. For frame segments, 
+        the style is also updated to reflect the disabled state.
+
+        Args:
+            enabled (bool): If True, enable the microphone test state. If False, disable it.
+
+        Notes:
+            - For `ttk.Frame` or `tk.Frame` segments, the original style is stored before applying 
+            the disabled style. This allows the original style to be restored when re-enabled.
+            - The `_frame_original_styles` dictionary is used to store the original styles of frames.
+
+        Example:
+            >>> self.set_mic_test_state(True)  # Enable microphone test state
+            >>> self.set_mic_test_state(False) # Disable microphone test state
+        """
+        self.mic_dropdown.state(['!disabled' if enabled else 'disabled'])
+        self.status_label.state(['!disabled' if enabled else 'disabled'])         
         for segment in self.segments: 
             if isinstance(segment, (ttk.Frame, tk.Frame)):
                 if enabled:
