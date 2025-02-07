@@ -1732,6 +1732,10 @@ def faster_whisper_transcribe(audio):
         except (ValueError, TypeError) as e:
             return f"Invalid {SettingsKeys.WHISPER_BEAM_SIZE.value} parameter. Please go into the advanced settings and ensure you have a integer greater than 0: {str(e)}"
 
+        additional_kwargs = {}
+        if app_settings.editable_settings[SettingsKeys.USE_TRANSLATE_TASK.value]:
+            additional_kwargs['task'] = 'translate'
+
         # Validate vad_filter
         vad_filter = bool(app_settings.editable_settings[SettingsKeys.WHISPER_VAD_FILTER.value])
 
@@ -1739,6 +1743,7 @@ def faster_whisper_transcribe(audio):
             audio,
             beam_size=beam_size,
             vad_filter=vad_filter,
+            **additional_kwargs
         )
 
         return "".join(f"{segment.text} " for segment in segments)
