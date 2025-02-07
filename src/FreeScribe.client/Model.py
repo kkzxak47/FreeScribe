@@ -7,6 +7,9 @@ import tkinter.messagebox as messagebox
 from UI.SettingsConstant import SettingsKeys
 
 
+DEFAULT_CONTEXT_WINDOW_SIZE = 8192
+
+
 class Model:
     """
     Model class for handling GPU-accelerated text generation using the Llama library.
@@ -29,7 +32,7 @@ class Model:
         self,
         model_path: str,
         chat_template: str = None,
-        context_size: int = 4096,
+        context_size: int = DEFAULT_CONTEXT_WINDOW_SIZE,
         gpu_layers: int = -1,  # -1 means load all layers to GPU
         main_gpu: int = 0,     # Primary GPU device index
         tensor_split: Optional[list] = None,  # For multi-GPU setup
@@ -204,7 +207,7 @@ class ModelManager:
             model_path = f"./models/{model_to_use}"
             try:
                 ModelManager.local_model = Model(model_path,
-                    context_size=4096,
+                    context_size=DEFAULT_CONTEXT_WINDOW_SIZE,
                     gpu_layers=gpu_layers,
                     main_gpu=0,
                     n_batch=512,
