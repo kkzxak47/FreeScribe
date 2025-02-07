@@ -182,6 +182,7 @@ class ModelManager:
             GPU layers are set to -1 for CUDA architecture and 0 for CPU.
         """
         loading_window = LoadingWindow(root, "Loading Model", "Loading Model. Please wait")
+        app_settings.main_window.disable_settings_menu()
 
         # unload before loading new model
         if ModelManager.local_model is not None:
@@ -231,6 +232,7 @@ class ModelManager:
             if thread.is_alive():
                 root.after(500, lambda: check_thread_status(thread, loading_window, root))
             else:
+                app_settings.main_window.enable_settings_menu()
                 loading_window.destroy()
 
         root.after(500, lambda: check_thread_status(thread, loading_window, root))

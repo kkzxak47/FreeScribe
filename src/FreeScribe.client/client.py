@@ -1691,6 +1691,7 @@ def _load_stt_model_thread():
 
         model_name = app_settings.editable_settings[SettingsKeys.WHISPER_MODEL.value].strip()
         stt_loading_window = LoadingWindow(root, "Speech to Text", f"Loading Speech to Text {model_name} model. Please wait.")
+        window.disable_settings_menu()
         print(f"Loading STT model: {model_name}")
 
         try:
@@ -1717,6 +1718,7 @@ def _load_stt_model_thread():
             stt_local_model = None
             messagebox.showerror("Error", f"An error occurred while loading Speech to Text {type(e).__name__}: {e}")
         finally:
+            window.enable_settings_menu()
             stt_loading_window.destroy()
             print("Closing STT loading window.")
 
@@ -1948,12 +1950,58 @@ if (app_settings.editable_settings['Show Welcome Message']):
 
 #Wait for the UI root to be intialized then load the model. If using local llm.
 if app_settings.editable_settings[SettingsKeys.LOCAL_LLM.value]:
-    root.after(100, lambda:(ModelManager.setup_model(app_settings=app_settings, root=root)))  
+    root.after(100, lambda:(ModelManager.setup_model(app_settings=app_settings, root=root)))
 
 if app_settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value]:
     # Inform the user that Local Whisper is being used for transcription
     print("Using Local Whisper for transcription.")
     root.after(100, lambda: (load_stt_model()))
+
+# wait for both whisper and llm to be loaded before unlocking the settings button
+def await_models():
+    """
+    Waits until the necessary models (Whisper and LLM) are fully loaded.
+
+    The function checks if local models are enabled based on application settings. 
+    If a remote model is used, the corresponding flag is set to True immediately, 
+    bypassing the wait. Otherwise, the function enters a loop that periodically 
+    checks for model readiness and prints status updates until both models are loaded.
+
+    :return: None
+    """
+    #flags to check if models are loaded
+    whisper_loaded = False
+    llm_loaded = False
+
+    # if we are using remote whisper then we can assume it is loaded and dont wait
+    if not app_settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value]:
+        whisper_loaded = True
+    
+    # if we are not using local llm then we can assume it is loaded and dont wait
+    if not app_settings.editable_settings[SettingsKeys.LOCAL_LLM.value]:
+        llm_loaded = True
+
+    # wait for both models to be loaded
+    while not whisper_loaded or not llm_loaded:
+        print("Waiting for models to load...")
+
+        # reasonable wait to check again
+        time.sleep(0.5)
+
+        # overide the lock incase something else tried to edit
+        window.disable_settings_menu()
+
+        # if we have a object its loaded
+        if stt_local_model:
+            whisper_loaded = True
+
+        if ModelManager.local_model:
+            llm_loaded = True
+    
+    print("Models loaded")
+    window.enable_settings_menu()
+
+threading.Thread(target=await_models).start()
 
 root.bind("<<LoadSttModel>>", load_stt_model)
 
