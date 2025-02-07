@@ -606,7 +606,8 @@ class SettingsWindowUI:
         if self.get_selected_model() not in ["Loading models...", "Failed to load models"]:
             self.settings.editable_settings[SettingsKeys.LOCAL_LLM_MODEL.value] = self.get_selected_model()
 
-        self.settings.update_whisper_model()
+        # delay update, or the update thread might be reading old settings value
+        update_whisper_model_flag = self.settings.update_whisper_model()
 
         if FeatureToggle.PRE_PROCESSING is True:
             self.settings.editable_settings["Pre-Processing"] = self.preprocess_text.get("1.0", "end-1c") # end-1c removes the trailing newline
@@ -626,6 +627,9 @@ class SettingsWindowUI:
             self.settings.editable_settings["Silence cut-off"], # Save the old one for whisper audio cutoff, will be removed in future, left in incase we go back to old cut off
             # self.cutoff_slider.threshold / 32768, # old threshold 
         )
+        # send load event after the settings are saved
+        if update_whisper_model_flag:
+            self.main_window.root.event_generate("<<LoadSttModel>>")
 
         if self.settings.editable_settings["Use Docker Status Bar"] and self.main_window.docker_status_bar is None:
             self.main_window.create_docker_status_bar()
