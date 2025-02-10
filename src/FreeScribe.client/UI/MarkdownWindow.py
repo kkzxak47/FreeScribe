@@ -38,28 +38,26 @@ class MarkdownWindow:
         self.window.iconbitmap(get_file_path('assets', 'logo.ico'))
 
         # Footer frame to hold checkbox and close button
-        footer_frame = tk.Frame(self.window, bg="lightgray")
+        footer_frame = tk.Frame(self.window,bg="lightgray")
         footer_frame.pack(side=tk.BOTTOM, fill="x")
         # Add a version label to the footer
         version = get_application_version()
+        
 
         # Create a frame to hold the HTMLLabel and scrollbar
         frame = tk.Frame(self.window)
         frame.pack(fill="both", expand=True, padx=10, pady=10)
 
         # Create the HTMLLabel widget
-        self.html_label = HTMLLabel(frame, html=content)
-        self.html_label.pack(side="left", fill="both", expand=True)
+        html_label = HTMLLabel(frame, html=content)
+        html_label.pack(side="left", fill="both", expand=True)
 
         # Create the scrollbar
-        self.scrollbar = tk.Scrollbar(frame, orient="vertical", command=self.html_label.yview)
-        self.scrollbar.pack(side="right", fill="y")
+        scrollbar = tk.Scrollbar(frame, orient="vertical", command=html_label.yview)
+        scrollbar.pack(side="right", fill="y")
 
         # Configure the HTMLLabel to use the scrollbar
-        self.html_label.config(yscrollcommand=self.scrollbar.set)
-
-        # Bind mouse wheel event to the HTML label
-        self.html_label.bind("<MouseWheel>", self._on_mousewheel)
+        html_label.config(yscrollcommand=scrollbar.set)
 
         # Optional checkbox and callback handling
         if callback:
@@ -83,17 +81,13 @@ class MarkdownWindow:
             footer_frame.grid_columnconfigure(0, weight=1)
             footer_frame.grid_columnconfigure(1, weight=1)
             footer_frame.grid_columnconfigure(2, weight=1)
-            footer_frame.grid_columnconfigure(3, weight=0)
+            footer_frame.grid_columnconfigure(3, weight=0)  
 
         # Adjust window size based on content with constraints
-        self._adjust_window_size(self.html_label, self.scrollbar)
+        self._adjust_window_size(html_label, scrollbar)
         self._display_to_center()
         self.window.lift()
-
-    def _on_mousewheel(self, event):
-        """Handle mouse wheel events for scrolling."""
-        self.html_label.yview_scroll(-1 * (event.delta // 120), "units")
-
+    
     def _display_to_center(self):
         # Get parent window dimensions and position
         parent_x = self.parent.winfo_x()
