@@ -1966,7 +1966,7 @@ if app_settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value]:
     root.after(100, lambda: (load_stt_model()))
 
 # wait for both whisper and llm to be loaded before unlocking the settings button
-def await_models():
+def await_models(timeout_length=60):
     """
     Waits until the necessary models (Whisper and LLM) are fully loaded.
 
@@ -1990,7 +1990,8 @@ def await_models():
     # if we are not using local llm then we can assume it is loaded and dont wait
     if not app_settings.editable_settings[SettingsKeys.LOCAL_LLM.value]:
         llm_loaded = True
-
+ 
+    start_time = time.time()
     # wait for both models to be loaded
     while not whisper_loaded or not llm_loaded:
         print("Waiting for models to load...")
@@ -2004,15 +2005,15 @@ def await_models():
         # if we have a object its loaded
         if stt_local_model:
             whisper_loaded = True
-            print("*** Whisper model loaded on application startup.")
+            print("*** Whisper model loaded on application startup. Enabling settings bar.")
 
         if ModelManager.local_model:
-            print("*** LLM model loaded on application startup.")
+            print("*** LLM model loaded on application startup. Enabling settings bar.")
             llm_loaded = True
         
         #if we cancel this thread then break out of the loop
-        if cancel_await_thread:
-            print("*** Model loading cancelled.")
+        if cancel_await_thread or (time.time() - start_time) > timeout_length:
+            print("*** Model loading cancelled. Enabling settings bar.")
             #reset the flag
             cancel_await_thread = False
             break
