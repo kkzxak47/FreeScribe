@@ -682,6 +682,7 @@ def toggle_recording():
         save_audio()
 
         print("*** Recording Stopped")
+        stop_flashing()
 
         if current_view == "full":
             mic_button.config(bg=DEFAULT_BUTTON_COLOUR, text="Start\nRecording")
@@ -841,6 +842,7 @@ def send_audio_to_server():
         finally:
             GENERATION_THREAD_ID = None
             clear_application_press()
+            stop_flashing()
 
     loading_window = LoadingWindow(root, "Processing Audio", "Processing Audio. Please wait.", on_cancel=lambda: (cancel_processing(), cancel_whole_audio_process(current_thread_id)))
 
@@ -970,6 +972,7 @@ def send_audio_to_server():
                 if os.path.exists(file_to_send) and delete_file:
                     os.remove(file_to_send)
                 loading_window.destroy()
+    stop_flashing()
 
 def kill_thread(thread_id):
     """
@@ -1010,7 +1013,6 @@ def send_and_receive():
     display_text(NOTE_CREATION)
     threaded_handle_message(user_message)
 
-        
 
 def display_text(text):
     response_display.scrolled_text.configure(state='normal')
@@ -1337,7 +1339,7 @@ def show_edit_transcription_popup(formatted_message):
     if (app_settings.editable_settings[SettingsKeys.LOCAL_LLM.value] or is_private_ip(app_settings.editable_settings[SettingsKeys.LLM_ENDPOINT.value])) and not app_settings.editable_settings["Show Scrub PHI"]:
         generate_note_thread(cleaned_message)
         return
-    
+
     popup = tk.Toplevel(root)
     popup.title("Scrub PHI Prior to GPT")
     popup.iconbitmap(get_file_path('assets','logo.ico'))
@@ -1354,10 +1356,13 @@ def show_edit_transcription_popup(formatted_message):
     proceed_button = tk.Button(popup, text="Proceed", command=on_proceed)
     proceed_button.pack(side=tk.RIGHT, padx=10, pady=10)
 
-    # Cancel button
-    cancel_button = tk.Button(popup, text="Cancel", command=popup.destroy)
-    cancel_button.pack(side=tk.LEFT, padx=10, pady=10)
+    def on_cancel():
+        popup.destroy()
+        stop_flashing()
 
+    # Cancel button
+    cancel_button = tk.Button(popup, text="Cancel", command=on_cancel)
+    cancel_button.pack(side=tk.LEFT, padx=10, pady=10)
 
 
 def generate_note_thread(text: str):
@@ -1391,6 +1396,7 @@ def generate_note_thread(text: str):
             print(f"An error occurred: {e}")
         finally:
             GENERATION_THREAD_ID = None
+            stop_flashing()
 
     # Track the screen input thread
     screen_thread = None
@@ -1419,6 +1425,7 @@ def generate_note_thread(text: str):
             root.after(500, lambda: check_thread_status(thread, loading_window))
         else:
             loading_window.destroy()
+            stop_flashing()
 
     root.after(500, lambda: check_thread_status(thread, loading_window))
 
@@ -1431,16 +1438,17 @@ def upload_file():
     start_flashing()
 
 
-
 def start_flashing():
     global is_flashing
     is_flashing = True
     flash_circle()
 
+
 def stop_flashing():
     global is_flashing
     is_flashing = False
     blinking_circle_canvas.itemconfig(circle, fill='white')  # Reset to default color
+
 
 def flash_circle():
     if is_flashing:
@@ -1449,9 +1457,11 @@ def flash_circle():
         blinking_circle_canvas.itemconfig(circle, fill=new_color)
         root.after(1000, flash_circle)  # Adjust the flashing speed as needed
 
+
 def send_and_flash():
     start_flashing()
     send_and_receive()
+
 
 # Initialize variables to store window geometry for switching between views
 last_full_position = None
