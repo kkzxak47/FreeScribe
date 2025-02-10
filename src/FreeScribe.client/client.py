@@ -1997,6 +1997,8 @@ def await_models(timeout_length=60):
             print("*** Model loading cancelled. Enabling settings bar.")
             #reset the flag
             cancel_await_thread = False
+            #reset the settings bar
+            window.enable_settings_menu()
             #return so the .after() doesnt get called.
             return
 
