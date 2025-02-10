@@ -620,7 +620,7 @@ def toggle_recording():
             mic_button.config(bg="red", text="Stop\nRecording")
         elif current_view == "minimal":
             mic_button.config(bg="red", text="⏹️")
-        
+
         start_flashing()
     else:
         enable_recording_ui_elements()
@@ -1504,8 +1504,8 @@ def set_full_view():
     history_frame.grid()
     mic_button.grid(row=1, column=1, pady=5, padx=0,sticky='nsew')
     pause_button.grid(row=1, column=2, pady=5, padx=0,sticky='nsew')
-    switch_view_button.grid(row=1, column=7, pady=5, padx=0,sticky='nsew')
-    blinking_circle_canvas.grid(row=1, column=8, padx=0,pady=5)
+    switch_view_button.grid(row=1, column=6, pady=5, padx=0,sticky='nsew')
+    blinking_circle_canvas.grid(row=1, column=7, padx=0,pady=5)
     footer_frame.grid()
 
     window.toggle_menu_bar(enable=True)
