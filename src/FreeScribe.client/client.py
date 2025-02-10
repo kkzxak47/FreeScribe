@@ -1980,41 +1980,33 @@ def await_models(timeout_length=60):
     global cancel_await_thread
 
     # if we are using remote whisper then we can assume it is loaded and dont wait
-    whisper_loaded = app_settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value]
+    whisper_loaded = (not app_settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value] or stt_local_model)
     
     # if we are not using local llm then we can assume it is loaded and dont wait
-    llm_loaded = app_settings.editable_settings[SettingsKeys.LOCAL_LLM.value]
+    llm_loaded = (not app_settings.editable_settings[SettingsKeys.LOCAL_LLM.value] or ModelManager.local_model)
  
-    start_time = time.time()
     # wait for both models to be loaded
-    while not whisper_loaded or not llm_loaded:
+    if not whisper_loaded or not llm_loaded:
         print("Waiting for models to load...")
-
-        # reasonable wait to check again
-        time.sleep(0.5)
 
         # override the lock in case something else tried to edit
         window.disable_settings_menu()
-
-        # if we have a object its loaded
-        if stt_local_model:
-            whisper_loaded = True
-            print("*** Whisper model loaded on application startup. Enabling settings bar.")
-
-        if ModelManager.local_model:
-            print("*** LLM model loaded on application startup. Enabling settings bar.")
-            llm_loaded = True
-        
+      
         #if we cancel this thread then break out of the loop
-        if cancel_await_thread or (time.time() - start_time) > timeout_length:
+        if cancel_await_thread:
             print("*** Model loading cancelled. Enabling settings bar.")
             #reset the flag
             cancel_await_thread = False
-            break
-    
-    window.enable_settings_menu()
+            #return so the .after() doesnt get called.
+            return
 
-threading.Thread(target=await_models).start()
+        root.after(100, await_models)
+    else:
+        print("*** Models loaded successfully on startup.")
+        window.enable_settings_menu()
+
+root.after(100, await_models)
+
 
 root.bind("<<LoadSttModel>>", load_stt_model)
 
