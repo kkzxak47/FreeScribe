@@ -179,6 +179,7 @@ RATE = 16000
 # Application flags
 is_audio_processing_realtime_canceled = threading.Event()
 is_audio_processing_whole_canceled = threading.Event()
+cancel_await_thread = threading.Event()
 
 # Constants
 DEFAULT_BUTTON_COLOUR = "SystemButtonFace"
@@ -1689,8 +1690,12 @@ def _load_stt_model_thread():
     with stt_model_loading_thread_lock:
         global stt_local_model
 
+        def on_cancel_whisper_load():
+            cancel_await_thread.set()
+
         model_name = app_settings.editable_settings[SettingsKeys.WHISPER_MODEL.value].strip()
-        stt_loading_window = LoadingWindow(root, "Speech to Text", f"Loading Speech to Text {model_name} model. Please wait.")
+        stt_loading_window = LoadingWindow(root, "Speech to Text", f"Loading Speech to Text {model_name} model. Please wait.", on_cancel=on_cancel_whisper_load)
+        window.disable_settings_menu()
         print(f"Loading STT model: {model_name}")
 
         try:
@@ -1717,6 +1722,7 @@ def _load_stt_model_thread():
             stt_local_model = None
             messagebox.showerror("Error", f"An error occurred while loading Speech to Text {type(e).__name__}: {e}")
         finally:
+            window.enable_settings_menu()
             stt_loading_window.destroy()
             print("Closing STT loading window.")
 
@@ -1953,12 +1959,56 @@ if (app_settings.editable_settings['Show Welcome Message']):
 
 #Wait for the UI root to be intialized then load the model. If using local llm.
 if app_settings.editable_settings[SettingsKeys.LOCAL_LLM.value]:
-    root.after(100, lambda:(ModelManager.setup_model(app_settings=app_settings, root=root)))  
+    def on_cancel_llm_load():
+        cancel_await_thread.set()
+    root.after(100, lambda:(ModelManager.setup_model(app_settings=app_settings, root=root, on_cancel=on_cancel_llm_load)))
 
 if app_settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value]:
     # Inform the user that Local Whisper is being used for transcription
     print("Using Local Whisper for transcription.")
     root.after(100, lambda: (load_stt_model()))
+
+# wait for both whisper and llm to be loaded before unlocking the settings button
+def await_models(timeout_length=60):
+    """
+    Waits until the necessary models (Whisper and LLM) are fully loaded.
+
+    The function checks if local models are enabled based on application settings. 
+    If a remote model is used, the corresponding flag is set to True immediately, 
+    bypassing the wait. Otherwise, the function enters a loop that periodically 
+    checks for model readiness and prints status updates until both models are loaded.
+
+    :return: None
+    """
+    #if we cancel this thread then break out of the loop
+    if cancel_await_thread.is_set():
+        print("*** Model loading cancelled. Enabling settings bar.")
+        #reset the flag
+        cancel_await_thread.clear()
+        #reset the settings bar
+        window.enable_settings_menu()
+        #return so the .after() doesnt get called.
+        return
+
+    # if we are using remote whisper then we can assume it is loaded and dont wait
+    whisper_loaded = (not app_settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value] or stt_local_model)
+    
+    # if we are not using local llm then we can assume it is loaded and dont wait
+    llm_loaded = (not app_settings.editable_settings[SettingsKeys.LOCAL_LLM.value] or ModelManager.local_model)
+ 
+    # wait for both models to be loaded
+    if not whisper_loaded or not llm_loaded:
+        print("Waiting for models to load...")
+
+        # override the lock in case something else tried to edit
+        window.disable_settings_menu()
+
+        root.after(100, await_models)
+    else:
+        print("*** Models loaded successfully on startup.")
+        window.enable_settings_menu()
+
+root.after(100, await_models)
 
 root.bind("<<LoadSttModel>>", load_stt_model)
 
