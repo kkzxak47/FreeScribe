@@ -1997,7 +1997,7 @@ def await_models(timeout_length=60):
         # reasonable wait to check again
         time.sleep(0.5)
 
-        # overide the lock incase something else tried to edit
+        # override the lock in case something else tried to edit
         window.disable_settings_menu()
 
         # if we have a object its loaded
