@@ -1690,7 +1690,8 @@ def _load_stt_model_thread():
         global stt_local_model
 
         model_name = app_settings.editable_settings[SettingsKeys.WHISPER_MODEL.value].strip()
-        stt_loading_window = LoadingWindow(root, "Speech to Text", f"Loading Speech to Text {model_name} model. Please wait.")
+        stt_loading_window = LoadingWindow(root, title="Speech to Text", initial_text="Loading Speech to Text medium model. Please wait.", 
+                            note_text="Note: If this is the first time loading the model, it will be actively downloading and may take some time.\n We appreciate your patience!")
         print(f"Loading STT model: {model_name}")
 
         try:
