@@ -1979,10 +1979,6 @@ def await_models(timeout_length=60):
     """
     global cancel_await_thread
 
-    #flags to check if models are loaded
-    whisper_loaded = False
-    llm_loaded = False
-
     # if we are using remote whisper then we can assume it is loaded and dont wait
     whisper_loaded = app_settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value]
     
