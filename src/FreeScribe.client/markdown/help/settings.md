@@ -16,7 +16,7 @@
 
 ---
 
-## Speech-to-Text (Whisper) Settings
+## Speech-to-Text Settings (Whisper)
 
 ### Built-in Speech2Text
 
@@ -24,16 +24,22 @@
 **Default**: `true`  
 **Type**: boolean
 
-### Real-Time Speech-to-Text
+### Real Time Speech Transcription
 
 **Description**: Enable real-time transcription of speech to text.  
 **Default**: `true`  
 **Type**: boolean
 
-### Whisper Model
+### Built-in Speech2Text Model
 
 **Description**: Select the model size for Whisper transcription. Options include small, medium, and large model sizes.  
 **Default**: `medium`  
+**Type**: dropdown
+
+### Built-in Speech2Text Architecture
+
+**Description**: Specify the hardware architecture used for Whisper Speech-to-Text processing. Options include `CUDA (Nvidia GPU)` and `CPU` available architectures.  
+**Default**: `CPU`  
 **Type**: dropdown
 
 ### Speech2Text (Whisper) Endpoint
@@ -54,15 +60,9 @@
 **Default**: `false`  
 **Type**: boolean
 
-### Speech2Text (Whisper) Architecture
-
-**Description**: Specify the hardware architecture used for Whisper Speech-to-Text processing. Options include `CUDA (Nvidia GPU)` and `CPU` available architectures.  
-**Default**: `CPU`  
-**Type**: dropdown
-
 ---
 
-## AI Settings
+## AI Settings (LLM)
 
 ### Built-in AI processing
 
@@ -76,7 +76,7 @@
 **Default**: `CPU`  
 **Type**: dropdown
 
-### Built-in AI Model
+### AI Model
 
 **Description**: Select the local LLM model to use.  
 **Default**: `gemma-2-2b-it-Q8_0.gguf`  
@@ -104,7 +104,7 @@
 
 ## Advanced Settings
 
-### Audio Processing Timeout
+### Audio Processing Timeout (seconds)
 
 **Description**: Timeout in seconds for audio processing tasks.  
 **Default**: `180`  
@@ -182,6 +182,18 @@
 **Default**: `0.4`  
 **Type**: float
 
+### Enable Word Count Validation
+
+**Description**: When generating a note, check if the text is under 50 words, as it may be invalid for sending.
+**Default**: `true`  
+**Type**: boolean
+
+### Enable AI Conversation Validation
+
+**Description**: When generating a note, check if the text is not related to a clinical context, as it may be invalid for sending.
+**Default**: `false`  
+**Type**: boolean
+
 ---
 
 ## Prompting Settings
@@ -192,7 +204,7 @@
 **Default**: See predefined text in settings.  
 **Type**: string
 
-### Post Prompting Instructions
+### Post Prompting
 
 **Description**: Additional instructions on how the AI should structure generated notes, ensuring accuracy and proper formatting in SOAP format.  
 **Default**: See predefined text in settings.  
