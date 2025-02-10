@@ -189,7 +189,7 @@ class ModelManager:
             if on_cancel is not None:
                 on_cancel()
 
-        loading_window = LoadingWindow(root, "Loading Model", "Loading Model. Please wait")
+        loading_window = LoadingWindow(root, "Loading Model", "Loading Model. Please wait", on_cancel=on_cancel_load)
         app_settings.main_window.disable_settings_menu()
 
         # unload before loading new model
