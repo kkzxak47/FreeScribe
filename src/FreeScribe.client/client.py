@@ -1984,12 +1984,10 @@ def await_models(timeout_length=60):
     llm_loaded = False
 
     # if we are using remote whisper then we can assume it is loaded and dont wait
-    if not app_settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value]:
-        whisper_loaded = True
+    whisper_loaded = app_settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value]
     
     # if we are not using local llm then we can assume it is loaded and dont wait
-    if not app_settings.editable_settings[SettingsKeys.LOCAL_LLM.value]:
-        llm_loaded = True
+    llm_loaded = app_settings.editable_settings[SettingsKeys.LOCAL_LLM.value]
  
     start_time = time.time()
     # wait for both models to be loaded
