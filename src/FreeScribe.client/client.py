@@ -179,7 +179,7 @@ RATE = 16000
 # Application flags
 is_audio_processing_realtime_canceled = threading.Event()
 is_audio_processing_whole_canceled = threading.Event()
-cancel_await_thread = False
+cancel_await_thread = threading.Event()
 
 # Constants
 DEFAULT_BUTTON_COLOUR = "SystemButtonFace"
@@ -1691,8 +1691,7 @@ def _load_stt_model_thread():
         global stt_local_model
 
         def on_cancel_whisper_load():
-            global cancel_await_thread
-            cancel_await_thread = True
+            cancel_await_thread.set()
 
         model_name = app_settings.editable_settings[SettingsKeys.WHISPER_MODEL.value].strip()
         stt_loading_window = LoadingWindow(root, "Speech to Text", f"Loading Speech to Text {model_name} model. Please wait.", on_cancel=on_cancel_whisper_load)
@@ -1956,8 +1955,7 @@ if (app_settings.editable_settings['Show Welcome Message']):
 #Wait for the UI root to be intialized then load the model. If using local llm.
 if app_settings.editable_settings[SettingsKeys.LOCAL_LLM.value]:
     def on_cancel_llm_load():
-        global cancel_await_thread
-        cancel_await_thread = True
+        cancel_await_thread.set()
     root.after(100, lambda:(ModelManager.setup_model(app_settings=app_settings, root=root, on_cancel=on_cancel_llm_load)))
 
 if app_settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value]:
@@ -1977,7 +1975,15 @@ def await_models(timeout_length=60):
 
     :return: None
     """
-    global cancel_await_thread
+    #if we cancel this thread then break out of the loop
+    if cancel_await_thread.is_set():
+        print("*** Model loading cancelled. Enabling settings bar.")
+        #reset the flag
+        cancel_await_thread.clear()
+        #reset the settings bar
+        window.enable_settings_menu()
+        #return so the .after() doesnt get called.
+        return
 
     # if we are using remote whisper then we can assume it is loaded and dont wait
     whisper_loaded = (not app_settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value] or stt_local_model)
@@ -1991,16 +1997,6 @@ def await_models(timeout_length=60):
 
         # override the lock in case something else tried to edit
         window.disable_settings_menu()
-      
-        #if we cancel this thread then break out of the loop
-        if cancel_await_thread:
-            print("*** Model loading cancelled. Enabling settings bar.")
-            #reset the flag
-            cancel_await_thread = False
-            #reset the settings bar
-            window.enable_settings_menu()
-            #return so the .after() doesnt get called.
-            return
 
         root.after(100, await_models)
     else:
