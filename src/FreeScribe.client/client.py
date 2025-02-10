@@ -179,6 +179,7 @@ RATE = 16000
 # Application flags
 is_audio_processing_realtime_canceled = threading.Event()
 is_audio_processing_whole_canceled = threading.Event()
+cancel_await_thread = False
 
 # Constants
 DEFAULT_BUTTON_COLOUR = "SystemButtonFace"
@@ -1689,8 +1690,12 @@ def _load_stt_model_thread():
     with stt_model_loading_thread_lock:
         global stt_local_model
 
+        def on_cancel_whisper_load():
+            global cancel_await_thread
+            cancel_await_thread = True
+
         model_name = app_settings.editable_settings[SettingsKeys.WHISPER_MODEL.value].strip()
-        stt_loading_window = LoadingWindow(root, "Speech to Text", f"Loading Speech to Text {model_name} model. Please wait.")
+        stt_loading_window = LoadingWindow(root, "Speech to Text", f"Loading Speech to Text {model_name} model. Please wait.", on_cancel=on_cancel_whisper_load)
         window.disable_settings_menu()
         print(f"Loading STT model: {model_name}")
 
@@ -1950,7 +1955,10 @@ if (app_settings.editable_settings['Show Welcome Message']):
 
 #Wait for the UI root to be intialized then load the model. If using local llm.
 if app_settings.editable_settings[SettingsKeys.LOCAL_LLM.value]:
-    root.after(100, lambda:(ModelManager.setup_model(app_settings=app_settings, root=root)))
+    def on_cancel_llm_load():
+        global cancel_await_thread
+        cancel_await_thread = True
+    root.after(100, lambda:(ModelManager.setup_model(app_settings=app_settings, root=root, on_cancel=on_cancel_llm_load)))
 
 if app_settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value]:
     # Inform the user that Local Whisper is being used for transcription
@@ -1969,6 +1977,8 @@ def await_models():
 
     :return: None
     """
+    global cancel_await_thread
+
     #flags to check if models are loaded
     whisper_loaded = False
     llm_loaded = False
@@ -1994,11 +2004,19 @@ def await_models():
         # if we have a object its loaded
         if stt_local_model:
             whisper_loaded = True
+            print("*** Whisper model loaded on application startup.")
 
         if ModelManager.local_model:
+            print("*** LLM model loaded on application startup.")
             llm_loaded = True
+        
+        #if we cancel this thread then break out of the loop
+        if cancel_await_thread:
+            print("*** Model loading cancelled.")
+            #reset the flag
+            cancel_await_thread = False
+            break
     
-    print("Models loaded")
     window.enable_settings_menu()
 
 threading.Thread(target=await_models).start()
