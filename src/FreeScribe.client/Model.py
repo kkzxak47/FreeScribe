@@ -4,10 +4,7 @@ from typing import Optional, Dict, Any
 import threading
 from UI.LoadingWindow import LoadingWindow
 import tkinter.messagebox as messagebox
-from UI.SettingsConstant import SettingsKeys
-
-
-DEFAULT_CONTEXT_WINDOW_SIZE = 8192
+from UI.SettingsConstant import SettingsKeys, DEFAULT_CONTEXT_WINDOW_SIZE
 
 
 class Model:
@@ -215,13 +212,16 @@ class ModelManager:
                 
             model_path = f"./models/{model_to_use}"
             try:
-                ModelManager.local_model = Model(model_path,
-                    context_size=DEFAULT_CONTEXT_WINDOW_SIZE,
+                context_size = app_settings.editable_settings.get(SettingsKeys.LOCAL_LLM_CONTEXT_WINDOW.value) or DEFAULT_CONTEXT_WINDOW_SIZE
+                ModelManager.local_model = Model(
+                    model_path,
+                    context_size=context_size,
                     gpu_layers=gpu_layers,
                     main_gpu=0,
                     n_batch=512,
                     n_threads=None,
-                    seed=1337)
+                    seed=1337
+                )
             except Exception as e:
                 # model doesnt exist
                 #TODO: Logo to system log
