@@ -514,7 +514,7 @@ class SettingsWindowUI:
 
         # Pre convo instruction
         self.aiscribe_text, label_row1, text_row1, row = self._create_text_area(
-            "Pre convo instruction", self.settings.AISCRIBE, row
+            "Pre Conversation Instruction", self.settings.AISCRIBE, row
         )
 
         # Explanation for Pre convo instruction
@@ -536,7 +536,7 @@ class SettingsWindowUI:
 
         # Post convo instruction
         self.aiscribe2_text, label_row2, text_row2, row = self._create_text_area(
-            "Post convo instruction", self.settings.AISCRIBE2, row
+            "Post Conversation Instruction", self.settings.AISCRIBE2, row
         )
 
         # Explanation for Post convo instruction
