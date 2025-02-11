@@ -538,7 +538,34 @@ class SettingsWindow():
 
     def load_or_unload_model(self, old_model, new_model, old_use_local_llm, new_use_local_llm, old_architecture, new_architecture,
                              old_context_window, new_context_window):
-        # return unload_flag, reload_flag
+        """
+        Determine if the model needs to be loaded or unloaded based on settings changes.
+
+        This method compares old and new settings values to determine if the language model
+        needs to be reloaded or unloaded. It returns two boolean flags indicating whether
+        to unload the current model and whether to load a new model.
+
+        :param old_model: The previously selected model name
+        :type old_model: str
+        :param new_model: The newly selected model name
+        :type new_model: str
+        :param old_use_local_llm: Previous state of local LLM checkbox (0=off, 1=on)
+        :type old_use_local_llm: int
+        :param new_use_local_llm: New state of local LLM checkbox (0=off, 1=on)
+        :type new_use_local_llm: int
+        :param old_architecture: Previously selected architecture
+        :type old_architecture: str
+        :param new_architecture: Newly selected architecture
+        :type new_architecture: str
+        :param old_context_window: Previous context window size
+        :type old_context_window: int
+        :param new_context_window: New context window size
+        :type new_context_window: int
+        :return: Tuple of (unload_flag, reload_flag) where:
+                 - unload_flag: True if current model should be unloaded
+                 - reload_flag: True if new model should be loaded
+        :rtype: tuple(bool, bool)
+        """
         # Check if old model and new model are different if they are reload and make sure new model is checked.
         if old_model != new_model and new_use_local_llm == 1:
             return True, True
