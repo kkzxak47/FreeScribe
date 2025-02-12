@@ -511,9 +511,51 @@ class SettingsWindowUI:
         
         # Prompting Settings
         row = self._create_section_header("Prompting Settings", row, text_colour="black")
-        self.aiscribe_text, row = self._create_text_area("Note Generation Prompt", self.settings.AISCRIBE, row)
-        self.aiscribe2_text, row = self._create_text_area("Post Prompting", self.settings.AISCRIBE2, row)
-        
+
+        # Pre convo instruction
+        self.aiscribe_text, label_row1, text_row1, row = self._create_text_area(
+            "Pre Conversation Instruction", self.settings.AISCRIBE, row
+        )
+
+        # Explanation for Pre convo instruction
+        pre_explanation = (
+            "This is the FIRST part of the AI prompt structure:\n\n"
+            "• Acts as the opening instruction to the AI\n"
+            "• Sets up how to interpret the conversation\n"
+            "• Defines SOAP note format requirements\n"
+            "• Conversation will be inserted after this\n\n"
+            "⚠️ Modify with caution as it affects AI output quality"
+        )
+        tk.Label(
+            self.advanced_settings_frame,
+            text=pre_explanation,
+            justify="left",
+            font=("Arial", 9),
+            fg="#272927"
+        ).grid(row=text_row1, column=1, padx=(10, 0), pady=5, sticky="nw")
+
+        # Post convo instruction
+        self.aiscribe2_text, label_row2, text_row2, row = self._create_text_area(
+            "Post Conversation Instruction", self.settings.AISCRIBE2, row
+        )
+
+        # Explanation for Post convo instruction
+        post_explanation = (
+            "This is the LAST part of the AI prompt structure:\n\n"
+            "• Added after the conversation text\n"
+            "• Provides final formatting instructions\n"
+            "• Ensures SOAP note completeness\n"
+            "• Helps maintain consistency\n\n"
+            "⚠️ Modify with caution as it affects AI output quality"
+        )
+        tk.Label(
+            self.advanced_settings_frame,
+            text=post_explanation,
+            justify="left",           
+            font=("Arial", 9),
+            fg="#272927"
+        ).grid(row=text_row2, column=1, padx=(10, 0), pady=5, sticky="nw")
+
         if FeatureToggle.PRE_PROCESSING is True:
             # Processing Sections
             self.preprocess_text, row = create_processing_section(
@@ -783,15 +825,18 @@ class SettingsWindowUI:
             row (int): Starting grid row position
             
         Returns:
-            tuple: (Text widget object, next available grid row number)
+            tuple: (Text widget object, label_row, text_row, next_row)
         """
+        label_row = row
         tk.Label(self.advanced_settings_frame, text=label_text).grid(
-            row=row, column=0, padx=10, pady=5, sticky="w")
-        row += 1
+            row=label_row, column=0, padx=10, pady=5, sticky="w")
+        
+        text_row = row + 1
         text_area = tk.Text(self.advanced_settings_frame, height=10, width=50)
         text_area.insert(tk.END, text_content)
-        text_area.grid(row=row, column=0, columnspan=2, padx=10, pady=5, sticky="w")
-        return text_area, row + 1
+        text_area.grid(row=text_row, column=0, padx=10, pady=5, sticky="w")
+        
+        return text_area, label_row, text_row, row + 2
 
     def __focus_and_lift_root_window(self):
         """
