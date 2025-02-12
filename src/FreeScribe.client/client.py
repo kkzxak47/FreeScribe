@@ -1704,7 +1704,7 @@ def _load_stt_model_thread():
             cancel_await_thread.set()
 
         model_name = app_settings.editable_settings[SettingsKeys.WHISPER_MODEL.value].strip()
-        stt_loading_window = LoadingWindow(root, title="Speech to Text", initial_text="Loading Speech to Text medium model. Please wait.", 
+        stt_loading_window = LoadingWindow(root, title="Speech to Text", initial_text=f"Loading Speech to Text {model_name} model. Please wait.", 
                             note_text="Note: If this is the first time loading the model, it will be actively downloading and may take some time.\n We appreciate your patience!",on_cancel=on_cancel_whisper_load)
         window.disable_settings_menu()
         print(f"Loading STT model: {model_name}")
