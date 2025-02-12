@@ -24,7 +24,7 @@
 **Default**: `true`  
 **Type**: boolean
 
-### Real Time Speech Transcription
+### Real-time Speech Transcription
 
 **Description**: Enable real-time transcription of speech to text.  
 **Default**: `true`  
