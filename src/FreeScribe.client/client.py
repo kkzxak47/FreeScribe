@@ -175,6 +175,7 @@ CHUNK = 512
 FORMAT = pyaudio.paInt16
 CHANNELS = 1
 RATE = 16000
+silent_warning_duration = 0
 
 # Application flags
 is_audio_processing_realtime_canceled = threading.Event()
@@ -390,12 +391,11 @@ def record_audio():
     Returns:
         None: The function does not return a value. It interacts with global variables.
     """
-    global is_paused, frames, audio_queue
+    global is_paused, frames, audio_queue, silent_warning_duration
 
     try:
         current_chunk = []
-        silent_duration = 0
-        silent_warning_duration = 0
+        silent_duration = 0        
         record_duration = 0
         minimum_silent_duration = int(app_settings.editable_settings["Real Time Silence Length"])
         minimum_audio_duration = int(app_settings.editable_settings["Real Time Audio Length"])
@@ -463,9 +463,11 @@ def check_silence_warning(silence_duration):
     """Check if silence warning should be displayed."""
 
     # Check if we need to warn if silence is long than warn time
-    if silence_duration >= SILENCE_WARNING_LENGTH and window.warning_bar is None:
-        
-        window.create_warning_bar(f"No audio input detected for {SILENCE_WARNING_LENGTH} seconds. Please check and ensure your microphone input device is working.")
+    if silence_duration >= SILENCE_WARNING_LENGTH and window.warning_bar is None and not is_paused:
+        if current_view == "full":            
+            window.create_warning_bar(f"No audio input detected for {SILENCE_WARNING_LENGTH} seconds. Please check and ensure your microphone input device is working.")
+        elif current_view == "minimal":
+            window.create_warning_bar(f"🔇No audio for {SILENCE_WARNING_LENGTH}s.")
     elif silence_duration <= SILENCE_WARNING_LENGTH and window.warning_bar is not None:
         # If the warning bar is displayed, remove it
         window.destroy_warning_bar()
@@ -1498,7 +1500,7 @@ def set_full_view():
     - current_view: Tracks the current interface state ('full' or 'minimal').
     - last_minimal_position: Saves the geometry of the window when switching from minimal view.
     """
-    global current_view, last_minimal_position
+    global current_view, last_minimal_position, silent_warning_duration
 
     # Reset button sizes and placements for full view
     mic_button.config(width=11, height=2)
@@ -1518,6 +1520,8 @@ def set_full_view():
     switch_view_button.grid(row=1, column=6, pady=5, padx=0,sticky='nsew')
     blinking_circle_canvas.grid(row=1, column=7, padx=0,pady=5)
     footer_frame.grid()
+    
+    
 
     window.toggle_menu_bar(enable=True)
 
@@ -1534,6 +1538,10 @@ def set_full_view():
     root.attributes('-topmost', False)
     root.minsize(900, 400)
     current_view = "full"
+
+    #Recreates Silence Warning Bar
+    window.destroy_warning_bar()
+    check_silence_warning(silence_duration= silent_warning_duration)
 
     # add the minimal view geometry and remove the last full view geometry
     add_min_max(root)
@@ -1573,7 +1581,7 @@ def set_minimal_view():
     - current_view: Tracks the current interface state ('full' or 'minimal').
     - last_full_position: Saves the geometry of the window when switching from full view.
     """
-    global current_view, last_full_position
+    global current_view, last_full_position, silent_warning_duration
 
     # Remove all non-essential UI components
     user_input.grid_remove()
@@ -1610,6 +1618,10 @@ def set_minimal_view():
 
     if root.wm_state() == 'zoomed':  # Check if window is maximized
         root.wm_state('normal')       # Restore the window
+
+    #Recreates Silence Warning Bar
+    window.destroy_warning_bar()
+    check_silence_warning(silence_duration= silent_warning_duration)
 
     # Set hover transparency events
     def on_enter(e):
