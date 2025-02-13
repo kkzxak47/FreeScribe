@@ -638,12 +638,17 @@ class SettingsWindowUI:
         This method retrieves the values from the UI elements and calls the
         `save_settings` method of the `settings` object to save the settings.
         """
-        self.settings.load_or_unload_model(self.settings.editable_settings[SettingsKeys.LOCAL_LLM_MODEL.value],
+        # delay actual unload/reload till settings are actually saved
+        local_model_unload_flag, local_model_reload_flag = self.settings.load_or_unload_model(
+            self.settings.editable_settings[SettingsKeys.LOCAL_LLM_MODEL.value],
             self.get_selected_model(),
             self.settings.editable_settings[SettingsKeys.LOCAL_LLM.value],
             self.settings.editable_settings_entries[SettingsKeys.LOCAL_LLM.value].get(),
             self.settings.editable_settings[SettingsKeys.LLM_ARCHITECTURE.value],
-            self.architecture_dropdown.get())
+            self.architecture_dropdown.get(),
+            self.settings.editable_settings[SettingsKeys.LOCAL_LLM_CONTEXT_WINDOW.value],
+            self.settings.editable_settings_entries[SettingsKeys.LOCAL_LLM_CONTEXT_WINDOW.value].get(),
+        )
 
         if self.get_selected_model() not in ["Loading models...", "Failed to load models"]:
             self.settings.editable_settings[SettingsKeys.LOCAL_LLM_MODEL.value] = self.get_selected_model()
@@ -672,6 +677,11 @@ class SettingsWindowUI:
         # send load event after the settings are saved
         if update_whisper_model_flag:
             self.main_window.root.event_generate("<<LoadSttModel>>")
+        # unload / reload model after the settings are saved
+        if local_model_unload_flag:
+            ModelManager.unload_model()
+        if local_model_reload_flag:
+            ModelManager.start_model_threaded(self.settings, self.main_window.root)
 
         if self.settings.editable_settings["Use Docker Status Bar"] and self.main_window.docker_status_bar is None:
             self.main_window.create_docker_status_bar()

@@ -23,7 +23,7 @@ import tkinter as tk
 from tkinter import messagebox
 import requests
 
-from UI.SettingsConstant import SettingsKeys, Architectures, FeatureToggle
+from UI.SettingsConstant import SettingsKeys, Architectures, FeatureToggle, DEFAULT_CONTEXT_WINDOW_SIZE
 from utils.file_utils import get_resource_path, get_file_path
 from utils.utils import get_application_version
 from Model import ModelManager
@@ -79,6 +79,7 @@ class SettingsWindow():
             SettingsKeys.LLM_ENDPOINT.value: "https://localhost:3334/v1",
             SettingsKeys.LOCAL_LLM.value: True,
             SettingsKeys.LLM_ARCHITECTURE.value: DEFAULT_LLM_ARCHITECTURE,
+            SettingsKeys.LOCAL_LLM_CONTEXT_WINDOW.value: DEFAULT_CONTEXT_WINDOW_SIZE,
             "use_story": False,
             "use_memory": False,
             "use_authors_note": False,
@@ -198,6 +199,7 @@ class SettingsWindow():
             # "singleline",
             # "frmttriminc",
             # "frmtrmblln",
+            SettingsKeys.LOCAL_LLM_CONTEXT_WINDOW.value,
             SettingsKeys.Enable_Word_Count_Validation.value,
             SettingsKeys.Enable_AI_Conversation_Validation.value
         ]
@@ -347,7 +349,7 @@ class SettingsWindow():
 
         for setting, entry in self.editable_settings_entries.items():     
             value = entry.get()
-            if setting in ["max_context_length", "max_length", "rep_pen_range", "top_k"]:
+            if setting in ["max_context_length", "max_length", "rep_pen_range", "top_k", SettingsKeys.LOCAL_LLM_CONTEXT_WINDOW.value]:
                 value = int(value)
             self.editable_settings[setting] = value
 
@@ -534,23 +536,55 @@ class SettingsWindow():
         """
         self.main_window = window
 
-    def load_or_unload_model(self, old_model, new_model, old_use_local_llm, new_use_local_llm, old_architecture, new_architecture):
+    def load_or_unload_model(self, old_model, new_model, old_use_local_llm, new_use_local_llm, old_architecture, new_architecture,
+                             old_context_window, new_context_window):
+        """
+        Determine if the model needs to be loaded or unloaded based on settings changes.
+
+        This method compares old and new settings values to determine if the language model
+        needs to be reloaded or unloaded. It returns two boolean flags indicating whether
+        to unload the current model and whether to load a new model.
+
+        :param old_model: The previously selected model name
+        :type old_model: str
+        :param new_model: The newly selected model name
+        :type new_model: str
+        :param old_use_local_llm: Previous state of local LLM checkbox (0=off, 1=on)
+        :type old_use_local_llm: int
+        :param new_use_local_llm: New state of local LLM checkbox (0=off, 1=on)
+        :type new_use_local_llm: int
+        :param old_architecture: Previously selected architecture
+        :type old_architecture: str
+        :param new_architecture: Newly selected architecture
+        :type new_architecture: str
+        :param old_context_window: Previous context window size
+        :type old_context_window: int
+        :param new_context_window: New context window size
+        :type new_context_window: int
+        :return: Tuple of (unload_flag, reload_flag) where:
+                 - unload_flag: True if current model should be unloaded
+                 - reload_flag: True if new model should be loaded
+        :rtype: tuple(bool, bool)
+        """
         # Check if old model and new model are different if they are reload and make sure new model is checked.
         if old_model != new_model and new_use_local_llm == 1:
-            ModelManager.unload_model()
-            ModelManager.start_model_threaded(self, self.main_window.root)
+            return True, True
 
         # Load the model if check box is now selected
         if old_use_local_llm == 0 and new_use_local_llm == 1:
-            ModelManager.start_model_threaded(self, self.main_window.root)
+            return False, True
 
         # Check if Local LLM was on and if turned off unload model.abs
         if old_use_local_llm == 1 and new_use_local_llm == 0:
-            ModelManager.unload_model()
+            return True, False
 
         if old_architecture != new_architecture and new_use_local_llm == 1:
-            ModelManager.unload_model()
-            ModelManager.start_model_threaded(self, self.main_window.root)
+            return True, True
+
+        if int(old_context_window) != int(new_context_window) and new_use_local_llm == 1:
+            return True, True
+
+        return False, False
 
     def _create_settings_and_aiscribe_if_not_exist(self):
         """

@@ -21,6 +21,7 @@ class SettingsKeys(Enum):
     USE_PRESCREEN_AI_INPUT = "Use Pre-Screen AI Input"
     LOCAL_LLM = "Built-in AI Processing"
     LOCAL_LLM_MODEL = "AI Model"
+    LOCAL_LLM_CONTEXT_WINDOW = "AI Context Window"
     LLM_ENDPOINT = "AI Server Endpoint"
     LLM_SERVER_API_KEY = "AI Server API Key"
     Enable_Word_Count_Validation = "Enable Word Count Validation"
@@ -45,3 +46,6 @@ class FeatureToggle:
     DOCKER_STATUS_BAR = False
     POST_PROCESSING = False
     PRE_PROCESSING = False
+
+
+DEFAULT_CONTEXT_WINDOW_SIZE = 4096
