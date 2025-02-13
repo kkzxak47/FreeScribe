@@ -56,6 +56,7 @@ from utils.window_utils import remove_min_max, add_min_max
 from WhisperModel import TranscribeError
 from UI.Widgets.PopupBox import PopupBox
 from UI.Widgets.TimestampListbox import TimestampListbox
+from UI.ScrubWindow import ScrubWindow
 
 
 
@@ -1341,29 +1342,14 @@ def show_edit_transcription_popup(formatted_message):
         generate_note_thread(cleaned_message)
         return
 
-    popup = tk.Toplevel(root)
-    popup.title("Scrub PHI Prior to GPT")
-    popup.iconbitmap(get_file_path('assets','logo.ico'))
-    text_area = scrolledtext.ScrolledText(popup, height=20, width=80)
-    text_area.pack(padx=10, pady=10)
-    text_area.insert(tk.END, cleaned_message)
-
-    def on_proceed():
-        edited_text = text_area.get("1.0", tk.END).strip()
-        popup.destroy()
+    def on_proceed(edited_text):
         thread = threading.Thread(target=generate_note_thread, args=(edited_text,))
         thread.start()   
 
-    proceed_button = tk.Button(popup, text="Proceed", command=on_proceed)
-    proceed_button.pack(side=tk.RIGHT, padx=10, pady=10)
-
     def on_cancel():
-        popup.destroy()
         stop_flashing()
 
-    # Cancel button
-    cancel_button = tk.Button(popup, text="Cancel", command=on_cancel)
-    cancel_button.pack(side=tk.LEFT, padx=10, pady=10)
+    ScrubWindow(root, cleaned_message, on_proceed, on_cancel)
 
 
 def generate_note_thread(text: str):
