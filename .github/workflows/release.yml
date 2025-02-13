@@ -68,10 +68,10 @@ jobs:
           script-file: .\scripts\install.nsi
           additional-plugin-paths: "./scripts/nsis-plugins"
 
-      - name: Check if alpha release
+      - name: Check if alpha or RC release
         id: check_alpha
         run: |
-          if ("${{ github.ref }}" -like "*.alpha") {
+          if ("${{ github.ref }}" -like "*.alpha" -or "${{ github.ref }}" -like "*-RC*") {
             echo "is_alpha=true" >> $env:GITHUB_OUTPUT
           } else {
             echo "is_alpha=false" >> $env:GITHUB_OUTPUT
