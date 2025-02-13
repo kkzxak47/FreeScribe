@@ -231,6 +231,11 @@ class SettingsWindowUI:
         self.whisper_architecture_dropdown.grid(row=left_row, column=1, padx=0, pady=5, sticky="w")
         self.settings.editable_settings_entries[SettingsKeys.WHISPER_ARCHITECTURE.value] = self.whisper_architecture_dropdown
 
+        # remove architecture dropdown if architecture only has one option
+        if len(whisper_architecture_options) == 1:
+            self.whisper_architecture_label.grid_forget()
+            self.whisper_architecture_dropdown.grid_forget()
+
         left_row += 1
 
         # set the state of the whisper settings based on the SettingsKeys.LOCAL_WHISPER.value checkbox once all widgets are created
