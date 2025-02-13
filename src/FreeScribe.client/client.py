@@ -59,6 +59,9 @@ from UI.Widgets.TimestampListbox import TimestampListbox
 from UI.ScrubWindow import ScrubWindow
 
 
+dual = DualOutput()
+sys.stdout = dual
+sys.stderr = dual
 
 if os.environ.get("FREESCRIBE_DEBUG"):
     LOG_LEVEL = logging.DEBUG
@@ -66,13 +69,11 @@ else:
     LOG_LEVEL = logging.INFO
 
 logging.basicConfig(
+    stream=dual,
     level=LOG_LEVEL,
     format='%(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(message)s'
 )
 
-dual = DualOutput()
-sys.stdout = dual
-sys.stderr = dual
 
 APP_NAME = 'AI Medical Scribe'  # Application name
 APP_TASK_MANAGER_NAME = 'freescribe-client.exe'
