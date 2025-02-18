@@ -1,10 +1,17 @@
 # Application lock class to prevent multiple instances of an app from running
+import logging
 import tkinter as tk
 from tkinter import messagebox
 import psutil  # For process management
 import sys
 import ctypes
 import os
+import platform
+import subprocess
+
+
+logger = logging.getLogger(__name__)
+
 
 class OneInstance:
     """
@@ -19,7 +26,7 @@ class OneInstance:
         self.app_task_manager_name = app_task_manager_name
         self.root = None
         
-    def get_running_instance_pid(self):
+    def get_running_instance_pids(self):
         """
         Finds PIDs of any running instances of the application, excluding the current process.
         
@@ -28,9 +35,14 @@ class OneInstance:
         """
         current_pid = os.getpid()
         possible_ids = []
-        for proc in psutil.process_iter(['pid', 'name']):
+        for proc in psutil.process_iter(['pid', 'name', 'status']):
             try:
-                if proc.info['name'] == f"{self.app_task_manager_name}" and proc.info['pid'] != current_pid:
+                info = proc.info
+                # more criteria, they may remain in proc list in different states right after killing
+                if (info['name'] == f"{self.app_task_manager_name}"
+                        and info['pid'] != current_pid
+                        and info['status'] != psutil.STATUS_ZOMBIE
+                        and proc.is_running()):
                     possible_ids.append(proc.info['pid'])
             except (psutil.NoSuchProcess, psutil.AccessDenied):
                 continue
@@ -46,6 +58,7 @@ class OneInstance:
         Returns:
             bool: True if termination successful, False otherwise
         """
+        logger.info(f"Killing {pid=}")
         try:
             if type(pid) == int:
                 process = psutil.Process(pid)
@@ -58,7 +71,65 @@ class OneInstance:
                 return True
         except psutil.NoSuchProcess:
             return False
-            
+        except psutil.AccessDenied:
+            logger.info(f"Access Denied: {pid=}")
+            # try elevating privilege and kill instance again
+            return self._kill_with_admin_privilege(pid)
+        return False
+
+    def _kill_with_admin_privilege(self, pid):
+        """Attempt to kill process with elevated administrator privileges.
+
+        This method uses Windows API to execute a taskkill command with admin rights
+        to terminate the specified process(es).
+
+        :param pid: Process ID or list of PIDs to terminate
+        :type pid: int or list
+        :return: True if the command was successfully executed, False if an error occurred
+        :rtype: bool
+
+        .. note::
+            This method is Windows-specific and uses ctypes to call ShellExecuteW
+            with the 'runas' verb to elevate privileges.
+
+        .. code-block:: python
+
+            >>> instance = OneInstance("MyApp", "myapp.exe")
+            >>> instance._kill_with_admin_privilege(1234)  # Kill single process
+            True
+            >>> instance._kill_with_admin_privilege([1234, 5678])  # Kill multiple processes
+            True
+        """
+        try:
+            pids = pid
+            if type(pid) == int:
+                pids = [pid]
+
+            if platform.system() == "Windows":
+                pids = [str(pid) for pid in pids]
+                logger.info(f"Killing {pids=} with administrator privileges")
+                # Build the taskkill command
+                taskkill_args = f'/c taskkill /F /PID {" /PID ".join(pids)}'
+                logger.info(f"Running command: powershell Start-Process cmd -ArgumentList \"{taskkill_args}\" -Verb runAs")
+                # Run the command with admin privileges
+                proc = subprocess.run(
+                    [
+                        "powershell",
+                        "Start-Process",
+                        "cmd",
+                        "-ArgumentList",
+                        f'"{taskkill_args}"',
+                        "-Verb",
+                        "runAs"
+                    ],
+                    check=True
+                )
+                logger.info(f"Killed {pids=} with administrator privileges, Exit code {proc.returncode=}")
+            return True
+        except:
+            logger.exception("")
+            return False
+
     def bring_to_front(self, app_name: str):
         """
         Bring the window with the given handle to the front.
@@ -78,9 +149,14 @@ class OneInstance:
         
         return False
 
-    def _handle_kill(self, dialog, pid):
+    def _handle_kill(self, dialog, pids):
         """Handles clicking 'Close Existing Instance' button"""
-        if self.kill_instance(pid):
+        # try killing other instance
+        self.kill_instance(pids)
+        # check again if they are really killed
+        pids = self.get_running_instance_pids()
+        logger.info(f"not killed {pids=}")
+        if not pids:
             dialog.destroy()
             dialog.return_status = False
         else:
@@ -102,9 +178,9 @@ class OneInstance:
         Returns:
             bool: True if existing instance continues, False if terminated
         """
-        pid = self.get_running_instance_pid()
+        pids = self.get_running_instance_pids()
 
-        if not pid:
+        if not pids:
             return False
 
         dialog = tk.Tk()
@@ -119,7 +195,7 @@ class OneInstance:
         label = tk.Label(dialog, text="Another instance of FreeScribe is already running.\nWhat would you like to do?")
         label.pack(pady=20)
         
-        tk.Button(dialog, text="Close Existing Instance", command=lambda: self._handle_kill(dialog, pid)).pack(padx=5, pady=5)
+        tk.Button(dialog, text="Close Existing Instance", command=lambda: self._handle_kill(dialog, pids)).pack(padx=5, pady=5)
         tk.Button(dialog, text="Cancel", command=lambda: self._handle_cancel(dialog)).pack(padx=5, pady=2)
         
         dialog.mainloop()
@@ -132,7 +208,7 @@ class OneInstance:
         Returns:
             bool: True if existing instance continues, False if none exists or terminated
         """
-        if self.get_running_instance_pid():
+        if self.get_running_instance_pids():
             return self.show_instance_dialog()
         else:
             return False
