@@ -94,7 +94,7 @@ class OneInstance:
 
         .. code-block:: python
 
-            >>> instance = OneInstance("MyApp", "myapp.exe")
+            >>> instance = OneInstance("AI Medical Scribe", "freescribe-client.exe")
             >>> instance._kill_with_admin_privilege()  # Kill all other instances
             True
         """
