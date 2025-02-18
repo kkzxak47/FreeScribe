@@ -77,23 +77,25 @@ class OneInstance:
     def _kill_with_admin_privilege(self):
         """Attempt to kill process with elevated administrator privileges.
 
-        This method uses Windows API to execute a taskkill command with admin rights
-        to terminate the specified process(es).
+        This method uses Windows API to terminate processes with elevated privileges
+        using PowerShell and taskkill commands.
 
-        Args:
-            
-        Returns:
-            bool: True if the command was successfully executed, False if an error occurred
-            
-        Note:
-            This method is Windows-specific and uses powershell and taskkill shell command
-            with the 'runAs' verb to elevate privileges.
-            
-        Example:
+        :returns: True if the command was successfully executed, False if an error occurred
+        :rtype: bool
+
+        .. note::
+            This method is Windows-specific and uses PowerShell's Start-Process with
+            the 'runAs' verb to elevate privileges, combined with taskkill commands.
+
+        .. warning::
+            This method requires administrative privileges to terminate processes.
+            It will attempt to kill all running instances of the application except
+            the current process.
+
+        .. code-block:: python
+
             >>> instance = OneInstance("MyApp", "myapp.exe")
-            >>> instance._kill_with_admin_privilege(1234)  # Kill single process
-            True
-            >>> instance._kill_with_admin_privilege([1234, 5678])  # Kill multiple processes
+            >>> instance._kill_with_admin_privilege()  # Kill all other instances
             True
         """
         try:
