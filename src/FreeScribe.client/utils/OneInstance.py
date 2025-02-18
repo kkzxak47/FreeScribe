@@ -83,17 +83,17 @@ class OneInstance:
         This method uses Windows API to execute a taskkill command with admin rights
         to terminate the specified process(es).
 
-        :param pid: Process ID or list of PIDs to terminate
-        :type pid: int or list
-        :return: True if the command was successfully executed, False if an error occurred
-        :rtype: bool
-
-        .. note::
-            This method is Windows-specific and uses ctypes to call ShellExecuteW
-            with the 'runas' verb to elevate privileges.
-
-        .. code-block:: python
-
+        Args:
+            pid (int or list): Process ID or list of PIDs to terminate
+            
+        Returns:
+            bool: True if the command was successfully executed, False if an error occurred
+            
+        Note:
+            This method is Windows-specific and uses powershell and taskkill shell command
+            with the 'runAs' verb to elevate privileges.
+            
+        Example:
             >>> instance = OneInstance("MyApp", "myapp.exe")
             >>> instance._kill_with_admin_privilege(1234)  # Kill single process
             True
