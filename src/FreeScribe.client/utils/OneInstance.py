@@ -8,6 +8,7 @@ import ctypes
 import os
 import platform
 import subprocess
+import time
 
 
 logger = logging.getLogger(__name__)
@@ -71,20 +72,15 @@ class OneInstance:
                 return True
         except psutil.NoSuchProcess:
             return False
-        except psutil.AccessDenied:
-            logger.info(f"Access Denied: {pid=}")
-            # try elevating privilege and kill instance again
-            return self._kill_with_admin_privilege(pid)
         return False
 
-    def _kill_with_admin_privilege(self, pid):
+    def _kill_with_admin_privilege(self):
         """Attempt to kill process with elevated administrator privileges.
 
         This method uses Windows API to execute a taskkill command with admin rights
         to terminate the specified process(es).
 
         Args:
-            pid (int or list): Process ID or list of PIDs to terminate
             
         Returns:
             bool: True if the command was successfully executed, False if an error occurred
@@ -101,9 +97,7 @@ class OneInstance:
             True
         """
         try:
-            pids = pid
-            if type(pid) == int:
-                pids = [pid]
+            pids = self.get_running_instance_pids()
 
             if platform.system() == "Windows":
                 pids = [str(pid) for pid in pids]
@@ -125,6 +119,8 @@ class OneInstance:
                     check=True
                 )
                 logger.info(f"Killed {pids=} with administrator privileges, Exit code {proc.returncode=}")
+                # wait a little bit for windows to clean the proc list
+                time.sleep(0.5)
             return True
         except:
             logger.exception("")
@@ -152,7 +148,12 @@ class OneInstance:
     def _handle_kill(self, dialog, pids):
         """Handles clicking 'Close Existing Instance' button"""
         # try killing other instance
-        self.kill_instance(pids)
+        try:
+            self.kill_instance(pids)
+        except psutil.AccessDenied:
+            logger.info(f"Access Denied: {pids=}")
+            # try elevating privilege and kill instance again
+            self._kill_with_admin_privilege()
         # check again if they are really killed
         pids = self.get_running_instance_pids()
         logger.info(f"not killed {pids=}")
