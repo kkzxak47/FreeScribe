@@ -124,10 +124,10 @@ class OneInstance:
                 logger.info(f"Killed {pids=} with administrator privileges, Exit code {proc.returncode=}")
                 # wait a little bit for windows to clean the proc list
                 time.sleep(0.5)
-            return True
+                return True
         except:
             logger.exception("")
-            return False
+        return False
 
     def bring_to_front(self, app_name: str):
         """
