@@ -3,6 +3,7 @@ import sys
 from collections import deque
 from logging.handlers import RotatingFileHandler
 import logging
+from utils.file_utils import get_resource_path
 
 
 class BufferHandler(logging.Handler):
@@ -10,10 +11,13 @@ class BufferHandler(logging.Handler):
     A custom logging handler that writes log messages to the TrioOutput buffer.
     """
     def emit(self, record):
-        """
-        Emit a record by writing it to the TrioOutput buffer.
-        
-        :param record: The log record to be written
+        """Emit a record by writing it to the TrioOutput buffer.
+
+        Args:
+            record (logging.LogRecord): The log record to be written
+
+        Note:
+            Any exceptions during emission are handled by the parent class's handleError method
         """
         try:
             msg = self.format(record)
@@ -27,8 +31,11 @@ class TripleOutput:
     buffer = deque(maxlen=MAX_BUFFER_SIZE)
 
     def __init__(self, logger, level):
-        """
-        Initialize the dual output handler.
+        """Initialize the triple output handler.
+
+        Args:
+            logger (logging.Logger): The logger instance to use for logging
+            level (int): The logging level to use for output
 
         Creates a deque buffer with a max length and stores references to original stdout/stderr streams.
         """
@@ -39,33 +46,59 @@ class TripleOutput:
         self.level = level
 
     def write(self, message):
-        """
-        Write a message to the buffer, original stdout, and log file.
+        """Write a message to the buffer, original stdout, and log file.
 
-        :param message: The message to be written
-        :type message: str
+        Args:
+            message (str): The message to be written
+
+        Note:
+            - Empty messages are ignored
+            - Multi-line messages are split and written line by line
         """
         message = message.strip()
         if not message:
             return
-        self.logger.log(self.level, message)
-        TripleOutput.buffer.append(message)
-        self.original_stdout.write(message)
+        if '\n' in message:
+            for line in message.split('\n'):
+                self._triple_write(line)
+            return
+        self._triple_write(message)
+
+    def _triple_write(self, msg):
+        """Internal method to write a single message to all three outputs.
+
+        Args:
+            msg (str): The message to write
+
+        Writes to:
+            - Logger at configured level
+            - Buffer
+            - Original stdout
+        """
+        self.logger.log(level=self.level, message=msg)
+        self.buffer.append(msg)
+        self.original_stdout.write(msg)
 
     def flush(self):
-        """
-        Flush the original stdout to ensure output is written immediately.
+        """Flush the original stdout to ensure output is written immediately.
+
+        Note:
+            This is required to maintain proper stream behavior and ensure
+            output appears in real-time
         """
         if self.original_stdout is not None:
             self.original_stdout.flush()
 
     @staticmethod
     def get_buffer_content():
-        """
-        Retrieve all content stored in the buffer.
+        """Retrieve all content stored in the buffer.
 
-        :return: The complete buffer contents as a single string.
-        :rtype: str
+        Returns:
+            str: The complete buffer contents as a single string with newline separators
+
+        Note:
+            The buffer maintains a fixed size (MAX_BUFFER_SIZE) and automatically
+            discards oldest entries when full
         """
         return '\n'.join(TripleOutput.buffer)
 
@@ -75,7 +108,7 @@ if os.environ.get("FREESCRIBE_DEBUG"):
     LOG_LEVEL = logging.DEBUG
 else:
     LOG_LEVEL = logging.INFO
-LOG_FILE_NAME = os.path.join(os.getcwd(), "freescribe.log")
+LOG_FILE_NAME = get_resource_path("freescribe.log")
 # 10 MB
 LOG_FILE_MAX_SIZE = 10 * 1024 * 1024
 # Keep up to 1 backup log files
