@@ -5,6 +5,8 @@ import threading
 from UI.LoadingWindow import LoadingWindow
 import tkinter.messagebox as messagebox
 from UI.SettingsConstant import SettingsKeys, DEFAULT_CONTEXT_WINDOW_SIZE
+import contextlib
+from utils.log_config import logger
 
 
 class Model:
@@ -65,7 +67,7 @@ class Model:
                 tensor_split=tensor_split,
                 chat_format=chat_template,
             )
-        
+
             # Store configuration
             self.config = {
                 "gpu_layers": gpu_layers,
@@ -120,7 +122,8 @@ class Model:
             return response["choices"][0]["message"]["content"]
             
         except Exception as e:
-            print(f"GPU inference error ({e.__class__.__name__}): {str(e)}")
+            logger.exception(str(e))
+            logger.error(f"GPU inference error ({e.__class__.__name__}): {str(e)}")
             return f"({e.__class__.__name__}): {str(e)}"
 
     
