@@ -1253,19 +1253,14 @@ def screen_input(user_message):
     :param user_message: The message to be screened.
     :return: A boolean indicating whether the input is valid and accepted for further processing.
     """
-    # Perform basic word count to ensure 50 words and AI Prescreen
+    validators = []
     if app_settings.editable_settings[SettingsKeys.Enable_Word_Count_Validation.value]:
-        word_check_result = has_more_than_50_words(user_message)
-    else:
-        word_check_result = True
-    
-    if app_settings.editable_settings[SettingsKeys.Enable_AI_Conversation_Validation.value]:
-        ai_screen_result = screen_input_with_llm(user_message)
-    else:
-        ai_screen_result = True
+        validators.append(has_more_than_50_words)
 
-    # return true only if both pass the check else false
-    return word_check_result and ai_screen_result
+    if app_settings.editable_settings[SettingsKeys.Enable_AI_Conversation_Validation.value]:
+        validators.append(screen_input_with_llm)
+        
+    return all(validator(message) for validator in validators)
             
 def threaded_screen_input(user_message, screen_return):
     """
