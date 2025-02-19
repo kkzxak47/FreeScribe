@@ -30,7 +30,7 @@ class TripleOutput:
     MAX_BUFFER_SIZE = 2500  # Maximum number of lines in the buffer
     buffer = deque(maxlen=MAX_BUFFER_SIZE)
 
-    def __init__(self, logger, level):
+    def __init__(self, log_func):
         """Initialize the triple output handler.
 
         Args:
@@ -42,8 +42,7 @@ class TripleOutput:
         # DualOutput.buffer = deque(maxlen=DualOutput.MAX_BUFFER_SIZE)  # Buffer with a fixed size
         self.original_stdout = sys.__stdout__  # Save the original stdout
         self.original_stderr = sys.__stderr__  # Save the original stderr
-        self.logger = logger
-        self.level = level
+        self.log_func = log_func
 
     def write(self, message):
         """Write a message to the buffer, original stdout, and log file.
@@ -60,24 +59,9 @@ class TripleOutput:
             return
         if '\n' in message:
             for line in message.split('\n'):
-                self._triple_write(line)
+                self.log_func(line)
             return
-        self._triple_write(message)
-
-    def _triple_write(self, msg):
-        """Internal method to write a single message to all three outputs.
-
-        Args:
-            msg (str): The message to write
-
-        Writes to:
-            - Logger at configured level
-            - Buffer
-            - Original stdout
-        """
-        self.logger.log(self.level, msg)
-        self.buffer.append(msg)
-        self.original_stdout.write(msg)
+        self.log_func(message)
 
     def flush(self):
         """Flush the original stdout to ensure output is written immediately.
@@ -135,6 +119,6 @@ logger.addHandler(console_handler)
 logger.addHandler(file_handler)
 logger.addHandler(buffer_handler)
 
-triple = TripleOutput(logger, LOG_LEVEL)
+triple = TripleOutput(logger.info)
 sys.stdout = triple
 sys.stderr = triple
