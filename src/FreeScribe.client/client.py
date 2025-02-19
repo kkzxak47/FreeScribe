@@ -1253,8 +1253,8 @@ def screen_input(user_message):
 
     if app_settings.editable_settings[SettingsKeys.Enable_AI_Conversation_Validation.value]:
         validators.append(screen_input_with_llm)
-        
-    return all(validator(message) for validator in validators)
+
+    return all(validator(user_message) for validator in validators)
             
 def threaded_screen_input(user_message, screen_return):
     """
