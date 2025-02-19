@@ -1172,23 +1172,21 @@ def screen_input_with_llm(conversation):
     :param conversation: A string containing the conversation to be screened.
     :return: A boolean indicating whether the conversation is valid.
     """
-    if app_settings.editable_settings[SettingsKeys.Enable_AI_Conversation_Validation.value]:
-        # Define the chunk size (number of words per chunk)
-        words_per_chunk = 60  # Adjust this value based on your results
-        # Split the conversation into words
-        words = conversation.split()
-        # Split the words into chunks
-        chunks = [' '.join(words[i:i + words_per_chunk]) for i in range(0, len(words), words_per_chunk)]
-        print(f"Total chunks count: {len(chunks)}")
-        # Process each chunk sequentially
-        for chunk in chunks:                               
-            if process_chunk(chunk):
-                # If any chunk is valid, return True
-                return True
-        # If no chunk is valid, return False
-        return False
-    else:
-        return True
+    # Define the chunk size (number of words per chunk)
+    words_per_chunk = 60  # Adjust this value based on your results
+    # Split the conversation into words
+    words = conversation.split()
+    # Split the words into chunks
+    chunks = [' '.join(words[i:i + words_per_chunk]) for i in range(0, len(words), words_per_chunk)]
+    print(f"Total chunks count: {len(chunks)}")
+    # Process each chunk sequentially
+    for chunk in chunks:                               
+        if process_chunk(chunk):
+            # If any chunk is valid, return True
+            return True
+    # If no chunk is valid, return False
+    return False
+
 
 def process_chunk(chunk):
     """
@@ -1214,21 +1212,12 @@ def process_chunk(chunk):
     return prescreen.strip().lower() == "true"
 
 def has_more_than_50_words(text: str) -> bool:
-    if app_settings.editable_settings[SettingsKeys.Enable_Word_Count_Validation.value]:
-        # Split the text into words using whitespace as the delimiter
-        words = text.split()        
-        # Print the number of words
-        print(f"Number of words: {len(words)}")
-        # Check if the number of words is greater than 50
-        if len(words) > 50:
-            # Perform AI-based prescreening
-            screen_result = screen_input_with_llm(text)
-            return screen_result
-        else:
-            return False    
-    else:
-        # Perform AI-based prescreening
-        return screen_input_with_llm(text)
+    # Split the text into words using whitespace as the delimiter
+    words = text.split()        
+    # Print the number of words
+    print(f"Number of words: {len(words)}")
+    # Check if the number of words is greater than 50
+    return len(words) > 50
 
 def display_screening_popup():
     """
@@ -1265,17 +1254,19 @@ def screen_input(user_message):
     :return: A boolean indicating whether the input is valid and accepted for further processing.
     """
     # Perform basic word count to ensure 50 words and AI Prescreen
-    screen_result = has_more_than_50_words(user_message)
-
-    # If the input fails prescreening, display a popup for the user
-    if not screen_result:
-        return display_screening_popup()
+    if app_settings.editable_settings[SettingsKeys.Enable_Word_Count_Validation.value]:
+        word_check_result = has_more_than_50_words(user_message)
     else:
-        return True
-            
-    #else return true always
-    return True
+        word_check_result = True
+    
+    if app_settings.editable_settings[SettingsKeys.Enable_AI_Conversation_Validation.value]:
+        ai_screen_result = screen_input_with_llm(user_message)
+    else:
+        ai_screen_result = True
 
+    # return true only if both pass the check else false
+    return word_check_result and ai_screen_result
+            
 def threaded_screen_input(user_message, screen_return):
     """
     Screen the user's input message based on the application's settings in a separate thread.
@@ -1401,7 +1392,13 @@ def generate_note_thread(text: str):
     # Check if the screen input was canceled or force overridden by the user
     if screen_return.get() is False:
         loading_window.destroy()
-        return
+
+        # display the popup
+        if display_screening_popup() is False:
+            return
+    
+    loading_window = LoadingWindow(root, "Generating Note.", "Generating Note. Please wait.", on_cancel=lambda: (cancel_note_generation(GENERATION_THREAD_ID, screen_thread)))
+
 
     thread = threading.Thread(target=generate_note, args=(text,))
     thread.start()
