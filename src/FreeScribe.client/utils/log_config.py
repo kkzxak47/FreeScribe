@@ -5,6 +5,21 @@ from logging.handlers import RotatingFileHandler
 import logging
 from utils.file_utils import get_resource_path
 
+# Redirect stdout/stderr to a file if they are None (e.g., in PyInstaller --windowed mode)
+if sys.stdout is None:
+    sys.stdout = open(os.devnull, "w")
+if sys.stderr is None:
+    sys.stderr = open(os.devnull, "w")
+
+class SafeStreamHandler(logging.StreamHandler):
+    def emit(self, record):
+        if self.stream and not self.stream.closed:
+            super().emit(record)
+
+    def close(self):
+        if self.stream and not self.stream.closed:  # Only close if open
+            super().close()
+
 
 class BufferHandler(logging.Handler):
     """
@@ -54,14 +69,17 @@ class TripleOutput:
             - Empty messages are ignored
             - Multi-line messages are split and written line by line
         """
-        message = message.strip()
-        if not message:
-            return
-        if '\n' in message:
-            for line in message.split('\n'):
-                self.log_func(line)
-            return
-        self.log_func(message)
+        try:
+            message = message.strip()
+            if not message:
+                return
+            if '\n' in message:
+                for line in message.split('\n'):
+                    self.log_func(line)
+                return
+            self.log_func(message)
+        except:
+            pass
 
     def flush(self):
         """Flush the original stdout to ensure output is written immediately.
@@ -101,7 +119,7 @@ LOG_FILE_BACKUP_COUNT = 1
 
 formatter = logging.Formatter('%(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(message)s')
 
-console_handler = logging.StreamHandler(sys.stdout)
+console_handler = SafeStreamHandler(sys.stdout)
 console_handler.setLevel(LOG_LEVEL)
 console_handler.setFormatter(formatter)
 
