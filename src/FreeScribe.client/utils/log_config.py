@@ -75,7 +75,7 @@ class TripleOutput:
             - Buffer
             - Original stdout
         """
-        self.logger.log(level=self.level, message=msg)
+        self.logger.log(self.level, msg)
         self.buffer.append(msg)
         self.original_stdout.write(msg)
 
