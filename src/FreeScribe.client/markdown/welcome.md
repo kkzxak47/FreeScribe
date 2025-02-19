@@ -17,7 +17,7 @@ The FreeScribe project leverages advanced machine learning models to transcribe 
 
 Join our Discord community to connect with other users, get support, and collaborate on the AI Medical Scribe project. Our community is a great place to ask questions, share ideas, and stay updated on the latest developments.
 
-[Join our Discord Community](https://discord.gg/6DnPENSn)
+[Join our Discord Community](https://discord.gg/5VgNaZNa)
 
 ## License
 
