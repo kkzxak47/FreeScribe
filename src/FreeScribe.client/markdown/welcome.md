@@ -11,7 +11,7 @@ The FreeScribe project leverages advanced machine learning models to transcribe 
 - **Real-time Transcription**: Transcribe conversations in real-time using advanced speech recognition models.
 - **Medical Note Generation**: Automatically generate structured medical notes from transcriptions.
 - **User-Friendly Interface**: Intuitive and easy-to-use interface for healthcare professionals.
-- **Customizable Settings**: Customize the application settings to suit your workflow.+`    
+- **Customizable Settings**: Customize the application settings to suit your workflow.    
 
 ## Discord Community
 

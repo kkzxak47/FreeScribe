@@ -37,6 +37,7 @@
 **Type**: dropdown
 
 ### Built-in Speech2Text Architecture
+Note: Available only if GPU selected while installing
 
 **Description**: Specify the hardware architecture used for Whisper Speech-to-Text processing. Options include `CUDA (Nvidia GPU)` and `CPU` available architectures.  
 **Default**: `CPU`  
@@ -45,7 +46,7 @@
 ### Speech2Text (Whisper) Endpoint
 
 **Description**: API endpoint for Whisper service. This endpoint processes audio files from the client. By default, it points to the local Whisper container provided by ClinicianFOCUS.  
-**Default**: `https://localhost:2224/whisperaudio`  
+**Default**: `https://localhost:2224/whisperaudio`
 **Type**: string
 
 ### Speech2Text (Whisper) API Key
@@ -71,6 +72,7 @@
 **Type**: boolean
 
 ### Built-in AI Architecture
+Note: Available only if GPU selected while installing
 
 **Description**: Choose the hardware architecture for running the local LLM. Options may include `CUDA (Nvidia GPU)` and `CPU`.  
 **Default**: `CPU`  
@@ -182,15 +184,21 @@
 **Default**: `0.4`  
 **Type**: float
 
+### AI Context Window
+
+**Description**: Specify the Context Window Size.
+**Default**: `4096`  
+**Type**: string
+
 ### Enable Word Count Validation
 
-**Description**: When generating a note, check if the text is under 50 words, as it may be invalid for sending.
+**Description**: When generating a note, check if the text is more than 50 words, as it might create invalid results.
 **Default**: `true`  
 **Type**: boolean
 
 ### Enable AI Conversation Validation
 
-**Description**: When generating a note, check if the text is not related to a clinical context, as it may be invalid for sending.
+**Description**: When generating a note, check if the text is related to a clinical context, as it might create invalid results.
 **Default**: `false`  
 **Type**: boolean
 
@@ -198,13 +206,13 @@
 
 ## Prompting Settings
 
-### Note Generation Prompt
+### Pre Conversation Instruction
 
 **Description**: Template prompt for generating SOAP notes based on conversations.  
 **Default**: See predefined text in settings.  
 **Type**: string
 
-### Post Prompting
+### Post Conversation Instruction
 
 **Description**: Additional instructions on how the AI should structure generated notes, ensuring accuracy and proper formatting in SOAP format.  
 **Default**: See predefined text in settings.  
