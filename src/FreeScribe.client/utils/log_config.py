@@ -17,12 +17,12 @@ class BufferHandler(logging.Handler):
         """
         try:
             msg = self.format(record)
-            TrioOutput.buffer.append(msg)
+            TripleOutput.buffer.append(msg)
         except Exception:
             self.handleError(record)
 
 
-class TrioOutput:
+class TripleOutput:
     MAX_BUFFER_SIZE = 2500  # Maximum number of lines in the buffer
     buffer = deque(maxlen=MAX_BUFFER_SIZE)
 
@@ -49,7 +49,7 @@ class TrioOutput:
         if not message:
             return
         self.logger.log(self.level, message)
-        TrioOutput.buffer.append(message)
+        TripleOutput.buffer.append(message)
         self.original_stdout.write(message)
 
     def flush(self):
@@ -67,7 +67,7 @@ class TrioOutput:
         :return: The complete buffer contents as a single string.
         :rtype: str
         """
-        return '\n'.join(TrioOutput.buffer)
+        return '\n'.join(TripleOutput.buffer)
 
 
 # Configure logging
@@ -102,6 +102,6 @@ logger.addHandler(console_handler)
 logger.addHandler(file_handler)
 logger.addHandler(buffer_handler)
 
-trio = TrioOutput(logger, LOG_LEVEL)
+trio = TripleOutput(logger, LOG_LEVEL)
 sys.stdout = trio
 sys.stderr = trio
