@@ -135,6 +135,6 @@ logger.addHandler(console_handler)
 logger.addHandler(file_handler)
 logger.addHandler(buffer_handler)
 
-trio = TripleOutput(logger, LOG_LEVEL)
-sys.stdout = trio
-sys.stderr = trio
+triple = TripleOutput(logger, LOG_LEVEL)
+sys.stdout = triple
+sys.stderr = triple
