@@ -96,7 +96,7 @@ buffer_handler = BufferHandler()
 buffer_handler.setLevel(LOG_LEVEL)
 buffer_handler.setFormatter(formatter)
 
-logger = logging.getLogger()
+logger = logging.getLogger("freescribe")
 logger.setLevel(LOG_LEVEL)
 logger.addHandler(console_handler)
 logger.addHandler(file_handler)
