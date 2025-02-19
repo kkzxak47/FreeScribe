@@ -1264,16 +1264,14 @@ def screen_input(user_message):
     :param user_message: The message to be screened.
     :return: A boolean indicating whether the input is valid and accepted for further processing.
     """
-    # Check if AI prescreening is enabled in the application settings
-    if app_settings.editable_settings[SettingsKeys.USE_PRESCREEN_AI_INPUT.value]:        
-        # Perform basic word count to ensure 50 words and AI Prescreen
-        screen_result = has_more_than_50_words(user_message)
+    # Perform basic word count to ensure 50 words and AI Prescreen
+    screen_result = has_more_than_50_words(user_message)
 
-        # If the input fails prescreening, display a popup for the user
-        if not screen_result:
-            return display_screening_popup()
-        else:
-            return True
+    # If the input fails prescreening, display a popup for the user
+    if not screen_result:
+        return display_screening_popup()
+    else:
+        return True
             
     #else return true always
     return True
