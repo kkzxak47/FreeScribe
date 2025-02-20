@@ -1,133 +1,97 @@
+import io
 import os
 import sys
-from collections import deque
 import logging
-from utils.file_utils import get_resource_path
+from collections import deque
 
-
-class SafeStreamHandler(logging.StreamHandler):
-    """A safe stream handler that checks stream state before operations.
-    
-    This handler extends logging.StreamHandler to prevent errors when
-    working with potentially closed streams.
-
-    :ivar stream: The output stream being used
-    :vartype stream: io.TextIOWrapper
-    """
-    def emit(self, record):
-        """Emit a record if the stream is open.
-        
-        :param record: The log record to emit
-        :type record: logging.LogRecord
-        :return: None
-        """
-        if self.stream and not self.stream.closed:
-            super().emit(record)
-
-    def close(self):
-        """Close the handler only if the stream is open.
-        
-        Prevents errors when closing already-closed streams.
-        
-        :return: None
-        """
-        if self.stream and not self.stream.closed:  # Only close if open
-            super().close()
+MAX_BUFFER_SIZE = 2500
 
 
 class BufferHandler(logging.Handler):
-    """A custom logging handler that writes log messages to the buffer.
+    """Custom handler that maintains an in-memory buffer of log records.
     
-    This handler captures log records and writes them to an in-memory buffer.
-
-    :cvar MAX_BUFFER_SIZE: Maximum number of lines in the buffer
-    :vartype MAX_BUFFER_SIZE: int
-    :cvar buffer: The deque buffer storing log messages
-    :vartype buffer: collections.deque
+    This handler stores log records in a deque buffer with a maximum capacity,
+    allowing efficient access to recent log history.
+    
+    :param capacity: Maximum number of records to store (default: 2500)
+    :type capacity: int
     """
-    MAX_BUFFER_SIZE = 2500  # Maximum number of lines in the buffer
-    buffer = deque(maxlen=MAX_BUFFER_SIZE)
-
+    
+    def __init__(self, capacity=MAX_BUFFER_SIZE):
+        super().__init__()
+        self.buffer = deque(maxlen=capacity)
+        
     def emit(self, record):
-        """Emit a record by writing it to the buffer.
-
-        :param record: The log record to be written
+        """Store the log record in the buffer.
+        
+        :param record: The log record to store
         :type record: logging.LogRecord
-        :return: None
-        :note: Any exceptions during emission are handled by the parent class's handleError method
+        :raises Exception: If record cannot be stored, handled by handleError
         """
         try:
-            msg = self.format(record)
-            BufferHandler.buffer.append(msg)
+            self.buffer.append(record)
         except Exception:
             self.handleError(record)
 
-    @staticmethod
-    def get_buffer_content():
-        """Retrieve all content stored in the buffer.
-
-        :return: The complete buffer contents as a single string with newline separators
+    def get_buffer_content(self):
+        """Get all buffered records as formatted strings.
+        
+        :return: Complete buffer contents as single string with newline separators
         :rtype: str
-        :note: The buffer maintains a fixed size (MAX_BUFFER_SIZE) and automatically
-               discards oldest entries when full
+        :note: Records are formatted using the handler's formatter
         """
-        return '\n'.join(BufferHandler.buffer)
+        return '\n'.join(self.format(record) for record in self.buffer)
 
 
-class OutputHandler:
-    """Handles output redirection to both logging system and original stdout/stderr streams.
+class LoggingStream(io.StringIO):
+    """A stream that logs messages to a specified logger level.
     
-    This class is used to intercept writes to stdout/stderr and redirect them to both
-    the logging system and their original destinations. It maintains the original stream
-    functionality while adding logging capabilities.
+    This class implements the io.StringIO interface while redirecting
+    writes to a logger at the specified level.
     
-    :ivar level: The logging level to use for output (e.g., logging.INFO, logging.ERROR)
-    :vartype level: int
+    :param level: Logging level to use for messages (e.g., logging.INFO)
+    :type level: int
     """
     
     def __init__(self, level):
-        """Initialize the triple output handler.
-
-        :param log_func: The logging function to use for output (e.g., logger.info)
-        :type log_func: callable
-        """
+        super().__init__()
         self.level = level
 
     def write(self, message):
-        """Process and write a message to both logging system and original stream.
+        """Write message to logger, splitting multi-line messages.
         
-        This method handles message formatting, filtering, and proper routing to both
-        the logging system and the original stdout/stderr stream.
-        
-        :param message: The message to be written, which may contain multiple lines
+        :param message: The message to write/log
         :type message: str
         :return: Length of the processed message
         :rtype: int
-        :note: 
-            - Empty messages are ignored
-            - Multi-line messages are split and processed individually
-            - Message length is returned to maintain stream protocol compatibility
+        :note: Empty messages are ignored, multi-line messages are split
         """
         message = message.strip()
-        if not message:
-            return
-        for line in message.splitlines():
-            logger.log(self.level, line)
+        if message:
+            for line in message.splitlines():
+                logger.log(self.level, line)
         return len(message)
 
     def flush(self):
-        """Implement stream protocol flush method.
+        """No-op flush to satisfy stream interface.
         
-        This is a no-op implementation to satisfy the stream interface requirements
-        while maintaining compatibility with code that expects flush() to exist.
-        
-        :return: None
-        :note: Actual flushing is handled by the underlying logging system and streams
+        This method exists to maintain compatibility with the stream interface
+        but performs no actual operations.
         """
         pass
 
 
 def addLoggingLevel(levelName, levelNum, methodName=None):
+    """Add a new logging level to the logging module.
+    
+    :param levelName: Name of the new level (e.g., 'DIAG')
+    :type levelName: str
+    :param levelNum: Numeric value for the new level
+    :type levelNum: int
+    :param methodName: Optional method name to add to logger (defaults to levelName.lower())
+    :type methodName: str or None
+    :raises AttributeError: If level or method name already exists
+    """
     if not methodName:
         methodName = levelName.lower()
 
@@ -170,13 +134,13 @@ formatter = logging.Formatter(LOG_FORMAT)
 # Since Python's logging module tries to write to sys.stdout (or another stream handler),
 # it fails with AttributeError: 'NoneType' object has no attribute 'write'.
 if sys.stderr or sys.stdout:
-    console_handler = SafeStreamHandler(sys.stderr or sys.stdout)
+    console_handler = logging.StreamHandler(sys.stderr or sys.stdout)
 else:
     console_handler = logging.NullHandler()
 console_handler.setLevel(LOG_LEVEL)
 console_handler.setFormatter(formatter)
 
-buffer_handler = BufferHandler()
+buffer_handler = BufferHandler(capacity=MAX_BUFFER_SIZE)
 buffer_handler.setLevel(LOG_LEVEL)
 buffer_handler.setFormatter(formatter)
 
@@ -189,5 +153,5 @@ logging.basicConfig(
 logger = logging.getLogger("freescribe")
 logger.setLevel(LOG_LEVEL)
 
-sys.stdout = OutputHandler(logging.INFO)
-sys.stderr = OutputHandler(DIAGNOSE_LEVEL)
+sys.stdout = LoggingStream(logging.INFO)
+sys.stderr = LoggingStream(DIAGNOSE_LEVEL)
