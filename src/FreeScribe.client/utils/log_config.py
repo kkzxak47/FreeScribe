@@ -8,27 +8,41 @@ from utils.file_utils import get_resource_path
 
 
 class SafeStreamHandler(logging.StreamHandler):
+    """A safe stream handler that checks stream state before operations.
+    
+    This handler extends logging.StreamHandler to prevent errors when
+    working with potentially closed streams.
+    """
     def emit(self, record):
+        """Emit a record if the stream is open.
+        
+        :param record: The log record to emit
+        :type record: logging.LogRecord
+        """
         if self.stream and not self.stream.closed:
             super().emit(record)
 
     def close(self):
+        """Close the handler only if the stream is open.
+        
+        Prevents errors when closing already-closed streams.
+        """
         if self.stream and not self.stream.closed:  # Only close if open
             super().close()
 
 
 class BufferHandler(logging.Handler):
-    """
-    A custom logging handler that writes log messages to the TrioOutput buffer.
+    """A custom logging handler that writes log messages to the TrioOutput buffer.
+    
+    This handler captures log records and writes them to an in-memory buffer
+    maintained by the TripleOutput class.
     """
     def emit(self, record):
         """Emit a record by writing it to the TrioOutput buffer.
 
-        Args:
-            record (logging.LogRecord): The log record to be written
-
-        Note:
-            Any exceptions during emission are handled by the parent class's handleError method
+        :param record: The log record to be written
+        :type record: logging.LogRecord
+        :note: Any exceptions during emission are handled by the parent class's handleError method
         """
         try:
             msg = self.format(record)
@@ -44,10 +58,9 @@ class TripleOutput:
     def __init__(self, log_func):
         """Initialize the triple output handler.
 
-        Args:
-            logger (logging.Logger): The logger instance to use for logging
-            level (int): The logging level to use for output
-
+        :param log_func: The logging function to use for output (e.g., logger.info)
+        :type log_func: callable
+        
         Creates a deque buffer with a max length and stores references to original stdout/stderr streams.
         """
         # DualOutput.buffer = deque(maxlen=DualOutput.MAX_BUFFER_SIZE)  # Buffer with a fixed size
@@ -58,10 +71,9 @@ class TripleOutput:
     def write(self, message):
         """Write a message to the buffer, original stdout, and log file.
 
-        Args:
-            message (str): The message to be written
-
-        Note:
+        :param message: The message to be written
+        :type message: str
+        :note: 
             - Empty messages are ignored
             - Multi-line messages are split and written line by line
         """
@@ -85,9 +97,8 @@ class TripleOutput:
     def flush(self):
         """Flush the original stdout to ensure output is written immediately.
 
-        Note:
-            This is required to maintain proper stream behavior and ensure
-            output appears in real-time
+        :note: This is required to maintain proper stream behavior and ensure
+               output appears in real-time
         """
         if self.original_stdout is not None:
             self.original_stdout.flush()
@@ -96,12 +107,10 @@ class TripleOutput:
     def get_buffer_content():
         """Retrieve all content stored in the buffer.
 
-        Returns:
-            str: The complete buffer contents as a single string with newline separators
-
-        Note:
-            The buffer maintains a fixed size (MAX_BUFFER_SIZE) and automatically
-            discards oldest entries when full
+        :return: The complete buffer contents as a single string with newline separators
+        :rtype: str
+        :note: The buffer maintains a fixed size (MAX_BUFFER_SIZE) and automatically
+               discards oldest entries when full
         """
         return '\n'.join(TripleOutput.buffer)
 
