@@ -187,7 +187,7 @@ buffer_handler.setFormatter(formatter)
 # root logger settings
 logging.basicConfig(
     level=logging.DEBUG,
-    handlers=[console_handler, file_handler, buffer_handler],
+    handlers=[console_handler, buffer_handler],
     format=LOG_FORMAT
 )
 logger = logging.getLogger("freescribe")
