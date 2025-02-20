@@ -71,8 +71,6 @@ class TripleOutput:
 
         :param log_func: The logging function to use for output (e.g., logger.info)
         :type log_func: callable
-        
-        Creates a deque buffer with a max length and stores references to original stdout/stderr streams.
         """
         self.log_func = log_func
 
