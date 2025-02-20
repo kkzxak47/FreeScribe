@@ -136,7 +136,6 @@ class SettingsWindow():
             SettingsKeys.SILERO_SPEECH_THRESHOLD.value: 0.5,
             SettingsKeys.USE_TRANSLATE_TASK.value: False,
             SettingsKeys.WHISPER_LANGUAGE_CODE.value: "None (Auto Detect)",
-            SettingsKeys.USE_PRESCREEN_AI_INPUT.value: True,
             SettingsKeys.Enable_Word_Count_Validation.value : True,  # Default to enabled
             SettingsKeys.Enable_AI_Conversation_Validation.value : False,  # Default to disabled
         }
@@ -216,7 +215,6 @@ class SettingsWindow():
             # SettingsKeys.SILERO_SPEECH_THRESHOLD.value, 
             SettingsKeys.USE_TRANSLATE_TASK.value,
             SettingsKeys.WHISPER_LANGUAGE_CODE.value,
-            SettingsKeys.USE_PRESCREEN_AI_INPUT.value,
         ]
 
 

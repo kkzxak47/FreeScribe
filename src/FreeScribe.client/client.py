@@ -53,6 +53,7 @@ from UI.Widgets.PopupBox import PopupBox
 from UI.Widgets.TimestampListbox import TimestampListbox
 from UI.ScrubWindow import ScrubWindow
 from utils.log_config import logger
+from Model import ModelStatus
 
 
 APP_NAME = 'AI Medical Scribe'  # Application name
@@ -448,9 +449,9 @@ def check_silence_warning(silence_duration):
     # Check if we need to warn if silence is long than warn time
     if silence_duration >= SILENCE_WARNING_LENGTH and window.warning_bar is None and not is_paused:
         if current_view == "full":            
-            window.create_warning_bar(f"No audio input detected for {SILENCE_WARNING_LENGTH} seconds. Please check and ensure your microphone input device is working.")
+            window.create_warning_bar(f"No audio input detected for {SILENCE_WARNING_LENGTH} seconds. Please check and ensure your microphone input device is working.", closeButton=False)
         elif current_view == "minimal":
-            window.create_warning_bar(f"🔇No audio for {SILENCE_WARNING_LENGTH}s.")
+            window.create_warning_bar(f"🔇No audio for {SILENCE_WARNING_LENGTH}s.", closeButton=False)
     elif silence_duration <= SILENCE_WARNING_LENGTH and window.warning_bar is not None:
         # If the warning bar is displayed, remove it
         window.destroy_warning_bar()
@@ -1154,23 +1155,15 @@ def screen_input_with_llm(conversation):
     :param conversation: A string containing the conversation to be screened.
     :return: A boolean indicating whether the conversation is valid.
     """
-    if app_settings.editable_settings[SettingsKeys.Enable_AI_Conversation_Validation.value]:
-        # Define the chunk size (number of words per chunk)
-        words_per_chunk = 60  # Adjust this value based on your results
-        # Split the conversation into words
-        words = conversation.split()
-        # Split the words into chunks
-        chunks = [' '.join(words[i:i + words_per_chunk]) for i in range(0, len(words), words_per_chunk)]
-        logger.info(f"Total chunks count: {len(chunks)}")
-        # Process each chunk sequentially
-        for chunk in chunks:                               
-            if process_chunk(chunk):
-                # If any chunk is valid, return True
-                return True
-        # If no chunk is valid, return False
-        return False
-    else:
-        return True
+    # Define the chunk size (number of words per chunk)
+    words_per_chunk = 60  # Adjust this value based on your results
+    # Split the conversation into words
+    words = conversation.split()
+    # Split the words into chunks
+    chunks = [' '.join(words[i:i + words_per_chunk]) for i in range(0, len(words), words_per_chunk)]
+    logger.info(f"Total chunks count: {len(chunks)}")
+    return any(process_chunk(chunk) for chunk in chunks)
+
 
 def process_chunk(chunk):
     """
@@ -1196,21 +1189,13 @@ def process_chunk(chunk):
     return prescreen.strip().lower() == "true"
 
 def has_more_than_50_words(text: str) -> bool:
-    if app_settings.editable_settings[SettingsKeys.Enable_Word_Count_Validation.value]:
-        # Split the text into words using whitespace as the delimiter
-        words = text.split()        
-        # Print the number of words
-        logger.info(f"Number of words: {len(words)}")
-        # Check if the number of words is greater than 50
-        if len(words) > 50:
-            # Perform AI-based prescreening
-            screen_result = screen_input_with_llm(text)
-            return screen_result
-        else:
-            return False    
-    else:
-        # Perform AI-based prescreening
-        return screen_input_with_llm(text)
+    # Split the text into words using whitespace as the delimiter
+    words = text.split()        
+    # Print the number of words
+    logger.info(f"Number of words: {len(words)}")
+    # Check if the number of words is greater than 50
+    return len(words) > 50
+
 
 def display_screening_popup():
     """
@@ -1246,20 +1231,15 @@ def screen_input(user_message):
     :param user_message: The message to be screened.
     :return: A boolean indicating whether the input is valid and accepted for further processing.
     """
-    # Check if AI prescreening is enabled in the application settings
-    if app_settings.editable_settings[SettingsKeys.USE_PRESCREEN_AI_INPUT.value]:        
-        # Perform basic word count to ensure 50 words and AI Prescreen
-        screen_result = has_more_than_50_words(user_message)
+    validators = []
+    if app_settings.editable_settings[SettingsKeys.Enable_Word_Count_Validation.value]:
+        validators.append(has_more_than_50_words)
 
-        # If the input fails prescreening, display a popup for the user
-        if not screen_result:
-            return display_screening_popup()
-        else:
-            return True
+    if app_settings.editable_settings[SettingsKeys.Enable_AI_Conversation_Validation.value]:
+        validators.append(screen_input_with_llm)
+
+    return all(validator(user_message) for validator in validators)
             
-    #else return true always
-    return True
-
 def threaded_screen_input(user_message, screen_return):
     """
     Screen the user's input message based on the application's settings in a separate thread.
@@ -1385,7 +1365,13 @@ def generate_note_thread(text: str):
     # Check if the screen input was canceled or force overridden by the user
     if screen_return.get() is False:
         loading_window.destroy()
-        return
+
+        # display the popup
+        if display_screening_popup() is False:
+            return
+    
+    loading_window = LoadingWindow(root, "Generating Note.", "Generating Note. Please wait.", on_cancel=lambda: (cancel_note_generation(GENERATION_THREAD_ID, screen_thread)))
+
 
     thread = threading.Thread(target=generate_note, args=(text,))
     thread.start()
@@ -1988,6 +1974,11 @@ def await_models(timeout_length=60):
     # if we are not using local llm then we can assume it is loaded and dont wait
     llm_loaded = (not app_settings.editable_settings[SettingsKeys.LOCAL_LLM.value] or ModelManager.local_model)
  
+    # if there was a error stop checking
+    if ModelManager.local_model == ModelStatus.ERROR:
+        #Error message is displayed else where
+        llm_loaded = True
+
     # wait for both models to be loaded
     if not whisper_loaded or not llm_loaded:
         logger.info("Waiting for models to load...")
@@ -1998,6 +1989,11 @@ def await_models(timeout_length=60):
         root.after(100, await_models)
     else:
         logger.info("*** Models loaded successfully on startup.")
+
+        # if error null out the model
+        if ModelManager.local_model == ModelStatus.ERROR:
+            ModelManager.local_model = None
+
         window.enable_settings_menu()
 
 root.after(100, await_models)
