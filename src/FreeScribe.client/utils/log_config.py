@@ -1,9 +1,7 @@
 import os
 import sys
 from collections import deque
-from logging.handlers import RotatingFileHandler
 import logging
-import traceback
 from utils.file_utils import get_resource_path
 
 
@@ -83,13 +81,13 @@ class TripleOutput:
     :vartype log_func: callable
     """
     
-    def __init__(self, log_func):
+    def __init__(self, level):
         """Initialize the triple output handler.
 
         :param log_func: The logging function to use for output (e.g., logger.info)
         :type log_func: callable
         """
-        self.log_func = log_func
+        self.level = level
 
     def write(self, message):
         """Write a message to the buffer, original stdout, and log file.
@@ -101,19 +99,12 @@ class TripleOutput:
             - Empty messages are ignored
             - Multi-line messages are split and written line by line
         """
-        try:
-            message = message.strip()
-            if not message:
-                return
-            for line in message.splitlines():
-                self.log_func(line)
-        except Exception as e:
-            err = traceback.format_exc()
-            out = sys.__stderr__ or sys.__stdout__
-            if not out:
-                return
-            out.write(str(e) + '\n')
-            out.write(err)
+        message = message.strip()
+        if not message:
+            return
+        for line in message.splitlines():
+            logger.log(self.level, line)
+        return len(message)
 
     def flush(self):
         """Dummy flush method to satisfy stream interface requirements.
@@ -156,11 +147,7 @@ if os.environ.get("FREESCRIBE_DEBUG"):
     LOG_LEVEL = logging.DEBUG
 else:
     LOG_LEVEL = logging.INFO
-LOG_FILE_NAME = get_resource_path("freescribe.log")
-# 10 MB
-LOG_FILE_MAX_SIZE = 10 * 1024 * 1024
-# Keep up to 1 backup log files
-LOG_FILE_BACKUP_COUNT = 1
+
 LOG_FORMAT = '[%(asctime)s] | %(levelname)s | %(name)s | %(threadName)s | [%(filename)s:%(lineno)d in %(funcName)s] | %(message)s'
 
 formatter = logging.Formatter(LOG_FORMAT)
@@ -189,5 +176,5 @@ logging.basicConfig(
 logger = logging.getLogger("freescribe")
 logger.setLevel(LOG_LEVEL)
 
-sys.stdout = TripleOutput(logger.info)
-sys.stderr = TripleOutput(logger.diag)
+sys.stdout = TripleOutput(logging.INFO)
+sys.stderr = TripleOutput(DIAGNOSE_LEVEL)
