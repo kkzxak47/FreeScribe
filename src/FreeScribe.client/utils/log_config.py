@@ -74,11 +74,15 @@ class BufferHandler(logging.Handler):
         return '\n'.join(BufferHandler.buffer)
 
 
-class TripleOutput:
-    """Handles triple output to buffer, stdout/stderr, and log file.
+class OutputHandler:
+    """Handles output redirection to both logging system and original stdout/stderr streams.
     
-    :ivar log_func: The logging function to use for output
-    :vartype log_func: callable
+    This class is used to intercept writes to stdout/stderr and redirect them to both
+    the logging system and their original destinations. It maintains the original stream
+    functionality while adding logging capabilities.
+    
+    :ivar level: The logging level to use for output (e.g., logging.INFO, logging.ERROR)
+    :vartype level: int
     """
     
     def __init__(self, level):
@@ -90,14 +94,19 @@ class TripleOutput:
         self.level = level
 
     def write(self, message):
-        """Write a message to the buffer, original stdout, and log file.
-
-        :param message: The message to be written
+        """Process and write a message to both logging system and original stream.
+        
+        This method handles message formatting, filtering, and proper routing to both
+        the logging system and the original stdout/stderr stream.
+        
+        :param message: The message to be written, which may contain multiple lines
         :type message: str
-        :return: None
+        :return: Length of the processed message
+        :rtype: int
         :note: 
             - Empty messages are ignored
-            - Multi-line messages are split and written line by line
+            - Multi-line messages are split and processed individually
+            - Message length is returned to maintain stream protocol compatibility
         """
         message = message.strip()
         if not message:
@@ -107,9 +116,13 @@ class TripleOutput:
         return len(message)
 
     def flush(self):
-        """Dummy flush method to satisfy stream interface requirements.
+        """Implement stream protocol flush method.
+        
+        This is a no-op implementation to satisfy the stream interface requirements
+        while maintaining compatibility with code that expects flush() to exist.
         
         :return: None
+        :note: Actual flushing is handled by the underlying logging system and streams
         """
         pass
 
@@ -176,5 +189,5 @@ logging.basicConfig(
 logger = logging.getLogger("freescribe")
 logger.setLevel(LOG_LEVEL)
 
-sys.stdout = TripleOutput(logging.INFO)
-sys.stderr = TripleOutput(DIAGNOSE_LEVEL)
+sys.stdout = OutputHandler(logging.INFO)
+sys.stderr = OutputHandler(DIAGNOSE_LEVEL)
