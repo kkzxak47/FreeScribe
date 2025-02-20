@@ -123,9 +123,34 @@ class TripleOutput:
         pass
 
 
+def addLoggingLevel(levelName, levelNum, methodName=None):
+    if not methodName:
+        methodName = levelName.lower()
+
+    if hasattr(logging, levelName):
+        raise AttributeError("{} already defined in logging module".format(levelName))
+    if hasattr(logging, methodName):
+        raise AttributeError("{} already defined in logging module".format(methodName))
+    if hasattr(logging.getLoggerClass(), methodName):
+        raise AttributeError("{} already defined in logger class".format(methodName))
+
+    def logForLevel(self, message, *args, **kwargs):
+        if self.isEnabledFor(levelNum):
+            self._log(levelNum, message, args, **kwargs)
+
+    def logToRoot(message, *args, **kwargs):
+        logging.log(levelNum, message, *args, **kwargs)
+
+    logging.addLevelName(levelNum, levelName)
+    setattr(logging, levelName, levelNum)
+    setattr(logging.getLoggerClass(), methodName, logForLevel)
+    setattr(logging, methodName, logToRoot)
+
+
 # Define custom level
 DIAGNOSE_LEVEL = 99
-logging.addLevelName(DIAGNOSE_LEVEL, "DIAG")
+# logging.addLevelName(DIAGNOSE_LEVEL, "DIAG")
+addLoggingLevel("DIAG", DIAGNOSE_LEVEL)
 # Configure logging
 if os.environ.get("FREESCRIBE_DEBUG"):
     LOG_LEVEL = logging.DEBUG
@@ -169,4 +194,4 @@ logger = logging.getLogger("freescribe")
 logger.setLevel(LOG_LEVEL)
 
 sys.stdout = TripleOutput(logger.info)
-sys.stderr = TripleOutput(lambda msg: logger.log(DIAGNOSE_LEVEL, msg))
+sys.stderr = TripleOutput(logger.diag)
