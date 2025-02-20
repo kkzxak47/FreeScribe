@@ -57,6 +57,7 @@ from utils.log_config import logger
 
 APP_NAME = 'AI Medical Scribe'  # Application name
 APP_TASK_MANAGER_NAME = 'freescribe-client.exe'
+logger.info(f"{APP_NAME=} {APP_TASK_MANAGER_NAME=} {get_application_version()=}")
 
 # check if another instance of the application is already running.
 # if false, create a new instance of the application
@@ -1933,6 +1934,7 @@ footer_frame.grid(row=100, column=0, columnspan=100, sticky="ew")  # Use grid in
 # Add "Version 2" label in the center of the footer
 version = get_application_version()
 version_label = tk.Label(footer_frame, text=f"FreeScribe Client {version}",bg="lightgray",fg="black").pack(side="left", expand=True, padx=2, pady=5)
+
 
 window.update_aiscribe_texts(None)
 # Bind Alt+P to send_and_receive function
