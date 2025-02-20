@@ -106,6 +106,9 @@ class TripleOutput:
         return '\n'.join(TripleOutput.buffer)
 
 
+# Define custom level
+DIAGNOSE_LEVEL = 99
+logging.addLevelName(DIAGNOSE_LEVEL, "DIAG")
 # Configure logging
 if os.environ.get("FREESCRIBE_DEBUG"):
     LOG_LEVEL = logging.DEBUG
@@ -116,9 +119,9 @@ LOG_FILE_NAME = get_resource_path("freescribe.log")
 LOG_FILE_MAX_SIZE = 10 * 1024 * 1024
 # Keep up to 1 backup log files
 LOG_FILE_BACKUP_COUNT = 1
+LOG_FORMAT = '%(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(message)s'
 
-
-formatter = logging.Formatter('%(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(message)s')
+formatter = logging.Formatter(LOG_FORMAT)
 
 if sys.stderr or sys.stdout:
     console_handler = SafeStreamHandler(sys.stderr or sys.stdout)
@@ -136,10 +139,13 @@ buffer_handler.setLevel(LOG_LEVEL)
 buffer_handler.setFormatter(formatter)
 
 # root logger settings
-logging.basicConfig(level=LOG_LEVEL, handlers=[console_handler, file_handler, buffer_handler])
+logging.basicConfig(
+    level=logging.DEBUG,
+    handlers=[console_handler, file_handler, buffer_handler],
+    format=LOG_FORMAT
+)
 logger = logging.getLogger("freescribe")
 logger.setLevel(LOG_LEVEL)
 
-triple = TripleOutput(logger.info)
-sys.stdout = triple
-sys.stderr = triple
+sys.stdout = TripleOutput(logger.info)
+sys.stderr = TripleOutput(lambda msg: logger.log(DIAGNOSE_LEVEL, msg))
