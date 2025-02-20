@@ -37,6 +37,9 @@ class BufferHandler(logging.Handler):
     This handler captures log records and writes them to an in-memory buffer
     maintained by the TripleOutput class.
     """
+    MAX_BUFFER_SIZE = 2500  # Maximum number of lines in the buffer
+    buffer = deque(maxlen=MAX_BUFFER_SIZE)
+
     def emit(self, record):
         """Emit a record by writing it to the TrioOutput buffer.
 
@@ -46,15 +49,23 @@ class BufferHandler(logging.Handler):
         """
         try:
             msg = self.format(record)
-            TripleOutput.buffer.append(msg)
+            BufferHandler.buffer.append(msg)
         except Exception:
             self.handleError(record)
 
+    @staticmethod
+    def get_buffer_content():
+        """Retrieve all content stored in the buffer.
+
+        :return: The complete buffer contents as a single string with newline separators
+        :rtype: str
+        :note: The buffer maintains a fixed size (MAX_BUFFER_SIZE) and automatically
+               discards oldest entries when full
+        """
+        return '\n'.join(BufferHandler.buffer)
+
 
 class TripleOutput:
-    MAX_BUFFER_SIZE = 2500  # Maximum number of lines in the buffer
-    buffer = deque(maxlen=MAX_BUFFER_SIZE)
-
     def __init__(self, log_func):
         """Initialize the triple output handler.
 
@@ -63,9 +74,6 @@ class TripleOutput:
         
         Creates a deque buffer with a max length and stores references to original stdout/stderr streams.
         """
-        # DualOutput.buffer = deque(maxlen=DualOutput.MAX_BUFFER_SIZE)  # Buffer with a fixed size
-        self.original_stdout = sys.__stdout__  # Save the original stdout
-        self.original_stderr = sys.__stderr__  # Save the original stderr
         self.log_func = log_func
 
     def write(self, message):
@@ -81,11 +89,8 @@ class TripleOutput:
             message = message.strip()
             if not message:
                 return
-            if '\n' in message:
-                for line in message.split('\n'):
-                    self.log_func(line)
-                return
-            self.log_func(message)
+            for line in message.splitlines():
+                self.log_func(line)
         except Exception as e:
             err = traceback.format_exc()
             out = sys.__stderr__ or sys.__stdout__
@@ -95,24 +100,7 @@ class TripleOutput:
             out.write(err)
 
     def flush(self):
-        """Flush the original stdout to ensure output is written immediately.
-
-        :note: This is required to maintain proper stream behavior and ensure
-               output appears in real-time
-        """
-        if self.original_stdout is not None:
-            self.original_stdout.flush()
-
-    @staticmethod
-    def get_buffer_content():
-        """Retrieve all content stored in the buffer.
-
-        :return: The complete buffer contents as a single string with newline separators
-        :rtype: str
-        :note: The buffer maintains a fixed size (MAX_BUFFER_SIZE) and automatically
-               discards oldest entries when full
-        """
-        return '\n'.join(TripleOutput.buffer)
+        pass
 
 
 # Define custom level

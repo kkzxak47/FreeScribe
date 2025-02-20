@@ -7,7 +7,7 @@ and a debug window interface built with tkinter.
 
 import tkinter as tk
 
-from utils.log_config import TripleOutput
+from utils.log_config import BufferHandler
 from utils.utils import bring_to_front
 
 
@@ -81,7 +81,7 @@ class DebugPrintWindow:
         Preserves scroll position when updating content and only updates
         if there are changes in the buffer.
         """
-        content = TripleOutput.get_buffer_content()
+        content = BufferHandler.get_buffer_content()
         current_content = self.text_widget.get("1.0", tk.END).strip()
 
         if content != current_content:

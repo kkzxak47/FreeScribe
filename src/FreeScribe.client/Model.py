@@ -5,7 +5,6 @@ import threading
 from UI.LoadingWindow import LoadingWindow
 import tkinter.messagebox as messagebox
 from UI.SettingsConstant import SettingsKeys, DEFAULT_CONTEXT_WINDOW_SIZE
-import contextlib
 from utils.log_config import logger
 
 

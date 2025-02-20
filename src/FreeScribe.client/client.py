@@ -226,7 +226,7 @@ def threaded_check_stt_model():
     
     # Check if the task was canceled via task_cancel_var
     if task_cancel_var.get():
-        logger.debug(f"double checking canceled")
+        logger.debug("double checking canceled")
         return False
     return True
 
