@@ -12,12 +12,16 @@ class SafeStreamHandler(logging.StreamHandler):
     
     This handler extends logging.StreamHandler to prevent errors when
     working with potentially closed streams.
+
+    :ivar stream: The output stream being used
+    :vartype stream: io.TextIOWrapper
     """
     def emit(self, record):
         """Emit a record if the stream is open.
         
         :param record: The log record to emit
         :type record: logging.LogRecord
+        :return: None
         """
         if self.stream and not self.stream.closed:
             super().emit(record)
@@ -26,25 +30,32 @@ class SafeStreamHandler(logging.StreamHandler):
         """Close the handler only if the stream is open.
         
         Prevents errors when closing already-closed streams.
+        
+        :return: None
         """
         if self.stream and not self.stream.closed:  # Only close if open
             super().close()
 
 
 class BufferHandler(logging.Handler):
-    """A custom logging handler that writes log messages to the TrioOutput buffer.
+    """A custom logging handler that writes log messages to the buffer.
     
-    This handler captures log records and writes them to an in-memory buffer
-    maintained by the TripleOutput class.
+    This handler captures log records and writes them to an in-memory buffer.
+
+    :cvar MAX_BUFFER_SIZE: Maximum number of lines in the buffer
+    :vartype MAX_BUFFER_SIZE: int
+    :cvar buffer: The deque buffer storing log messages
+    :vartype buffer: collections.deque
     """
     MAX_BUFFER_SIZE = 2500  # Maximum number of lines in the buffer
     buffer = deque(maxlen=MAX_BUFFER_SIZE)
 
     def emit(self, record):
-        """Emit a record by writing it to the TrioOutput buffer.
+        """Emit a record by writing it to the buffer.
 
         :param record: The log record to be written
         :type record: logging.LogRecord
+        :return: None
         :note: Any exceptions during emission are handled by the parent class's handleError method
         """
         try:
@@ -66,6 +77,12 @@ class BufferHandler(logging.Handler):
 
 
 class TripleOutput:
+    """Handles triple output to buffer, stdout/stderr, and log file.
+    
+    :ivar log_func: The logging function to use for output
+    :vartype log_func: callable
+    """
+    
     def __init__(self, log_func):
         """Initialize the triple output handler.
 
@@ -79,6 +96,7 @@ class TripleOutput:
 
         :param message: The message to be written
         :type message: str
+        :return: None
         :note: 
             - Empty messages are ignored
             - Multi-line messages are split and written line by line
@@ -98,6 +116,10 @@ class TripleOutput:
             out.write(err)
 
     def flush(self):
+        """Dummy flush method to satisfy stream interface requirements.
+        
+        :return: None
+        """
         pass
 
 
