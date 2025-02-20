@@ -123,6 +123,10 @@ LOG_FORMAT = '%(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(messag
 
 formatter = logging.Formatter(LOG_FORMAT)
 
+# When running a PyInstaller-built application with --windowed mode, there's no console,
+# so sys.stdout and sys.stderr are set to None.
+# Since Python's logging module tries to write to sys.stdout (or another stream handler),
+# it fails with AttributeError: 'NoneType' object has no attribute 'write'.
 if sys.stderr or sys.stdout:
     console_handler = SafeStreamHandler(sys.stderr or sys.stdout)
 else:
