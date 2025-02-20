@@ -3,13 +3,9 @@ import sys
 from collections import deque
 from logging.handlers import RotatingFileHandler
 import logging
+import traceback
 from utils.file_utils import get_resource_path
 
-# Redirect stdout/stderr to a file if they are None (e.g., in PyInstaller --windowed mode)
-if sys.stdout is None:
-    sys.stdout = open(os.devnull, "w")
-if sys.stderr is None:
-    sys.stderr = open(os.devnull, "w")
 
 class SafeStreamHandler(logging.StreamHandler):
     def emit(self, record):
@@ -78,8 +74,13 @@ class TripleOutput:
                     self.log_func(line)
                 return
             self.log_func(message)
-        except:
-            pass
+        except Exception as e:
+            err = traceback.format_exc()
+            out = sys.__stderr__ or sys.__stdout__
+            if not out:
+                return
+            out.write(str(e) + '\n')
+            out.write(err)
 
     def flush(self):
         """Flush the original stdout to ensure output is written immediately.
@@ -119,7 +120,10 @@ LOG_FILE_BACKUP_COUNT = 1
 
 formatter = logging.Formatter('%(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(message)s')
 
-console_handler = SafeStreamHandler(sys.stdout)
+if sys.stderr or sys.stdout:
+    console_handler = SafeStreamHandler(sys.stderr or sys.stdout)
+else:
+    console_handler = logging.NullHandler()
 console_handler.setLevel(LOG_LEVEL)
 console_handler.setFormatter(formatter)
 
@@ -131,11 +135,10 @@ buffer_handler = BufferHandler()
 buffer_handler.setLevel(LOG_LEVEL)
 buffer_handler.setFormatter(formatter)
 
+# root logger settings
+logging.basicConfig(level=LOG_LEVEL, handlers=[console_handler, file_handler, buffer_handler])
 logger = logging.getLogger("freescribe")
 logger.setLevel(LOG_LEVEL)
-logger.addHandler(console_handler)
-logger.addHandler(file_handler)
-logger.addHandler(buffer_handler)
 
 triple = TripleOutput(logger.info)
 sys.stdout = triple

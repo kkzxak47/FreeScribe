@@ -461,7 +461,6 @@ class SettingsWindow():
             settings_window.destroy()
         except Exception as e:
             # Print any exception that occurs during file handling or window destruction.
-            logger.exception(str(e))
             logger.error(f"Error clearing settings files: {e}")
             messagebox.showerror("Error", "An error occurred while clearing settings. Please try again.")
 
@@ -503,7 +502,7 @@ class SettingsWindow():
             return available_models
         except requests.RequestException as e:
             # messagebox.showerror("Error", f"Failed to fetch models: {e}. Please ensure your OpenAI API key is correct.") 
-            logger.exception(str(e))
+            logger.error(str(e))
             return ["Failed to load models", "Custom"]
 
     def update_models_dropdown(self, dropdown, endpoint=None):

@@ -122,7 +122,6 @@ class Model:
             return response["choices"][0]["message"]["content"]
             
         except Exception as e:
-            logger.exception(str(e))
             logger.error(f"GPU inference error ({e.__class__.__name__}): {str(e)}")
             return f"({e.__class__.__name__}): {str(e)}"
 

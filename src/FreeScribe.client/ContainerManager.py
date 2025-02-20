@@ -141,7 +141,6 @@ class ContainerManager:
             logger.error(f"An error occurred while checking the container status: {e}")
             return False
         except Exception as e:
-            logger.exception(str(e))
             logger.error(f"An error occurred while checking the container status: {e}")
             return False
 
