@@ -116,7 +116,7 @@ LOG_FILE_NAME = get_resource_path("freescribe.log")
 LOG_FILE_MAX_SIZE = 10 * 1024 * 1024
 # Keep up to 1 backup log files
 LOG_FILE_BACKUP_COUNT = 1
-LOG_FORMAT = '%(asctime)s - %(levelname)s - %(threadName)s - %(name)s - [%(filename)s:%(lineno)d in %(funcName)s] - %(message)s'
+LOG_FORMAT = '[%(asctime)s] | %(levelname)s | %(threadName)s | %(name)s | [%(filename)s:%(lineno)d in %(funcName)s] | %(message)s'
 
 formatter = logging.Formatter(LOG_FORMAT)
 
