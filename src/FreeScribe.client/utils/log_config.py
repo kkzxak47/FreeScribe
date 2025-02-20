@@ -140,8 +140,8 @@ def addLoggingLevel(levelName, levelNum, methodName=None):
 
 # Define custom level
 DIAGNOSE_LEVEL = 99
-# logging.addLevelName(DIAGNOSE_LEVEL, "DIAG")
 addLoggingLevel("DIAG", DIAGNOSE_LEVEL)
+
 # Configure logging
 if os.environ.get("FREESCRIBE_DEBUG"):
     LOG_LEVEL = logging.DEBUG
