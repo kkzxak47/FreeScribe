@@ -176,10 +176,6 @@ else:
 console_handler.setLevel(LOG_LEVEL)
 console_handler.setFormatter(formatter)
 
-file_handler = RotatingFileHandler(LOG_FILE_NAME, maxBytes=LOG_FILE_MAX_SIZE, backupCount=LOG_FILE_BACKUP_COUNT)
-file_handler.setLevel(LOG_LEVEL)
-file_handler.setFormatter(formatter)
-
 buffer_handler = BufferHandler()
 buffer_handler.setLevel(LOG_LEVEL)
 buffer_handler.setFormatter(formatter)
