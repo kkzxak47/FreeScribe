@@ -44,6 +44,7 @@ from UI.SettingsWindow import SettingsWindow
 from UI.SettingsConstant import SettingsKeys, Architectures
 from UI.Widgets.CustomTextBox import CustomTextBox
 from UI.LoadingWindow import LoadingWindow
+from UI.ImageWindow import ImageWindow
 from Model import  ModelManager
 from utils.ip_utils import is_private_ip
 from utils.file_utils import get_file_path, get_resource_path
@@ -1949,6 +1950,7 @@ root.minsize(900, 400)
 
 if (app_settings.editable_settings['Show Welcome Message']):
     window.show_welcome_message()
+    ImageWindow(root, "Help Guide", get_file_path('assets', 'help.png'))
 
 #Wait for the UI root to be intialized then load the model. If using local llm.
 if app_settings.editable_settings[SettingsKeys.LOCAL_LLM.value]:
