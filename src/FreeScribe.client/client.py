@@ -1718,8 +1718,9 @@ def _load_stt_model_thread():
             window.enable_settings_menu()
             stt_loading_window.destroy()
             print("Closing STT loading window.")
+        logging.debug(f"STT model status after loading: {stt_local_model=}")
 
-def unload_stt_model():
+def unload_stt_model(event=None):
     """
     Unload the speech-to-text model from memory.
     
@@ -1735,6 +1736,7 @@ def unload_stt_model():
         print("STT model unloaded successfully.")
     else:
         print("STT model is already unloaded.")
+    logging.debug(f"STT model status after unloading: {stt_local_model=}")
 
 def get_selected_whisper_architecture():
     """
@@ -2014,6 +2016,7 @@ def await_models(timeout_length=60):
 root.after(100, await_models)
 
 root.bind("<<LoadSttModel>>", load_stt_model)
+root.bind("<<UnloadSttModel>>", unload_stt_model)
 
 root.mainloop()
 

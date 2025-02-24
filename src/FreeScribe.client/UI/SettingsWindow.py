@@ -22,6 +22,7 @@ import os
 import tkinter as tk
 from tkinter import messagebox
 import requests
+import logging
 
 from UI.SettingsConstant import SettingsKeys, Architectures, FeatureToggle, DEFAULT_CONTEXT_WINDOW_SIZE
 from utils.file_utils import get_resource_path, get_file_path
@@ -564,25 +565,20 @@ class SettingsWindow():
                  - reload_flag: True if new model should be loaded
         :rtype: tuple(bool, bool)
         """
-        # Check if old model and new model are different if they are reload and make sure new model is checked.
-        if old_model != new_model and new_use_local_llm == 1:
-            return True, True
-
-        # Load the model if check box is now selected
-        if old_use_local_llm == 0 and new_use_local_llm == 1:
-            return False, True
-
-        # Check if Local LLM was on and if turned off unload model.abs
-        if old_use_local_llm == 1 and new_use_local_llm == 0:
-            return True, False
-
-        if old_architecture != new_architecture and new_use_local_llm == 1:
-            return True, True
-
-        if int(old_context_window) != int(new_context_window) and new_use_local_llm == 1:
-            return True, True
-
-        return False, False
+        unload_flag = False
+        reload_flag = False
+        try:
+            if new_use_local_llm:
+                if any([old_model != new_model,
+                        old_architecture != new_architecture,
+                        int(old_context_window) != int(new_context_window)]):
+                    reload_flag = True
+            else:
+                unload_flag = True
+        except:
+            logging.exception("Failed to load model")
+        logging.debug(f"load_or_unload_model {unload_flag=}, {reload_flag=}")
+        return unload_flag, reload_flag
 
     def _create_settings_and_aiscribe_if_not_exist(self):
         """
