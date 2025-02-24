@@ -569,14 +569,17 @@ class SettingsWindow():
         reload_flag = False
         try:
             if new_use_local_llm:
-                if any([old_model != new_model,
-                        old_architecture != new_architecture,
-                        int(old_context_window) != int(new_context_window)]):
+                if any([
+                    old_use_local_llm != new_use_local_llm,
+                    old_model != new_model,
+                    old_architecture != new_architecture,
+                    int(old_context_window) != int(new_context_window)]
+                ):
                     reload_flag = True
             else:
                 unload_flag = True
         except:
-            logging.exception("Failed to load model")
+            logging.exception("Failed to determine reload/unload model")
         logging.debug(f"load_or_unload_model {unload_flag=}, {reload_flag=}")
         return unload_flag, reload_flag
 
