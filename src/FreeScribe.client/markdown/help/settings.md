@@ -37,6 +37,7 @@
 **Type**: dropdown
 
 ### Built-in Speech2Text Architecture
+
 Note: Available only if GPU selected while installing
 
 **Description**: Specify the hardware architecture used for Whisper Speech-to-Text processing. Options include `CUDA (Nvidia GPU)` and `CPU` available architectures.  
@@ -46,7 +47,7 @@ Note: Available only if GPU selected while installing
 ### Speech2Text (Whisper) Endpoint
 
 **Description**: API endpoint for Whisper service. This endpoint processes audio files from the client. By default, it points to the local Whisper container provided by ClinicianFOCUS.  
-**Default**: `https://localhost:2224/whisperaudio`
+**Default**: `https://localhost:2224/whisperaudio`  
 **Type**: string
 
 ### Speech2Text (Whisper) API Key
@@ -72,6 +73,7 @@ Note: Available only if GPU selected while installing
 **Type**: boolean
 
 ### Built-in AI Architecture
+
 Note: Available only if GPU selected while installing
 
 **Description**: Choose the hardware architecture for running the local LLM. Options may include `CUDA (Nvidia GPU)` and `CPU`.  
