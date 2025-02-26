@@ -578,7 +578,9 @@ class SettingsWindow():
                     reload_flag = True
             else:
                 unload_flag = True
-        except:
+        # in case context_window value is invalid
+        except (ValueError, TypeError) as e:
+            logging.error(str(e))
             logging.exception("Failed to determine reload/unload model")
         logging.debug(f"load_or_unload_model {unload_flag=}, {reload_flag=}")
         return unload_flag, reload_flag
