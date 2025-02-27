@@ -508,7 +508,7 @@ def realtime_text():
                 print("Real Time Audio to Text")
                 audio_buffer = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768
                 if app_settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value] == True:
-                    print("Local Real Time Whisper")
+                    print(f"Local Real Time Whisper {audio_queue.qsize()=}")
                     if stt_local_model is None:
                         update_gui("Local Whisper model not loaded. Please check your settings.")
                         break
