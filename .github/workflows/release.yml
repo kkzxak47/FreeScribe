@@ -104,5 +104,3 @@ jobs:
           asset_path: dist/FreeScribeInstaller.exe
           asset_name: FreeScribeInstaller_windows.exe
           asset_content_type: application/octet-stream
-          
-      # push a tag to a 
