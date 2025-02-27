@@ -688,10 +688,10 @@ class SettingsWindowUI:
             self.main_window.root.event_generate("<<UnloadSttModel>>")
         # unload / reload model after the settings are saved
         if local_model_unload_flag:
-            logging.debug(f"unloading ai model")
+            logging.debug("unloading ai model")
             ModelManager.unload_model()
         if local_model_reload_flag:
-            logging.debug(f"reloading ai model")
+            logging.debug("reloading ai model")
             ModelManager.start_model_threaded(self.settings, self.main_window.root)
 
         if self.settings.editable_settings["Use Docker Status Bar"] and self.main_window.docker_status_bar is None:
