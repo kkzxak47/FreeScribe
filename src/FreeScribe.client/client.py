@@ -1782,12 +1782,15 @@ def faster_whisper_transcribe(audio):
         # Validate vad_filter
         vad_filter = bool(app_settings.editable_settings[SettingsKeys.WHISPER_VAD_FILTER.value])
 
+        start_time = time.monotonic()
         segments, info = stt_local_model.transcribe(
             audio,
             beam_size=beam_size,
             vad_filter=vad_filter,
             **additional_kwargs
         )
+        if type(audio) in [str, np.ndarray]:
+            print(f"took {time.monotonic() - start_time:.3f} seconds to process {len(audio)=} {type(audio)=} audio.")
 
         return "".join(f"{segment.text} " for segment in segments)
     except Exception as e:
