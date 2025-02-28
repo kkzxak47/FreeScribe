@@ -286,7 +286,8 @@ class ModelManager:
         the application.
         """
         if ModelManager.local_model is not None:
-            ModelManager.local_model.model.close()
+            if ModelManager.local_model.model:
+                ModelManager.local_model.model.close()
             del ModelManager.local_model
             ModelManager.local_model = None
             
