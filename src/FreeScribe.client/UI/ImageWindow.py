@@ -4,10 +4,34 @@ from PIL import Image, ImageTk
 from utils.file_utils import get_file_path
 
 class ImageWindow:
-    """
-    A simple window to display an image with scrollbars.
+    """A window to display an image with scrollbars and zoom functionality.
+    
+    This class creates a scrollable window that displays an image file. It supports:
+    - Vertical and horizontal scrolling
+    - Mouse wheel navigation
+    - Automatic window sizing and centering
+    - Error handling for missing image files
+    
+    :param parent: The parent tkinter widget
+    :type parent: tk.Widget
+    :param title: Window title text
+    :type title: str
+    :param image_path: Path to the image file to display
+    :type image_path: str
     """
     def __init__(self, parent, title, image_path):
+        """Initialize the ImageWindow.
+        
+        Creates a new window, loads the specified image, and sets up scrollable canvas.
+        Handles errors if image file is not found.
+        
+        :param parent: The parent tkinter widget
+        :type parent: tk.Widget
+        :param title: Window title text
+        :type title: str
+        :param image_path: Path to the image file to display
+        :type image_path: str
+        """
         try:
             # Create window and load image
             self.window = Toplevel(parent)
@@ -75,7 +99,15 @@ class ImageWindow:
                 self.window.destroy()
 
     def _on_mousewheel(self, event):
-        """Handle vertical scrolling"""
+        """Handle vertical scrolling with mouse wheel.
+        
+        Supports both Windows/Mac and Linux mouse wheel events.
+        
+        :param event: The mouse wheel event
+        :type event: tk.Event
+        :return: "break" to prevent event propagation
+        :rtype: str
+        """
         if event.num == 4:  # Linux scroll up
             self.canvas.yview_scroll(-1, "units")
         elif event.num == 5:  # Linux scroll down
@@ -85,7 +117,15 @@ class ImageWindow:
         return "break"
 
     def _on_horizontal_scroll(self, event):
-        """Handle horizontal scrolling"""
+        """Handle horizontal scrolling with mouse wheel.
+        
+        Supports both Windows/Mac and Linux mouse wheel events when Shift is held.
+        
+        :param event: The mouse wheel event
+        :type event: tk.Event
+        :return: "break" to prevent event propagation
+        :rtype: str
+        """
         if event.num == 4:  # Linux scroll left
             self.canvas.xview_scroll(-1, "units")
         elif event.num == 5:  # Linux scroll right
@@ -93,4 +133,3 @@ class ImageWindow:
         else:  # Windows/Mac
             self.canvas.xview_scroll(-1 * (event.delta // 120), "units")
         return "break"
-
