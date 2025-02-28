@@ -401,9 +401,9 @@ def record_audio():
                 try: 
                     speech_prob_threshold = float(app_settings.editable_settings[SettingsKeys.SILERO_SPEECH_THRESHOLD.value])
                 except ValueError:
-                    # default it to 0.5 on invalid error
-                    speech_prob_threshold = 0.5
-                
+                    # default it to value in DEFAULT_SETTINGS_TABLE on invalid error
+                    speech_prob_threshold = app_settings.DEFAULT_SETTINGS_TABLE[SettingsKeys.SILERO_SPEECH_THRESHOLD.value]
+
                 if is_silent(audio_buffer, speech_prob_threshold ):
                     silent_duration += CHUNK / RATE
                     silent_warning_duration += CHUNK / RATE
@@ -1354,8 +1354,7 @@ def generate_note_thread(text: str):
     # The return value from the screen input thread
     screen_return = tk.BooleanVar()
 
-    loading_window = LoadingWindow(root, "Generating Note.", "Generating Note. Please wait.", on_cancel=lambda: (cancel_note_generation(GENERATION_THREAD_ID, screen_thread)))
-    
+    loading_window = LoadingWindow(root, "Screening Input Text", "Ensuring input is valid. Please wait.", on_cancel=lambda: (cancel_note_generation(GENERATION_THREAD_ID, screen_thread)))    
     # screen input in its own thread so we can cancel it
     screen_thread = threading.Thread(target=threaded_screen_input, args=(text, screen_return))
     screen_thread.start()
@@ -1370,6 +1369,7 @@ def generate_note_thread(text: str):
         if display_screening_popup() is False:
             return
     
+    loading_window.destroy()
     loading_window = LoadingWindow(root, "Generating Note.", "Generating Note. Please wait.", on_cancel=lambda: (cancel_note_generation(GENERATION_THREAD_ID, screen_thread)))
 
 
