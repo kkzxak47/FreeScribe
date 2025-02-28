@@ -48,7 +48,7 @@ class MarkdownWindow:
                 content = self._process_markdown_images(content)
                 html_content = md.markdown(content, extensions=["extra", "smarty"])
             except Exception as e:
-                print(f"Error reading file: {e}")
+                logger.error(f"Error reading file: {e}")
                 messagebox.showerror("Error", "Error reading file")
                 return
 
