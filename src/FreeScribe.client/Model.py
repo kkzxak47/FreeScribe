@@ -87,7 +87,7 @@ class Model:
     def generate_response(
         self,
         prompt: str,
-        max_tokens: int = -1,
+        max_tokens: int | None = None,
         temperature: float = 0.1,
         top_p: float = 0.95,
         repeat_penalty: float = 1.1
