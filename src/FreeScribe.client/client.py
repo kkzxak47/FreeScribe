@@ -1779,6 +1779,8 @@ def faster_whisper_transcribe(audio):
         additional_kwargs = {}
         if app_settings.editable_settings[SettingsKeys.USE_TRANSLATE_TASK.value]:
             additional_kwargs['task'] = 'translate'
+        if app_settings.editable_settings[SettingsKeys.WHISPER_LANGUAGE_CODE.value] not in SettingsWindow.AUTO_DETECT_LANGUAGE_CODES:
+            additional_kwargs['language'] = app_settings.editable_settings[SettingsKeys.WHISPER_LANGUAGE_CODE.value]
 
         # Validate vad_filter
         vad_filter = bool(app_settings.editable_settings[SettingsKeys.WHISPER_VAD_FILTER.value])
