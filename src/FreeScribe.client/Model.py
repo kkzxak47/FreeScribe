@@ -2,6 +2,7 @@ from llama_cpp import Llama
 import os
 from typing import Optional, Dict, Any
 import threading
+import logging
 from UI.LoadingWindow import LoadingWindow
 import tkinter.messagebox as messagebox
 from UI.SettingsConstant import SettingsKeys, DEFAULT_CONTEXT_WINDOW_SIZE
@@ -290,4 +291,4 @@ class ModelManager:
                 ModelManager.local_model.model.close()
             del ModelManager.local_model
             ModelManager.local_model = None
-            
+        logging.debug(f"{ModelManager.local_model=}")
