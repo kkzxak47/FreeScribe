@@ -1780,7 +1780,7 @@ def faster_whisper_transcribe(audio):
             **additional_kwargs
         )
         if type(audio) in [str, np.ndarray]:
-            print(f"took {time.monotonic() - start_time:.3f} seconds to process {len(audio)=} {type(audio)=} audio.")
+            logger.info(f"took {time.monotonic() - start_time:.3f} seconds to process {len(audio)=} {type(audio)=} audio.")
 
         return "".join(f"{segment.text} " for segment in segments)
     except Exception as e:
