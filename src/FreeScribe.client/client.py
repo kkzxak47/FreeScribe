@@ -1321,7 +1321,26 @@ def generate_note(formatted_message):
         logging.exception(f"Error generating note: {e}")
         return False
 
-def check_and_warn_about_factual_consistency(formatted_message, medical_note):
+def check_and_warn_about_factual_consistency(formatted_message: str, medical_note: str) -> None:
+    """Verify and warn about potential factual inconsistencies in generated medical notes.
+
+    This function checks the consistency between the original conversation and the generated
+    medical note using multiple verification methods. If inconsistencies are found or the
+    confidence score is below the threshold, a warning dialog is shown to the user.
+
+    :param formatted_message: The original transcribed conversation text
+    :type formatted_message: str
+    :param medical_note: The generated medical note to verify
+    :type medical_note: str
+
+    .. note::
+        The verification is only performed if factual consistency checking is enabled
+        in the application settings.
+
+    .. warning::
+        Even if no inconsistencies are found, this does not guarantee the note is 100% accurate.
+        Always review generated notes carefully.
+    """
     # Verify factual consistency
     if not app_settings.editable_settings[SettingsKeys.FACTUAL_CONSISTENCY_VERIFICATION.value]:
         return
