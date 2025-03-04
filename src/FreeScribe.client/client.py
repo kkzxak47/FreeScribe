@@ -40,6 +40,7 @@ from UI.SettingsWindow import SettingsWindow
 from UI.SettingsConstant import SettingsKeys, Architectures
 from UI.Widgets.CustomTextBox import CustomTextBox
 from UI.LoadingWindow import LoadingWindow
+from UI.ImageWindow import ImageWindow
 from Model import  ModelManager
 from utils.ip_utils import is_private_ip
 from utils.file_utils import get_file_path, get_resource_path
@@ -491,7 +492,7 @@ def realtime_text():
                 logger.info("Real Time Audio to Text")
                 audio_buffer = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768
                 if app_settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value] == True:
-                    logger.info("Local Real Time Whisper")
+                    logger.info(f"Local Real Time Whisper {audio_queue.qsize()=}")
                     if stt_local_model is None:
                         update_gui("Local Whisper model not loaded. Please check your settings.")
                         break
@@ -1143,7 +1144,6 @@ def send_text_to_localmodel(edited_text):
 
     return ModelManager.local_model.generate_response(
         edited_text,
-        max_tokens=int(app_settings.editable_settings["max_length"]),
         temperature=float(app_settings.editable_settings["temperature"]),
         top_p=float(app_settings.editable_settings["top_p"]),
         repeat_penalty=float(app_settings.editable_settings["rep_pen"]),
@@ -1702,8 +1702,10 @@ def _load_stt_model_thread():
             window.enable_settings_menu()
             stt_loading_window.destroy()
             logger.info("Closing STT loading window.")
+        logger.debug(f"STT model status after loading: {stt_local_model=}")
 
-def unload_stt_model():
+
+def unload_stt_model(event=None):
     """
     Unload the speech-to-text model from memory.
     
@@ -1719,6 +1721,8 @@ def unload_stt_model():
         logger.info("STT model unloaded successfully.")
     else:
         logger.info("STT model is already unloaded.")
+    logger.debug(f"STT model status after unloading: {stt_local_model=}")
+
 
 def get_selected_whisper_architecture():
     """
@@ -1762,16 +1766,21 @@ def faster_whisper_transcribe(audio):
         additional_kwargs = {}
         if app_settings.editable_settings[SettingsKeys.USE_TRANSLATE_TASK.value]:
             additional_kwargs['task'] = 'translate'
+        if app_settings.editable_settings[SettingsKeys.WHISPER_LANGUAGE_CODE.value] not in SettingsWindow.AUTO_DETECT_LANGUAGE_CODES:
+            additional_kwargs['language'] = app_settings.editable_settings[SettingsKeys.WHISPER_LANGUAGE_CODE.value]
 
         # Validate vad_filter
         vad_filter = bool(app_settings.editable_settings[SettingsKeys.WHISPER_VAD_FILTER.value])
 
+        start_time = time.monotonic()
         segments, info = stt_local_model.transcribe(
             audio,
             beam_size=beam_size,
             vad_filter=vad_filter,
             **additional_kwargs
         )
+        if type(audio) in [str, np.ndarray]:
+            print(f"took {time.monotonic() - start_time:.3f} seconds to process {len(audio)=} {type(audio)=} audio.")
 
         return "".join(f"{segment.text} " for segment in segments)
     except Exception as e:
@@ -1934,6 +1943,7 @@ root.minsize(900, 400)
 
 if (app_settings.editable_settings['Show Welcome Message']):
     window.show_welcome_message()
+    ImageWindow(root, "Help Guide", get_file_path('assets', 'help.png'))
 
 #Wait for the UI root to be intialized then load the model. If using local llm.
 if app_settings.editable_settings[SettingsKeys.LOCAL_LLM.value]:
@@ -1999,6 +2009,7 @@ def await_models(timeout_length=60):
 root.after(100, await_models)
 
 root.bind("<<LoadSttModel>>", load_stt_model)
+root.bind("<<UnloadSttModel>>", unload_stt_model)
 
 root.mainloop()
 
