@@ -56,8 +56,8 @@ class LoggingStream(io.StringIO):
     def __init__(self, level):
         super().__init__()
         self.level = level
-        # Use UTF-8 encoding by default, which can handle all Unicode characters
-        self.encoding = 'utf-8'
+        # Store encoding as instance variable since we can't set the class attribute
+        self._encoding = 'utf-8'
 
     def write(self, message):
         """Write message to logger, splitting multi-line messages.
@@ -71,10 +71,10 @@ class LoggingStream(io.StringIO):
         # Handle bytes input by decoding with UTF-8
         if isinstance(message, bytes):
             try:
-                message = message.decode(self.encoding)
+                message = message.decode(self._encoding)
             except UnicodeDecodeError:
                 # Fallback to replace invalid characters
-                message = message.decode(self.encoding, errors='replace')
+                message = message.decode(self._encoding, errors='replace')
         
         message = message.strip()
         if message:
@@ -83,7 +83,7 @@ class LoggingStream(io.StringIO):
                     logger.log(self.level, line)
                 except UnicodeEncodeError:
                     # If encoding fails, replace problematic characters
-                    logger.log(self.level, line.encode(self.encoding, errors='replace').decode(self.encoding))
+                    logger.log(self.level, line.encode(self._encoding, errors='replace').decode(self._encoding))
         return len(message)
 
     def flush(self):
