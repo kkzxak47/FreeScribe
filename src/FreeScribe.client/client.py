@@ -58,6 +58,7 @@ from UI.Widgets.PopupBox import PopupBox
 from UI.Widgets.TimestampListbox import TimestampListbox
 from UI.ScrubWindow import ScrubWindow
 from Model import ModelStatus
+from services.factual_consistency import verify_factual_consistency, FACTUAL_CONFIDENCE_THRESHOLD
 
 
 if os.environ.get("FREESCRIBE_DEBUG"):
@@ -1273,42 +1274,66 @@ def send_text_to_chatgpt(edited_text):
         return send_text_to_api(edited_text)
 
 def generate_note(formatted_message):
-            try:
-                if use_aiscribe:
-                    # If pre-processing is enabled
-                    if app_settings.editable_settings["Use Pre-Processing"]:
-                        #Generate Facts List
-                        list_of_facts = send_text_to_chatgpt(f"{app_settings.editable_settings['Pre-Processing']} {formatted_message}")
-                        
-                        #Make a note from the facts
-                        medical_note = send_text_to_chatgpt(f"{app_settings.AISCRIBE} {list_of_facts} {app_settings.AISCRIBE2}")
+    """
+    Generate a note from the formatted message.
+    """
+    try:
+        summary = None
+        if use_aiscribe:
+            # If pre-processing is enabled
+            if app_settings.editable_settings["Use Pre-Processing"]:
+                #Generate Facts List
+                list_of_facts = send_text_to_chatgpt(f"{app_settings.editable_settings['Pre-Processing']} {formatted_message}")
 
-                        # If post-processing is enabled check the note over
-                        if app_settings.editable_settings["Use Post-Processing"]:
-                            post_processed_note = send_text_to_chatgpt(f"{app_settings.editable_settings['Post-Processing']}\nFacts:{list_of_facts}\nNotes:{medical_note}")
-                            update_gui_with_response(post_processed_note)
-                        else:
-                            update_gui_with_response(medical_note)
+                #Make a note from the facts
+                medical_note = send_text_to_chatgpt(f"{app_settings.AISCRIBE} {list_of_facts} {app_settings.AISCRIBE2}")
 
-                    else: # If pre-processing is not enabled thhen just generate the note
-                        medical_note = send_text_to_chatgpt(f"{app_settings.AISCRIBE} {formatted_message} {app_settings.AISCRIBE2}")
+                # If post-processing is enabled check the note over
+                if app_settings.editable_settings["Use Post-Processing"]:
+                    post_processed_note = send_text_to_chatgpt(f"{app_settings.editable_settings['Post-Processing']}\nFacts:{list_of_facts}\nNotes:{medical_note}")
+                    update_gui_with_response(post_processed_note)
+                    summary = post_processed_note
+                else:
+                    update_gui_with_response(medical_note)
+                    summary = medical_note
 
-                        if app_settings.editable_settings["Use Post-Processing"]:
-                            post_processed_note = send_text_to_chatgpt(f"{app_settings.editable_settings['Post-Processing']}\nNotes:{medical_note}")
-                            update_gui_with_response(post_processed_note)
-                        else:
-                            update_gui_with_response(medical_note)
-                else: # do not generate note just send text directly to AI 
-                    ai_response = send_text_to_chatgpt(formatted_message)
-                    update_gui_with_response(ai_response)
+            else: # If pre-processing is not enabled thhen just generate the note
+                medical_note = send_text_to_chatgpt(f"{app_settings.AISCRIBE} {formatted_message} {app_settings.AISCRIBE2}")
 
-                return True
-            except Exception as e:
-                #Logg
-                #TODO: Implement proper logging to system event logger
-                print(f"An error occurred: {e}")
-                display_text(f"An error occurred: {e}")
-                return False
+                if app_settings.editable_settings["Use Post-Processing"]:
+                    post_processed_note = send_text_to_chatgpt(f"{app_settings.editable_settings['Post-Processing']}\nNotes:{medical_note}")
+                    update_gui_with_response(post_processed_note)
+                    summary = post_processed_note
+                else:
+                    update_gui_with_response(medical_note)
+                    summary = medical_note
+        else: # do not generate note just send text directly to AI
+            ai_response = send_text_to_chatgpt(formatted_message)
+            update_gui_with_response(ai_response)
+            summary = ai_response
+        check_and_warn_about_factual_consistency(formatted_message, summary)
+
+        return True
+    except Exception as e:
+        #TODO: Implement proper logging to system event logger
+        print(f"An error occurred: {e}")
+        display_text(f"An error occurred: {e}")
+        logging.exception(f"Error generating note: {e}")
+        return False
+
+def check_and_warn_about_factual_consistency(formatted_message, medical_note):
+    # Verify factual consistency
+    if not app_settings.editable_settings[SettingsKeys.FACTUAL_CONSISTENCY_VERIFICATION.value]:
+        return
+    is_consistent, issues, confidence = verify_factual_consistency(formatted_message, medical_note)
+    logging.info(f"{is_consistent=}, {confidence=}, {issues=}")
+    if not is_consistent or confidence < FACTUAL_CONFIDENCE_THRESHOLD:
+        warning_message = "Warning: Potential inconsistencies detected in the generated note:\n\n"
+        warning_message += "Issues found:\n"
+        warning_message += "\n".join(f"- {issue}" for issue in issues)
+        warning_message += f"\n\nConfidence score: {confidence:.2%}"
+        warning_message += "\n\nPlease review the note for accuracy."
+        messagebox.showwarning("Factual Consistency Warning", warning_message)
 
 def show_edit_transcription_popup(formatted_message):
     scrubber = scrubadub.Scrubber()

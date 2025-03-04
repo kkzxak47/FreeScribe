@@ -137,6 +137,7 @@ class SettingsWindow():
             SettingsKeys.WHISPER_LANGUAGE_CODE.value: "None (Auto Detect)",
             SettingsKeys.Enable_Word_Count_Validation.value : True,  # Default to enabled
             SettingsKeys.Enable_AI_Conversation_Validation.value : False,  # Default to disabled
+            SettingsKeys.FACTUAL_CONSISTENCY_VERIFICATION.value: False,
         }
 
     def __init__(self):
@@ -200,7 +201,8 @@ class SettingsWindow():
             # "frmtrmblln",
             SettingsKeys.LOCAL_LLM_CONTEXT_WINDOW.value,
             SettingsKeys.Enable_Word_Count_Validation.value,
-            SettingsKeys.Enable_AI_Conversation_Validation.value
+            SettingsKeys.Enable_AI_Conversation_Validation.value,
+            SettingsKeys.FACTUAL_CONSISTENCY_VERIFICATION.value,
         ]
 
         self.adv_whisper_settings = [

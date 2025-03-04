@@ -14,6 +14,9 @@ from enum import Enum
 logger = logging.getLogger(__name__)
 
 
+FACTUAL_CONFIDENCE_THRESHOLD = 0.6
+
+
 class VerificationMethod(Enum):
     """Enum for different verification methods"""
     NER = "named_entity_recognition"
@@ -46,11 +49,11 @@ class NERVerifier(ConsistencyVerifier):
 
     def __init__(self):
         try:
-            self.nlp = spacy.load("en_core_web_md")
+            self.nlp = spacy.load("en_core_web_trf")
         except OSError:
             logger.info("Downloading spaCy model...")
-            os.system("python -m spacy download en_core_web_md")
-            self.nlp = spacy.load("en_core_web_md")
+            os.system("python -m spacy download en_core_web_trf")
+            self.nlp = spacy.load("en_core_web_trf")
 
     def verify(self, original_text: str, generated_summary: str) -> VerificationResult:
         """
