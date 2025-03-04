@@ -509,7 +509,7 @@ def realtime_text():
                 print("Real Time Audio to Text")
                 audio_buffer = np.frombuffer(audio_data, dtype=np.int16).astype(np.float32) / 32768
                 if app_settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value] == True:
-                    print("Local Real Time Whisper")
+                    print(f"Local Real Time Whisper {audio_queue.qsize()=}")
                     if stt_local_model is None:
                         update_gui("Local Whisper model not loaded. Please check your settings.")
                         break
@@ -1785,12 +1785,15 @@ def faster_whisper_transcribe(audio):
         # Validate vad_filter
         vad_filter = bool(app_settings.editable_settings[SettingsKeys.WHISPER_VAD_FILTER.value])
 
+        start_time = time.monotonic()
         segments, info = stt_local_model.transcribe(
             audio,
             beam_size=beam_size,
             vad_filter=vad_filter,
             **additional_kwargs
         )
+        if type(audio) in [str, np.ndarray]:
+            print(f"took {time.monotonic() - start_time:.3f} seconds to process {len(audio)=} {type(audio)=} audio.")
 
         return "".join(f"{segment.text} " for segment in segments)
     except Exception as e:
