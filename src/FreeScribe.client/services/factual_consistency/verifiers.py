@@ -88,12 +88,15 @@ class NERVerifier(ConsistencyVerifier):
     def __init__(self):
         try:
             self.nlp = spacy.load(self.NLP_MODEL)
-        except OSError:
+        except OSError as original_error:
             logger.info("Downloading spaCy model...")
             ret = os.system(f"python -m spacy download {self.NLP_MODEL}")
             if ret != 0:
-                raise EnvironmentError(f"{self.NLP_MODEL} not found and could not be downloaded")
-            self.nlp = spacy.load(self.NLP_MODEL)
+                raise EnvironmentError(f"{self.NLP_MODEL} not found and could not be downloaded") from original_error
+            try:
+                self.nlp = spacy.load(self.NLP_MODEL)
+            except Exception as load_error:
+                raise EnvironmentError(f"Failed to load {self.NLP_MODEL} after downloading") from load_error
 
     def verify(self, original_text: str, generated_summary: str) -> VerificationResult:
         """
