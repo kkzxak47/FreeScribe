@@ -15,7 +15,7 @@ techniques to validate that generated summaries accurately reflect the original 
 """
 
 import logging
-from typing import Tuple, List
+from typing import List
 
 from services.factual_consistency.verifiers import ConsistencyPipeline
 
