@@ -122,8 +122,8 @@ class NERVerifier(ConsistencyVerifier):
         summary_doc = self.nlp(generated_summary.lower())
 
         # Extract named entities from both texts
-        original_entities = set(ent.text for ent in original_doc.ents)
-        summary_entities = set(ent.text for ent in summary_doc.ents)
+        original_entities = {ent.text for ent in original_doc.ents}
+        summary_entities = {ent.text for ent in summary_doc.ents}
         logger.debug(f"summary entities: {[(x.text, x.label_) for x in summary_doc.ents]}")
 
         # Find entities that appear in summary but not in original text
