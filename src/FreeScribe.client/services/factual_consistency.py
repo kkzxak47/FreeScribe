@@ -118,6 +118,7 @@ class NERVerifier(ConsistencyVerifier):
     .. warning::
         The 'en_core_web_trf' model requires significant memory resources.
     """
+    LABEL_TO_BE_SKIPPED = {"CARDINAL"}
 
     def __init__(self):
         try:
@@ -157,8 +158,9 @@ class NERVerifier(ConsistencyVerifier):
         summary_doc = self.nlp(generated_summary.lower())
 
         # Extract named entities from both texts
-        original_entities = set(ent.text for ent in original_doc.ents)
-        summary_entities = set(ent.text for ent in summary_doc.ents)
+        original_entities = set(ent.text for ent in original_doc.ents if ent.label_ not in self.LABEL_TO_BE_SKIPPED)
+        summary_entities = set(ent.text for ent in summary_doc.ents if ent.label_ not in self.LABEL_TO_BE_SKIPPED)
+        logger.debug([[x.text, x.label_] for x in summary_doc.ents])
 
         # Find entities that appear in summary but not in original text
         inconsistent_entities = list(summary_entities - original_entities)
