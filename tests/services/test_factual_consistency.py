@@ -1,8 +1,5 @@
 import pytest
-from services.factual_consistency import (
-    verify_factual_consistency,
-    FACTUAL_CONFIDENCE_THRESHOLD
-)
+from services.factual_consistency import find_factual_inconsistency
 
 
 @pytest.fixture
@@ -28,36 +25,30 @@ def partial_match_texts():
 
 def test_verify_factual_consistency_consistent(consistent_texts):
     """Test verification with fully consistent text"""
-    is_consistent, issues, confidence = verify_factual_consistency(
+    issues = find_factual_inconsistency(
         consistent_texts["original"], 
         consistent_texts["summary"]
     )
 
-    assert is_consistent is True
     assert issues == []
-    assert confidence >= FACTUAL_CONFIDENCE_THRESHOLD
 
 def test_verify_factual_consistency_inconsistent(inconsistent_texts):
     """Test verification with inconsistent entities"""
-    is_consistent, issues, confidence = verify_factual_consistency(
+    issues = find_factual_inconsistency(
         inconsistent_texts["original"], 
         inconsistent_texts["summary"]
     )
     
-    assert is_consistent is False
     assert len(issues) > 0
-    assert confidence < FACTUAL_CONFIDENCE_THRESHOLD
 
 def test_verify_factual_consistency_partial_match(partial_match_texts):
     """Test verification with partial entity matches"""
-    is_consistent, issues, confidence = verify_factual_consistency(
+    issues = find_factual_inconsistency(
         partial_match_texts["original"], 
         partial_match_texts["summary"]
     )
     
-    assert is_consistent is True
-    assert issues == []
-    assert confidence >= 0.5
+    assert issues == ['high blood pressure']
 
 @pytest.mark.parametrize("original,summary,expected", [
     ("Some text", "", (True, [], 1.0)),  # Empty summary
@@ -65,19 +56,17 @@ def test_verify_factual_consistency_partial_match(partial_match_texts):
 ])
 def test_verify_factual_consistency_empty_inputs(original, summary, expected):
     """Test verification with empty inputs"""
-    result = verify_factual_consistency(original, summary)
-    assert result == expected
+    issues = find_factual_inconsistency(original, summary)
+    assert issues == expected[1]  # Just check the issues part
 
 def test_verify_factual_consistency_case_insensitivity():
     """Test that verification is case insensitive"""
     original = "Patient has Diabetes and High Blood Pressure."
     summary = "patient has diabetes and high blood pressure"
     
-    is_consistent, issues, confidence = verify_factual_consistency(original, summary)
+    issues = find_factual_inconsistency(original, summary)
     
-    assert is_consistent is True
     assert issues == []
-    assert confidence == 1.0
 
 
 def test_verify_factual_consistency_with_full_transcript():
@@ -103,7 +92,5 @@ Mr. Jones presents with chronic back pain likely stemming from an occupational i
 
 """
     
-    is_consistent, issues, confidence = verify_factual_consistency(original, summary)
-
-    assert is_consistent is False
-    assert confidence < 1.0
+    issues = find_factual_inconsistency(original, summary)
+    assert len(issues) > 0

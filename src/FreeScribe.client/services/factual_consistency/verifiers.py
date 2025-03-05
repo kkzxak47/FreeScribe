@@ -34,24 +34,14 @@ class VerificationResult:
 
     :param method: The verification method used
     :type method: VerificationMethod
-    :param is_consistent: Whether the verification passed, defaults to True
-    :type is_consistent: bool
     :param inconsistent_items: List of inconsistent items found, defaults to empty list
     :type inconsistent_items: List[str]
-    :param confidence: Confidence score (0.0 to 1.0), defaults to 1.0
-    :type confidence: float
 
     .. note::
-        A confidence score below 0.6 typically indicates potential issues.
-
-    .. warning::
-        Empty inconsistent_items list doesn't guarantee perfect consistency,
-        only that no inconsistencies were detected by the verification method.
+        If inconsistent_items is empty, no inconsistencies were found.
     """
     method: VerificationMethod
-    is_consistent: bool = True
     inconsistent_items: List[str] = field(default_factory=list)
-    confidence: float = 1.0 # 0.0 to 1.0
 
 
 class ConsistencyVerifier(ABC):
@@ -121,21 +111,12 @@ class NERVerifier(ConsistencyVerifier):
 
         Returns:
             VerificationResult containing:
-                - is_consistent: True if all entities in summary appear in original text
-                - inconsistent_entities: List of entities that appear in summary but not in original text
-                - confidence: Confidence score based on entity overlap
+                - inconsistent_items: List of entities that appear in summary but not in original text
                 - method: The verification method used
         """
-        if not generated_summary:
-            return VerificationResult(
-                method=VerificationMethod.NER
-            )
-        if not original_text:
-            return VerificationResult(
-                is_consistent=False,
-                confidence=0.0,
-                method=VerificationMethod.NER
-            )
+        if not generated_summary or not original_text:
+            return VerificationResult(method=VerificationMethod.NER)
+
         # Process both texts with spaCy
         original_doc = self.nlp(original_text.lower())
         summary_doc = self.nlp(generated_summary.lower())
@@ -148,20 +129,8 @@ class NERVerifier(ConsistencyVerifier):
         # Find entities that appear in summary but not in original text
         inconsistent_entities = list(summary_entities - original_entities)
 
-        # Calculate confidence based on entity overlap
-        if not summary_entities:
-            confidence = 1.0  # If no entities in summary, consider it consistent
-        else:
-            overlap = len(original_entities.intersection(summary_entities))
-            confidence = overlap / len(summary_entities)
-
-        # Check if there are any inconsistent entities
-        is_consistent = len(inconsistent_entities) == 0
-
         return VerificationResult(
-            is_consistent=is_consistent,
             inconsistent_items=inconsistent_entities,
-            confidence=confidence,
             method=VerificationMethod.NER
         )
 
@@ -207,39 +176,27 @@ class ConsistencyPipeline:
                 logger.error(f"Error in {method.value} verification: {str(e)}")
                 # Create a failed result
                 results[method] = VerificationResult(
-                    is_consistent=False,
                     inconsistent_items=[f"Verification failed: {str(e)}"],
-                    confidence=0.0,
                     method=method
                 )
         return results
 
-    def get_overall_consistency(self, results: Dict[VerificationMethod, VerificationResult]) -> Tuple[bool, List[str], float]:
+    def get_inconsistent_entities(self, results: Dict[VerificationMethod, VerificationResult]) -> List[str]:
         """
-        Analyze results from all verification methods to determine overall consistency.
+        Get all inconsistent entities found across verification methods.
 
         Args:
             results: Dictionary of verification results from each method
 
         Returns:
-            Tuple containing:
-                - is_consistent: True if all methods agree on consistency
-                - issues: List of all issues found across methods
-                - overall_confidence: Average confidence across all methods
+            List of all inconsistent entities found
         """
         if not results:
-            return False, ["No verification methods available"], 0.0
+            return ["No verification methods available"]
 
         # Collect all issues
         all_issues = []
         for result in results.values():
             all_issues.extend(result.inconsistent_items)
 
-        # Calculate overall confidence
-        confidences = [result.confidence for result in results.values()]
-        overall_confidence = sum(confidences) / len(confidences)
-
-        # Consider it consistent if all methods agree
-        is_consistent = all(result.is_consistent for result in results.values())
-
-        return is_consistent, all_issues, overall_confidence
+        return all_issues

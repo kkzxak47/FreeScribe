@@ -58,7 +58,7 @@ from UI.Widgets.PopupBox import PopupBox
 from UI.Widgets.TimestampListbox import TimestampListbox
 from UI.ScrubWindow import ScrubWindow
 from Model import ModelStatus
-from services.factual_consistency import verify_factual_consistency, FACTUAL_CONFIDENCE_THRESHOLD
+from services.factual_consistency import find_factual_inconsistency
 
 
 if os.environ.get("FREESCRIBE_DEBUG"):
@@ -1325,8 +1325,8 @@ def check_and_warn_about_factual_consistency(formatted_message: str, medical_not
     """Verify and warn about potential factual inconsistencies in generated medical notes.
 
     This function checks the consistency between the original conversation and the generated
-    medical note using multiple verification methods. If inconsistencies are found or the
-    confidence score is below the threshold, a warning dialog is shown to the user.
+    medical note using multiple verification methods. If inconsistencies are found, a warning 
+    dialog is shown to the user.
 
     :param formatted_message: The original transcribed conversation text
     :type formatted_message: str
@@ -1344,15 +1344,16 @@ def check_and_warn_about_factual_consistency(formatted_message: str, medical_not
     # Verify factual consistency
     if not app_settings.editable_settings[SettingsKeys.FACTUAL_CONSISTENCY_VERIFICATION.value]:
         return
-    is_consistent, issues, confidence = verify_factual_consistency(formatted_message, medical_note)
-    logging.info(f"{is_consistent=}, {confidence=}, {issues=}")
-    if not is_consistent or confidence < FACTUAL_CONFIDENCE_THRESHOLD:
-        warning_message = "Warning: Potential inconsistencies detected in the generated note:\n\n"
-        warning_message += "Issues found:\n"
-        warning_message += "\n".join(f"- {issue}" for issue in issues)
-        warning_message += f"\n\nConfidence score: {confidence:.2%}"
+        
+    inconsistent_entities = find_factual_inconsistency(formatted_message, medical_note)
+    logging.info(f"Inconsistent entities: {inconsistent_entities}")
+    
+    if inconsistent_entities:
+        warning_message = "Heads-up: Potential inconsistencies detected in the generated note:\n\n"
+        warning_message += "Entities not in original conversation found:\n"
+        warning_message += "\n".join(f"- {entity}" for entity in inconsistent_entities)
         warning_message += "\n\nPlease review the note for accuracy."
-        messagebox.showwarning("Factual Consistency Warning", warning_message)
+        messagebox.showwarning("Factual Consistency Heads-up", warning_message)
 
 def show_edit_transcription_popup(formatted_message):
     scrubber = scrubadub.Scrubber()
