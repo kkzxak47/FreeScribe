@@ -10,7 +10,7 @@ Prof. Michael Yingbull (PI), Dr. Braedon Hendy (Partner),
 and Research Students - Software Developer Alex Simko, Pemba Sherpa (F24), and Naitik Patel.
 
 """
-
+ 
 import ctypes
 import io
 import logging
@@ -1366,10 +1366,12 @@ def check_and_warn_about_factual_consistency(formatted_message: str, medical_not
     logging.info(f"Inconsistent entities: {inconsistent_entities}")
     
     if inconsistent_entities:
-        warning_message = "Heads-up: Potential inconsistencies detected in the generated note:\n\n"
-        warning_message += "Entities not in original conversation found:\n"
-        warning_message += "\n".join(f"- {entity}" for entity in inconsistent_entities)
-        warning_message += "\n\nPlease review the note for accuracy."
+        warning_message = (
+            "Heads-up: Potential inconsistencies detected in the generated note:\n\n"
+            "Entities not in original conversation found:\n"
+            f"{'\n'.join(f'- {entity}' for entity in inconsistent_entities)}"
+            "\n\nPlease review the note for accuracy."
+        )
         messagebox.showwarning("Factual Consistency Heads-up", warning_message)
 
 def show_edit_transcription_popup(formatted_message):
