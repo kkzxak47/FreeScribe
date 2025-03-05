@@ -1313,7 +1313,7 @@ def generate_note(formatted_message):
                     update_gui_with_response(medical_note)
                     summary = medical_note
 
-            else: # If pre-processing is not enabled thhen just generate the note
+            else: # If pre-processing is not enabled then just generate the note
                 medical_note = send_text_to_chatgpt(f"{app_settings.AISCRIBE} {formatted_message} {app_settings.AISCRIBE2}")
 
                 if app_settings.editable_settings["Use Post-Processing"]:
