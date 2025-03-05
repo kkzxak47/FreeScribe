@@ -117,6 +117,7 @@ class NERVerifier(ConsistencyVerifier):
     .. warning::
         The 'en_core_web_trf' model requires significant memory resources.
     """
+    # LABELS: CARDINAL, DATE, EVENT, FAC, GPE, LANGUAGE, LAW, LOC, MONEY, NORP, ORDINAL, ORG, PERCENT, PERSON, PRODUCT, QUANTITY, TIME, WORK_OF_ART
     LABEL_TO_BE_SKIPPED = {"CARDINAL"}
 
     def __init__(self):

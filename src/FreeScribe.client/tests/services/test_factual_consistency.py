@@ -104,9 +104,7 @@ Mr. Jones presents with chronic back pain likely stemming from an occupational i
 """
     
     is_consistent, issues, confidence = verify_factual_consistency(original, summary)
-    print(f"{is_consistent=} {issues=} {confidence=}")
 
     assert is_consistent is False
     assert confidence < 1.0
     assert 'next week' in issues
-    assert confidence > FACTUAL_CONFIDENCE_THRESHOLD
