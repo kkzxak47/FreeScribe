@@ -1274,8 +1274,24 @@ def send_text_to_chatgpt(edited_text):
         return send_text_to_api(edited_text)
 
 def generate_note(formatted_message):
-    """
-    Generate a note from the formatted message.
+    """Generate a note from the formatted message.
+    
+    This function processes the input text and generates a medical note or AI response
+    based on application settings. It supports pre-processing, post-processing, and
+    factual consistency verification.
+    
+    :param formatted_message: The transcribed conversation text to generate a note from
+    :type formatted_message: str
+    
+    :returns: True if note generation was successful, False otherwise
+    :rtype: bool
+    
+    .. note::
+        The behavior of this function depends on several application settings:
+        - If 'use_aiscribe' is True, it generates a structured medical note
+        - If 'Use Pre-Processing' is enabled, it first generates a list of facts
+        - If 'Use Post-Processing' is enabled, it refines the generated note
+        - Factual consistency verification is performed on the final note
     """
     try:
         summary = None
