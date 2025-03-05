@@ -1332,6 +1332,7 @@ def check_and_warn_about_factual_consistency(formatted_message: str, medical_not
     :type formatted_message: str
     :param medical_note: The generated medical note to verify
     :type medical_note: str
+    :returns: None
 
     .. note::
         The verification is only performed if factual consistency checking is enabled

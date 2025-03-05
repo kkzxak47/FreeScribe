@@ -27,21 +27,19 @@ pipeline = ConsistencyPipeline()
 
 
 def find_factual_inconsistency(original_text: str, generated_summary: str) -> List[str]:
-    """Verify factual consistency between original text and generated summary using multiple methods.
+    """Check for entities in generated summary that weren't in original text.
 
-    :param original_text: The original transcribed text
+    :param original_text: The original transcribed conversation
     :type original_text: str
-    :param generated_summary: The generated medical note/summary
+    :param generated_summary: The generated medical note
     :type generated_summary: str
-    :return: List of inconsistent entities found
+
+    :returns: List of entities found in summary but not in original text
     :rtype: List[str]
     
     .. note::
-        An empty list means no inconsistencies were found.
-
-    .. warning::
-        This function may raise exceptions if verification methods fail.
-        Callers should handle potential errors appropriately.
+        An empty list means no new entities were found in the summary.
+        This doesn't guarantee the summary is 100% accurate - always review carefully.
     """
     results = pipeline.verify(original_text, generated_summary)
     return pipeline.get_inconsistent_entities(results)

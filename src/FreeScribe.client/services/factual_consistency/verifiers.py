@@ -13,13 +13,10 @@ logger = logging.getLogger(__name__)
 class VerificationMethod(Enum):
     """Enumeration of different verification methods.
 
-    .. py:attribute:: NER
-       :annotation: = "named_entity_recognition"
+    :cvar NER: Named Entity Recognition based verification
+    :vartype NER: str
 
-       Named Entity Recognition based verification.
-
-    .. note::
-        Additional verification methods may be added in future versions.
+    .. note:: Additional verification methods may be added in future versions.
     """
     NER = "named_entity_recognition"
     # Add more methods as we implement them
@@ -34,11 +31,11 @@ class VerificationResult:
 
     :param method: The verification method used
     :type method: VerificationMethod
-    :param inconsistent_items: List of inconsistent items found, defaults to empty list
+    :param inconsistent_items: List of inconsistent items found
     :type inconsistent_items: List[str]
+    :default inconsistent_items: []
 
-    .. note::
-        If inconsistent_items is empty, no inconsistencies were found.
+    .. note:: If inconsistent_items is empty, no inconsistencies were found.
     """
     method: VerificationMethod
     inconsistent_items: List[str] = field(default_factory=list)
@@ -50,26 +47,25 @@ class ConsistencyVerifier(ABC):
     This class defines the interface for all concrete verification implementations.
     Subclasses must implement the verify() method.
 
-    .. note::
-        All verifiers should be thread-safe as they may be used concurrently.
+    .. note:: All verifiers should be thread-safe as they may be used concurrently.
     """
 
     @abstractmethod
     def verify(self, original_text: str, generated_summary: str) -> VerificationResult:
-        """Verify consistency between original text and generated summary.
+        """Check for entities in summary that weren't in original text.
 
-        :param original_text: The original transcribed text
+        :param original_text: The original conversation text
         :type original_text: str
-        :param generated_summary: The generated medical note/summary
+        :param generated_summary: The generated medical note
         :type generated_summary: str
-        :return: Verification result containing consistency status
+
+        :returns: Verification result with any new entities found
         :rtype: VerificationResult
 
         .. note::
-            Both input texts are normalized (lowercased) before verification.
-
-        .. warning::
-            Empty input texts may produce unexpected results.
+            This is a basic check - it only looks for entities that appear
+            in the summary but not the original text. It doesn't verify
+            the accuracy or appropriateness of the summary content.
         """
         pass
 
@@ -83,11 +79,9 @@ class NERVerifier(ConsistencyVerifier):
     :ivar nlp: The spaCy language model for medical text processing
     :vartype nlp: spacy.Language
 
-    .. note::
-        The model is automatically downloaded if not present.
+    .. note:: The model is automatically downloaded if not present.
 
-    .. warning::
-        The 'en_core_web_trf' model requires significant memory resources.
+    .. warning:: The 'en_core_web_trf' model requires significant memory resources.
     """
     NLP_MODEL = "en_core_sci_md"
 
@@ -103,16 +97,19 @@ class NERVerifier(ConsistencyVerifier):
 
     def verify(self, original_text: str, generated_summary: str) -> VerificationResult:
         """
-        Verify factual consistency using named entity recognition.
+        Check for entities in summary that weren't in original text.
 
-        Args:
-            original_text: The original transcribed text
-            generated_summary: The generated medical note/summary
+        :param original_text: The original conversation text
+        :type original_text: str
+        :param generated_summary: The generated medical note
+        :type generated_summary: str
 
-        Returns:
-            VerificationResult containing:
-                - inconsistent_items: List of entities that appear in summary but not in original text
-                - method: The verification method used
+        :returns: VerificationResult containing:
+            - inconsistent_items: List of new entities found in summary
+            - method: The verification method used
+
+        .. note:: This helps identify potential additions in the summary that
+                  weren't mentioned in the original conversation.
         """
         if not generated_summary or not original_text:
             return VerificationResult(method=VerificationMethod.NER)
@@ -144,11 +141,9 @@ class ConsistencyPipeline:
     :ivar verifiers: Dictionary mapping verification methods to their implementations
     :vartype verifiers: Dict[VerificationMethod, ConsistencyVerifier]
 
-    .. note::
-        New verification methods can be added by extending the verifiers dictionary.
+    .. note:: New verification methods can be added by extending the verifiers dictionary.
 
-    .. warning::
-        The pipeline assumes all verifiers are independent and can be run in any order.
+    .. warning:: The pipeline assumes all verifiers are independent and can be run in any order.
     """
 
     def __init__(self):
@@ -159,14 +154,18 @@ class ConsistencyPipeline:
 
     def verify(self, original_text: str, generated_summary: str) -> Dict[VerificationMethod, VerificationResult]:
         """
-        Run all verification methods and return their results.
+        Check summary against original text using available verification methods.
 
-        Args:
-            original_text: The original transcribed text
-            generated_summary: The generated medical note/summary
+        :param original_text: The original conversation text
+        :type original_text: str
+        :param generated_summary: The generated medical note
+        :type generated_summary: str
 
-        Returns:
-            Dictionary mapping verification methods to their results
+        :returns: Dictionary mapping verification methods to their results
+        :rtype: Dict[VerificationMethod, VerificationResult]
+
+        .. note:: Currently only checks for new entities, but could be extended
+                  with additional verification methods in the future.
         """
         results = {}
         for method, verifier in self.verifiers.items():
@@ -183,13 +182,16 @@ class ConsistencyPipeline:
 
     def get_inconsistent_entities(self, results: Dict[VerificationMethod, VerificationResult]) -> List[str]:
         """
-        Get all inconsistent entities found across verification methods.
+        Get all new entities found in summary across verification methods.
 
-        Args:
-            results: Dictionary of verification results from each method
+        :param results: Dictionary of verification results from each method
+        :type results: Dict[VerificationMethod, VerificationResult]
 
-        Returns:
-            List of all inconsistent entities found
+        :returns: List of entities found in summary but not in original text
+        :rtype: List[str]
+
+        .. note:: These are potential additions to review, not necessarily errors.
+                  Some new entities may be appropriate inferences by the AI.
         """
         if not results:
             return ["No verification methods available"]
