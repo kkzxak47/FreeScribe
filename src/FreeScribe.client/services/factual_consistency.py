@@ -72,7 +72,6 @@ class VerificationResult:
     confidence: float = 1.0 # 0.0 to 1.0
 
 
-
 class ConsistencyVerifier(ABC):
     """Abstract base class for consistency verifiers.
 
