@@ -10,7 +10,7 @@ Prof. Michael Yingbull (PI), Dr. Braedon Hendy (Partner),
 and Research Students - Software Developer Alex Simko, Pemba Sherpa (F24), and Naitik Patel.
 
 """
- 
+
 import ctypes
 import io
 import logging
