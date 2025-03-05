@@ -72,4 +72,4 @@ nvidia-cuda-nvrtc-cu12==12.4.127
 nvidia-cublas-cu12==12.4.5.8
 psutil==6.1.0
 Pillow==10.2.0
-en-core-web-trf @ https://huggingface.co/spacy/en_core_web_trf/resolve/main/en_core_web_trf-any-py3-none-any.whl
+en_core_sci_md @ https://s3-us-west-2.amazonaws.com/ai2-s2-scispacy/releases/v0.5.4/en_core_sci_md-0.5.4.tar.gz

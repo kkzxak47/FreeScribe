@@ -107,4 +107,3 @@ Mr. Jones presents with chronic back pain likely stemming from an occupational i
 
     assert is_consistent is False
     assert confidence < 1.0
-    assert 'next week' in issues

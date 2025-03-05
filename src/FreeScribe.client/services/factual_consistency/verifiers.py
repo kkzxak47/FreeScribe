@@ -1,31 +1,13 @@
-"""
-.. module:: factual_consistency
-   :synopsis: Module for verifying factual consistency between original text and generated summaries.
-
-This module provides a pipeline of different verification methods to ensure accuracy 
-in medical note generation. It includes named entity recognition and other verification
-techniques to validate that generated summaries accurately reflect the original content.
-
-.. note::
-    The module is designed specifically for medical/clinical text verification.
-
-.. warning::
-    This is not a general-purpose fact verification system and should only be used
-    for medical note generation scenarios.
-"""
-
-import os
-import spacy
-from typing import Tuple, List, Dict, Any
 import logging
+import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from enum import Enum
+from typing import List, Dict, Tuple
+
+import spacy
 
 logger = logging.getLogger(__name__)
-
-
-FACTUAL_CONFIDENCE_THRESHOLD = 0.6
 
 
 class VerificationMethod(Enum):
@@ -117,21 +99,22 @@ class NERVerifier(ConsistencyVerifier):
     .. warning::
         The 'en_core_web_trf' model requires significant memory resources.
     """
-    # LABELS: CARDINAL, DATE, EVENT, FAC, GPE, LANGUAGE, LAW, LOC, MONEY, NORP, ORDINAL, ORG, PERCENT, PERSON, PRODUCT, QUANTITY, TIME, WORK_OF_ART
-    LABEL_TO_BE_SKIPPED = {"CARDINAL"}
+    NLP_MODEL = "en_core_sci_md"
 
     def __init__(self):
         try:
-            self.nlp = spacy.load("en_core_web_trf")
+            self.nlp = spacy.load(self.NLP_MODEL)
         except OSError:
             logger.info("Downloading spaCy model...")
-            os.system("python -m spacy download en_core_web_trf")
-            self.nlp = spacy.load("en_core_web_trf")
+            ret = os.system(f"python -m spacy download {self.NLP_MODEL}")
+            if ret != 0:
+                raise EnvironmentError(f"{self.NLP_MODEL} not found and could not be downloaded")
+            self.nlp = spacy.load(self.NLP_MODEL)
 
     def verify(self, original_text: str, generated_summary: str) -> VerificationResult:
         """
         Verify factual consistency using named entity recognition.
-        
+
         Args:
             original_text: The original transcribed text
             generated_summary: The generated medical note/summary
@@ -158,9 +141,9 @@ class NERVerifier(ConsistencyVerifier):
         summary_doc = self.nlp(generated_summary.lower())
 
         # Extract named entities from both texts
-        original_entities = set(ent.text for ent in original_doc.ents if ent.label_ not in self.LABEL_TO_BE_SKIPPED)
-        summary_entities = set(ent.text for ent in summary_doc.ents if ent.label_ not in self.LABEL_TO_BE_SKIPPED)
-        logger.debug([[x.text, x.label_] for x in summary_doc.ents])
+        original_entities = set(ent.text for ent in original_doc.ents)
+        summary_entities = set(ent.text for ent in summary_doc.ents)
+        logger.debug(f"summary entities: {[(x.text, x.label_) for x in summary_doc.ents]}")
 
         # Find entities that appear in summary but not in original text
         inconsistent_entities = list(summary_entities - original_entities)
@@ -208,11 +191,11 @@ class ConsistencyPipeline:
     def verify(self, original_text: str, generated_summary: str) -> Dict[VerificationMethod, VerificationResult]:
         """
         Run all verification methods and return their results.
-        
+
         Args:
             original_text: The original transcribed text
             generated_summary: The generated medical note/summary
-            
+
         Returns:
             Dictionary mapping verification methods to their results
         """
@@ -234,10 +217,10 @@ class ConsistencyPipeline:
     def get_overall_consistency(self, results: Dict[VerificationMethod, VerificationResult]) -> Tuple[bool, List[str], float]:
         """
         Analyze results from all verification methods to determine overall consistency.
-        
+
         Args:
             results: Dictionary of verification results from each method
-            
+
         Returns:
             Tuple containing:
                 - is_consistent: True if all methods agree on consistency
@@ -260,33 +243,3 @@ class ConsistencyPipeline:
         is_consistent = all(result.is_consistent for result in results.values())
 
         return is_consistent, all_issues, overall_confidence
-
-
-# Create a global pipeline instance
-pipeline = ConsistencyPipeline()
-
-
-def verify_factual_consistency(original_text: str, generated_summary: str) -> Tuple[bool, List[str], float]:
-    """Verify factual consistency between original text and generated summary using multiple methods.
-
-    :param original_text: The original transcribed text
-    :type original_text: str
-    :param generated_summary: The generated medical note/summary
-    :type generated_summary: str
-    :return: Tuple containing verification results
-    :rtype: Tuple[bool, List[str], float]
-    
-    The return tuple contains:
-        - is_consistent (bool): True if all verification methods agree on consistency
-        - issues (List[str]): List of all issues found across methods
-        - confidence (float): Overall confidence score (0.0 to 1.0)
-
-    .. note::
-        A confidence score below 0.6 indicates potential factual inconsistencies.
-
-    .. warning::
-        This function may raise exceptions if verification methods fail.
-        Callers should handle potential errors appropriately.
-    """
-    results = pipeline.verify(original_text, generated_summary)
-    return pipeline.get_overall_consistency(results)
