@@ -442,6 +442,10 @@ def record_audio():
                     current_chunk = []
                     silent_duration = 0
                     record_duration = 0
+            else:
+                # Add a small delay to prevent high CPU usage
+                time.sleep(0.01)
+
 
         # Send any remaining audio chunk when recording stops
         if current_chunk:
