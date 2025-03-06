@@ -1493,7 +1493,7 @@ def set_full_view():
     
     
 
-    window.toggle_menu_bar(enable=True)
+    window.toggle_menu_bar(enable=True, is_recording=is_recording)
 
     # Reconfigure button styles and text
     mic_button.config(bg="red" if is_recording else DEFAULT_BUTTON_COLOUR,
