@@ -282,13 +282,9 @@ class SettingsWindow():
 
     def get_integer_settings(self) -> List[str]:
         """
-        Returns an extended list of setting keys that should be treated as integers.
-        
-        This includes settings from DEFAULT_SETTINGS_TABLE that have integer values,
-        as well as known integer settings that might not be in DEFAULT_SETTINGS_TABLE.
-        It also ensures there's no overlap with boolean settings.
-        
-        :returns: Extended list of setting keys that should be treated as integers
+        Returns a list of setting keys that have integer values in the DEFAULT_SETTINGS_TABLE.
+
+        :returns: List of setting keys with integer values
         :rtype: list
         """
         # Get base integer settings from DEFAULT_SETTINGS_TABLE
