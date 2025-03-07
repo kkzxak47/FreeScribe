@@ -295,27 +295,23 @@ class SettingsWindow():
                 
                 # Get the list of boolean and integer settings
                 boolean_settings = self.get_boolean_settings()
-                integer_settings = self.get_integer_settings()
-                
-                # Add known integer settings that might not be in DEFAULT_SETTINGS_TABLE
-                integer_settings.extend(["max_context_length", "max_length", "rep_pen_range", "top_k", 
-                                       SettingsKeys.LOCAL_LLM_CONTEXT_WINDOW.value])
-                
-                # Remove duplicates
-                integer_settings = list(set(integer_settings))
+                integer_settings = self.get_extended_integer_settings()
                 
                 for key, value in loaded_editable_settings.items():
                     if key in self.editable_settings:
-                        # Ensure boolean settings are loaded as boolean values
-                        if key in boolean_settings and isinstance(value, int):
-                            value = bool(value)
-                        # Ensure integer settings are loaded as integer values
-                        elif key in integer_settings and isinstance(value, str):
-                            try:
-                                value = int(value)
-                            except (ValueError, TypeError):
-                                # If conversion fails, keep the original value
-                                print(f"Warning: Could not convert {key} value to integer")
+                        # Process based on the expected type
+                        if key in boolean_settings:
+                            # Convert to boolean (handles both int and string representations)
+                            if isinstance(value, (int, str)) and not isinstance(value, bool):
+                                value = bool(int(value) if isinstance(value, str) else value)
+                        elif key in integer_settings:
+                            # Convert to integer (handles string representations)
+                            if isinstance(value, str):
+                                try:
+                                    value = int(value)
+                                except (ValueError, TypeError):
+                                    print(f"Warning: Could not convert {key} value to integer")
+                        
                         self.editable_settings[key] = value
 
                 if self.editable_settings["Use Docker Status Bar"] and self.main_window is not None:
@@ -357,17 +353,46 @@ class SettingsWindow():
         :rtype: list
         """
         return [key for key, value in self.DEFAULT_SETTINGS_TABLE.items() 
-                if type(value) is bool]
+                if isinstance(value, bool)]
 
-    def get_integer_settings(self):
+    def _get_integer_settings(self):
         """
         Returns a list of setting keys that have integer values in the DEFAULT_SETTINGS_TABLE.
+        Excludes boolean values since bool is a subclass of int in Python.
         
-        :returns: List of setting keys with integer values
+        :returns: List of setting keys with integer values (excluding booleans)
         :rtype: list
         """
         return [key for key, value in self.DEFAULT_SETTINGS_TABLE.items() 
-                if type(value) is int]
+                if isinstance(value, int) and not isinstance(value, bool)]
+
+    def get_extended_integer_settings(self):
+        """
+        Returns an extended list of setting keys that should be treated as integers.
+        
+        This includes settings from DEFAULT_SETTINGS_TABLE that have integer values,
+        as well as known integer settings that might not be in DEFAULT_SETTINGS_TABLE.
+        It also ensures there's no overlap with boolean settings.
+        
+        :returns: Extended list of setting keys that should be treated as integers
+        :rtype: list
+        """
+        # Get base integer settings
+        integer_settings = self._get_integer_settings()
+        
+        # Add known integer settings that might not be in DEFAULT_SETTINGS_TABLE
+        additional_integer_settings = [
+            "max_context_length", 
+            "max_length", 
+            "rep_pen_range", 
+            "top_k", 
+            SettingsKeys.LOCAL_LLM_CONTEXT_WINDOW.value
+        ]
+        integer_settings.extend(additional_integer_settings)
+        
+        # Remove duplicates and ensure no overlap with boolean settings
+        boolean_settings = self.get_boolean_settings()
+        return list(set(integer_settings) - set(boolean_settings))
 
     def save_settings(self, openai_api_key, aiscribe_text, aiscribe2_text, settings_window,
                     silence_cutoff):
@@ -389,26 +414,23 @@ class SettingsWindow():
 
         # Get the list of boolean and integer settings
         boolean_settings = self.get_boolean_settings()
-        integer_settings = self.get_integer_settings()
-        
-        # Add known integer settings that might not be in DEFAULT_SETTINGS_TABLE
-        integer_settings.extend(["max_context_length", "max_length", "rep_pen_range", "top_k", 
-                                SettingsKeys.LOCAL_LLM_CONTEXT_WINDOW.value])
-        
-        # Remove duplicates
-        integer_settings = list(set(integer_settings))
+        integer_settings = self.get_extended_integer_settings()
 
         for setting, entry in self.editable_settings_entries.items():     
             value = entry.get()
-            if setting in integer_settings:
+            
+            # Process based on the expected type
+            if setting in boolean_settings:
+                # Convert to boolean (handles both int and string representations)
+                if not isinstance(value, bool):
+                    value = bool(int(value) if isinstance(value, str) else value)
+            elif setting in integer_settings:
+                # Convert to integer
                 try:
                     value = int(value)
                 except (ValueError, TypeError):
-                    # If conversion fails, keep the original value
-                    logging.warning(f"Warning: Could not convert {setting} value to integer")
-            elif setting in boolean_settings:
-                # Convert integer checkbox values (0 and 1) to boolean values (False and True)
-                value = bool(value)
+                    print(f"Warning: Could not convert {setting} value to integer")
+                    
             self.editable_settings[setting] = value
 
         self.save_settings_to_file()

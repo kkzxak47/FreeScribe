@@ -798,13 +798,8 @@ class SettingsWindowUI:
         
         # Check if this is an integer setting
         integer_settings = []
-        if hasattr(self.settings, 'get_integer_settings'):
-            integer_settings = self.settings.get_integer_settings()
-            # Add known integer settings that might not be in DEFAULT_SETTINGS_TABLE
-            integer_settings.extend(["max_context_length", "max_length", "rep_pen_range", "top_k", 
-                                   SettingsKeys.LOCAL_LLM_CONTEXT_WINDOW.value])
-            # Remove duplicates
-            integer_settings = list(set(integer_settings))
+        if hasattr(self.settings, 'get_extended_integer_settings'):
+            integer_settings = self.settings.get_extended_integer_settings()
         
         # Ensure value is displayed correctly based on its type
         if setting_name in integer_settings and not isinstance(value, int):

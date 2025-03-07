@@ -10,6 +10,26 @@ from UI.SettingsWindow import SettingsWindow
 from UI.SettingsConstant import SettingsKeys
 
 
+# Helper function to get extended integer settings
+def get_extended_integer_settings(settings_instance):
+    """
+    Get integer settings extended with known integer settings.
+    
+    This helper function gets the base integer settings from the settings instance
+    and extends them with known integer settings that might not be in DEFAULT_SETTINGS_TABLE.
+    It also ensures there's no overlap with boolean settings.
+    
+    :param settings_instance: The settings instance
+    :return: List of integer setting keys
+    """
+    # Get base integer settings
+    integer_settings = settings_instance.get_extended_integer_settings()
+    
+    # Remove duplicates and ensure no overlap with boolean settings
+    boolean_settings = settings_instance.get_boolean_settings()
+    return list(set(integer_settings) - set(boolean_settings))
+
+
 @pytest.fixture
 def test_dir():
     """Create a temporary directory for test files."""
@@ -81,12 +101,8 @@ def test_boolean_settings_save_load(settings, test_dir):
 
 def test_integer_settings_save_load(settings, test_dir):
     """Test that integer settings are saved and loaded correctly."""
-    # Get integer settings
-    integer_settings = settings.get_integer_settings()
-    
-    # Add a known integer setting if the list is empty
-    if not integer_settings:
-        integer_settings = [SettingsKeys.LOCAL_LLM_CONTEXT_WINDOW.value]
+    # Get extended integer settings
+    integer_settings = get_extended_integer_settings(settings)
     
     # Ensure we have at least one integer setting to test
     assert len(integer_settings) > 0, "No integer settings found to test"
@@ -132,13 +148,13 @@ def test_mixed_settings_save_load(settings, test_dir):
     """Test that a mix of boolean and integer settings are saved and loaded correctly."""
     # Get boolean and integer settings
     boolean_settings = settings.get_boolean_settings()
-    integer_settings = settings.get_integer_settings()
+    integer_settings = get_extended_integer_settings(settings)
     
     # Ensure we have at least one of each type to test
     if not boolean_settings:
         pytest.skip("No boolean settings found to test")
     if not integer_settings:
-        integer_settings = [SettingsKeys.LOCAL_LLM_CONTEXT_WINDOW.value]
+        pytest.skip("No integer settings found to test")
     
     # Select one setting of each type to test
     bool_setting = boolean_settings[0]
@@ -219,12 +235,12 @@ def test_string_to_boolean_conversion(settings, test_dir):
 
 def test_string_to_integer_conversion(settings, test_dir):
     """Test that string representations of integers are converted correctly."""
-    # Get integer settings
-    integer_settings = settings.get_integer_settings()
+    # Get extended integer settings
+    integer_settings = get_extended_integer_settings(settings)
     
-    # Add a known integer setting if the list is empty
+    # Ensure we have at least one integer setting to test
     if not integer_settings:
-        integer_settings = [SettingsKeys.LOCAL_LLM_CONTEXT_WINDOW.value]
+        pytest.skip("No integer settings found to test")
     
     # Select an integer setting to test
     test_setting = integer_settings[0]
