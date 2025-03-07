@@ -460,7 +460,7 @@ class SettingsWindowUI:
                 continue
 
             value = self.settings.editable_settings[setting_name]
-            if value in [True, False]:
+            if type(value) is bool:
                 self.widgets[setting_name] = self._create_checkbox(frame, setting_name, setting_name, row)
             else:
                 self.widgets[setting_name] = self._create_entry(frame, setting_name, setting_name, row)
@@ -772,7 +772,9 @@ class SettingsWindowUI:
             row_idx (int): The row index at which to place the checkbox.
         """
         tk.Label(frame, text=label).grid(row=row_idx, column=0, padx=0, pady=5, sticky="w")
-        value = tk.IntVar(value=int(self.settings.editable_settings[setting_name]))
+        # Convert to bool to ensure proper type
+        current_value = bool(self.settings.editable_settings[setting_name])
+        value = tk.BooleanVar(value=current_value)
         checkbox = tk.Checkbutton(frame, variable=value)
         checkbox.grid(row=row_idx, column=1, padx=0, pady=5, sticky="w")
         self.settings.editable_settings_entries[setting_name] = value

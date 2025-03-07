@@ -99,8 +99,6 @@ class SettingsWindow():
             "singleline": False,
             "frmttriminc": False,
             "frmtrmblln": False,
-            "best_of": 2,
-            "Use best_of": False,
             SettingsKeys.LOCAL_WHISPER.value: True,
             SettingsKeys.WHISPER_ENDPOINT.value: "https://localhost:2224/whisperaudio",
             SettingsKeys.WHISPER_SERVER_API_KEY.value: "",
@@ -137,6 +135,8 @@ class SettingsWindow():
             SettingsKeys.WHISPER_LANGUAGE_CODE.value: "None (Auto Detect)",
             SettingsKeys.Enable_Word_Count_Validation.value : True,  # Default to enabled
             SettingsKeys.Enable_AI_Conversation_Validation.value : False,  # Default to disabled
+            # Best of N (Experimental), by default we only generate 1 completion of note, if this is set to a number greater than 1, we will generate N completions and pick the best one.
+            SettingsKeys.BEST_OF.value: 1,
         }
 
     def __init__(self):
@@ -193,6 +193,7 @@ class SettingsWindow():
             # "top_a",
             "top_k",
             "top_p",
+            SettingsKeys.BEST_OF.value,
             # "typical",
             # "sampler_order",
             # "singleline",
@@ -292,8 +293,16 @@ class SettingsWindow():
                 self.OPENAI_API_KEY = settings.get("openai_api_key", self.OPENAI_API_KEY)
                 # self.API_STYLE = settings.get("api_style", self.API_STYLE) # FUTURE FEATURE REVISION
                 loaded_editable_settings = settings.get("editable_settings", {})
+                
+                # Get the list of boolean settings from DEFAULT_SETTINGS_TABLE
+                boolean_settings = [key for key, value in self.DEFAULT_SETTINGS_TABLE.items() 
+                                   if isinstance(value, bool)]
+                
                 for key, value in loaded_editable_settings.items():
                     if key in self.editable_settings:
+                        # Ensure boolean settings are loaded as boolean values
+                        if key in boolean_settings and isinstance(value, int):
+                            value = bool(value)
                         self.editable_settings[key] = value
 
                 if self.editable_settings["Use Docker Status Bar"] and self.main_window is not None:
@@ -345,10 +354,17 @@ class SettingsWindow():
 
         self.editable_settings["Silence cut-off"] = silence_cutoff
 
+        # Get the list of boolean settings from DEFAULT_SETTINGS_TABLE
+        boolean_settings = [key for key, value in self.DEFAULT_SETTINGS_TABLE.items() 
+                           if isinstance(value, bool)]
+
         for setting, entry in self.editable_settings_entries.items():     
             value = entry.get()
             if setting in ["max_context_length", "max_length", "rep_pen_range", "top_k", SettingsKeys.LOCAL_LLM_CONTEXT_WINDOW.value]:
                 value = int(value)
+            elif setting in boolean_settings:
+                # Convert integer checkbox values (0 and 1) to boolean values (False and True)
+                value = bool(value)
             self.editable_settings[setting] = value
 
         self.save_settings_to_file()
