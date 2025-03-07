@@ -22,6 +22,7 @@ import os
 import tkinter as tk
 from tkinter import messagebox
 import requests
+import logging
 
 from UI.SettingsConstant import SettingsKeys, Architectures, FeatureToggle, DEFAULT_CONTEXT_WINDOW_SIZE
 from utils.file_utils import get_resource_path, get_file_path
@@ -181,8 +182,6 @@ class SettingsWindow():
             # "use_memory",
             # "use_authors_note",
             # "use_world_info",
-            # "Use best_of",
-            # "best_of",
             # "max_context_length",
             # "max_length",
             # "rep_pen",
@@ -294,15 +293,29 @@ class SettingsWindow():
                 # self.API_STYLE = settings.get("api_style", self.API_STYLE) # FUTURE FEATURE REVISION
                 loaded_editable_settings = settings.get("editable_settings", {})
                 
-                # Get the list of boolean settings from DEFAULT_SETTINGS_TABLE
-                boolean_settings = [key for key, value in self.DEFAULT_SETTINGS_TABLE.items() 
-                                   if isinstance(value, bool)]
+                # Get the list of boolean and integer settings
+                boolean_settings = self.get_boolean_settings()
+                integer_settings = self.get_integer_settings()
+                
+                # Add known integer settings that might not be in DEFAULT_SETTINGS_TABLE
+                integer_settings.extend(["max_context_length", "max_length", "rep_pen_range", "top_k", 
+                                       SettingsKeys.LOCAL_LLM_CONTEXT_WINDOW.value])
+                
+                # Remove duplicates
+                integer_settings = list(set(integer_settings))
                 
                 for key, value in loaded_editable_settings.items():
                     if key in self.editable_settings:
                         # Ensure boolean settings are loaded as boolean values
                         if key in boolean_settings and isinstance(value, int):
                             value = bool(value)
+                        # Ensure integer settings are loaded as integer values
+                        elif key in integer_settings and isinstance(value, str):
+                            try:
+                                value = int(value)
+                            except (ValueError, TypeError):
+                                # If conversion fails, keep the original value
+                                print(f"Warning: Could not convert {key} value to integer")
                         self.editable_settings[key] = value
 
                 if self.editable_settings["Use Docker Status Bar"] and self.main_window is not None:
@@ -336,6 +349,26 @@ class SettingsWindow():
         with open(get_resource_path('settings.txt'), 'w') as file:
             json.dump(settings, file)
 
+    def get_boolean_settings(self):
+        """
+        Returns a list of setting keys that have boolean values in the DEFAULT_SETTINGS_TABLE.
+        
+        :returns: List of setting keys with boolean values
+        :rtype: list
+        """
+        return [key for key, value in self.DEFAULT_SETTINGS_TABLE.items() 
+                if type(value) is bool]
+
+    def get_integer_settings(self):
+        """
+        Returns a list of setting keys that have integer values in the DEFAULT_SETTINGS_TABLE.
+        
+        :returns: List of setting keys with integer values
+        :rtype: list
+        """
+        return [key for key, value in self.DEFAULT_SETTINGS_TABLE.items() 
+                if type(value) is int]
+
     def save_settings(self, openai_api_key, aiscribe_text, aiscribe2_text, settings_window,
                     silence_cutoff):
         """
@@ -354,14 +387,25 @@ class SettingsWindow():
 
         self.editable_settings["Silence cut-off"] = silence_cutoff
 
-        # Get the list of boolean settings from DEFAULT_SETTINGS_TABLE
-        boolean_settings = [key for key, value in self.DEFAULT_SETTINGS_TABLE.items() 
-                           if isinstance(value, bool)]
+        # Get the list of boolean and integer settings
+        boolean_settings = self.get_boolean_settings()
+        integer_settings = self.get_integer_settings()
+        
+        # Add known integer settings that might not be in DEFAULT_SETTINGS_TABLE
+        integer_settings.extend(["max_context_length", "max_length", "rep_pen_range", "top_k", 
+                                SettingsKeys.LOCAL_LLM_CONTEXT_WINDOW.value])
+        
+        # Remove duplicates
+        integer_settings = list(set(integer_settings))
 
         for setting, entry in self.editable_settings_entries.items():     
             value = entry.get()
-            if setting in ["max_context_length", "max_length", "rep_pen_range", "top_k", SettingsKeys.LOCAL_LLM_CONTEXT_WINDOW.value]:
-                value = int(value)
+            if setting in integer_settings:
+                try:
+                    value = int(value)
+                except (ValueError, TypeError):
+                    # If conversion fails, keep the original value
+                    logging.warning(f"Warning: Could not convert {setting} value to integer")
             elif setting in boolean_settings:
                 # Convert integer checkbox values (0 and 1) to boolean values (False and True)
                 value = bool(value)

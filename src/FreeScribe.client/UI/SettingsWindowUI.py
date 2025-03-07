@@ -20,6 +20,7 @@ Classes:
 """
 
 import json
+import logging
 import tkinter as tk
 from tkinter import ttk, messagebox
 import threading
@@ -459,8 +460,8 @@ class SettingsWindowUI:
                 row += 1
                 continue
 
-            value = self.settings.editable_settings[setting_name]
-            if type(value) is bool:
+            boolean_settings = self.settings.get_boolean_settings()
+            if setting_name in boolean_settings:
                 self.widgets[setting_name] = self._create_checkbox(frame, setting_name, setting_name, row)
             else:
                 self.widgets[setting_name] = self._create_entry(frame, setting_name, setting_name, row)
@@ -794,6 +795,25 @@ class SettingsWindowUI:
         """
         tk.Label(frame, text=label).grid(row=row_idx, column=0, padx=0, pady=5, sticky="w")
         value = self.settings.editable_settings[setting_name]
+        
+        # Check if this is an integer setting
+        integer_settings = []
+        if hasattr(self.settings, 'get_integer_settings'):
+            integer_settings = self.settings.get_integer_settings()
+            # Add known integer settings that might not be in DEFAULT_SETTINGS_TABLE
+            integer_settings.extend(["max_context_length", "max_length", "rep_pen_range", "top_k", 
+                                   SettingsKeys.LOCAL_LLM_CONTEXT_WINDOW.value])
+            # Remove duplicates
+            integer_settings = list(set(integer_settings))
+        
+        # Ensure value is displayed correctly based on its type
+        if setting_name in integer_settings and not isinstance(value, int):
+            try:
+                value = int(value)
+            except (ValueError, TypeError):
+                # If conversion fails, keep the original value
+                logging.warning(f"Warning: Could not convert {setting_name} value to integer")
+        
         entry = tk.Entry(frame, width=LONG_ENTRY_WIDTH)
         entry.insert(0, str(value))
         entry.grid(row=row_idx, column=1, padx=0, pady=5, sticky="w")
