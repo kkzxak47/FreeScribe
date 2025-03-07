@@ -12,19 +12,18 @@ from UI.SettingsConstant import SettingsKeys
 
 
 # Helper function to get extended integer settings
-def get_extended_integer_settings(settings_instance: SettingsWindow) -> List[str]:
+def get_integer_settings(settings_instance: SettingsWindow) -> List[str]:
     """
-    Get integer settings extended with known integer settings.
+    Get integer settings.
     
-    This helper function gets the base integer settings from the settings instance
-    and extends them with known integer settings that might not be in DEFAULT_SETTINGS_TABLE.
-    It also ensures there's no overlap with boolean settings.
+    This helper function gets the integer settings from the settings instance's setting_types dictionary.
     
     :param settings_instance: The settings instance
     :return: List of integer setting keys
     """
-    # Use the get_extended_integer_settings method directly
-    return settings_instance.get_integer_settings()
+    # Get integer settings from setting_types dictionary
+    return [key for key, type_value in settings_instance.setting_types.items() 
+            if type_value == int]
 
 
 # Helper function to write a settings file with custom content
@@ -87,7 +86,8 @@ def settings(test_dir):
 @pytest.fixture
 def boolean_setting(settings):
     """Get a boolean setting for testing."""
-    boolean_settings = settings.get_boolean_settings()
+    boolean_settings = [key for key, type_value in settings.setting_types.items() 
+                        if type_value == bool]
     if not boolean_settings:
         pytest.skip("No boolean settings found to test")
     return boolean_settings[0]
@@ -96,7 +96,7 @@ def boolean_setting(settings):
 @pytest.fixture
 def integer_setting(settings):
     """Get an integer setting for testing."""
-    integer_settings = get_extended_integer_settings(settings)
+    integer_settings = get_integer_settings(settings)
     if not integer_settings:
         pytest.skip("No integer settings found to test")
     return integer_settings[0]
@@ -267,13 +267,9 @@ def test_invalid_string_to_integer_conversion(settings, integer_setting):
         invalid_value = "invalid_int"
         settings.editable_settings[integer_setting] = invalid_value
         
-        # Get the boolean and integer settings lists
-        boolean_settings = settings.get_boolean_settings()
-        integer_settings = settings.get_integer_settings()
-        
         # Call the convert_setting_value method directly
         result = settings.convert_setting_value(
-            integer_setting, invalid_value, boolean_settings, integer_settings
+            integer_setting, invalid_value
         )
         
         # The method should return the original value when conversion fails

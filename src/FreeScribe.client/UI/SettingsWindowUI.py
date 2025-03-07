@@ -460,7 +460,8 @@ class SettingsWindowUI:
                 row += 1
                 continue
 
-            boolean_settings = self.settings.get_boolean_settings()
+            boolean_settings = [key for key, type_value in self.settings.setting_types.items() 
+                            if type_value == bool]
             if setting_name in boolean_settings:
                 self.widgets[setting_name] = self._create_checkbox(frame, setting_name, setting_name, row)
             else:

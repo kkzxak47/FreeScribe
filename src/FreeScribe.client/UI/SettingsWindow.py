@@ -22,6 +22,7 @@ import os
 import tkinter as tk
 from tkinter import messagebox
 import requests
+import logging
 from typing import List, Any, Optional
 
 from UI.SettingsConstant import SettingsKeys, Architectures, FeatureToggle, DEFAULT_CONTEXT_WINDOW_SIZE
@@ -49,6 +50,9 @@ class SettingsWindow():
     editable_settings : dict
         A dictionary containing user-editable settings such as model parameters, audio 
         settings, and real-time processing configurations.
+    
+    setting_types : dict
+        A dictionary mapping setting keys to their expected types (bool, int, or str).
     
     Methods
     -------
@@ -141,15 +145,24 @@ class SettingsWindow():
 
     def __init__(self):
         """Initializes the ApplicationSettings with default values."""
-
-
         self.OPENAI_API_KEY = "None"
         # self.API_STYLE = "OpenAI" # FUTURE FEATURE REVISION
         self.main_window = None
         self.scribe_template_values = []
         self.scribe_template_mapping = {}
-
         
+        # Initialize setting types dictionary
+        self.setting_types = {}
+        for key, value in self.DEFAULT_SETTINGS_TABLE.items():
+            if isinstance(value, bool):
+                self.setting_types[key] = bool
+            elif isinstance(value, int):
+                self.setting_types[key] = int
+            elif isinstance(value, float):
+                self.setting_types[key] = float
+            else:
+                self.setting_types[key] = str
+
         self.general_settings = [
             "Show Welcome Message",
             "Show Scrub PHI"
@@ -270,78 +283,40 @@ class SettingsWindow():
             self.scribe_template_values = ["Settings Template"]
             self.scribe_template_mapping["Settings Template"] = (self.AISCRIBE, self.AISCRIBE2)
 
-    def get_boolean_settings(self) -> List[str]:
-        """
-        Returns a list of setting keys that have boolean values in the DEFAULT_SETTINGS_TABLE.
-        
-        :returns: List of setting keys with boolean values
-        :rtype: list
-        """
-        return [key for key, value in self.DEFAULT_SETTINGS_TABLE.items() 
-                if isinstance(value, bool)]
-
-    def get_integer_settings(self) -> List[str]:
-        """
-        Returns a list of setting keys that have integer values in the DEFAULT_SETTINGS_TABLE.
-
-        :returns: List of setting keys with integer values
-        :rtype: list
-        """
-        # Get base integer settings from DEFAULT_SETTINGS_TABLE
-        integer_settings = [key for key, value in self.DEFAULT_SETTINGS_TABLE.items()
-                            if isinstance(value, int) and not isinstance(value, bool)]
-
-        # Remove duplicates and ensure no overlap with boolean settings
-        # This prevents type conversion conflicts where a setting might be treated as both boolean and integer
-        boolean_settings = self.get_boolean_settings()
-        return list(set(integer_settings) - set(boolean_settings))
-
-    def convert_setting_value(self, setting: str, value: Any, 
-                             boolean_settings: Optional[List[str]] = None, 
-                             integer_settings: Optional[List[str]] = None) -> Any:
+    def convert_setting_value(self, setting: str, value: Any) -> Any:
         """
         Convert a setting value to the appropriate type based on the setting name.
         
         This helper method determines the correct type conversion for a setting value
-        based on whether it's a boolean or integer setting.
+        based on the type information stored in setting_types.
         
         :param setting: The name of the setting
         :type setting: str
         :param value: The value to convert
         :type value: Any
-        :param boolean_settings: List of boolean setting names, defaults to None
-        :type boolean_settings: list, optional
-        :param integer_settings: List of integer setting names, defaults to None
-        :type integer_settings: list, optional
         :returns: The converted value
         :rtype: Any
         """
-        # Get the lists if not provided
-        if boolean_settings is None:
-            boolean_settings = self.get_boolean_settings()
-        if integer_settings is None:
-            integer_settings = self.get_integer_settings()
+        if setting not in self.setting_types:
+            return value
             
-        # Convert based on setting type
-        if setting in boolean_settings:
-            # Convert to boolean (handles both int and string representations)
-            if not isinstance(value, bool):
-                try:
-                    return bool(int(value) if isinstance(value, str) else value)
-                except (ValueError, TypeError):
-                    print(f"Warning: Could not convert {setting} value to boolean")
-                    return value
-        elif setting in integer_settings:
-            # Convert to integer
-            if not isinstance(value, int) or isinstance(value, bool):  # bool is a subclass of int
-                try:
-                    return int(value)
-                except (ValueError, TypeError):
-                    print(f"Warning: Could not convert {setting} value to integer")
-                    return value
+        target_type = self.setting_types[setting]
         
-        # Return the original value if no conversion is needed
-        return value
+        # If value is already the correct type, return it
+        if isinstance(value, target_type):
+            return value
+            
+        try:
+            if target_type == bool:
+                # Convert to boolean (handles both int and string representations)
+                return bool(int(value) if isinstance(value, str) else value)
+            elif target_type in (int, float):
+                return target_type(value)
+            else:
+                return str(value)
+        except (ValueError, TypeError):
+            logging.warning(f"Warning: Could not convert {setting} value to {target_type}")
+            return value
 
     def load_settings_from_file(self, filename='settings.txt'):
         """
@@ -365,18 +340,10 @@ class SettingsWindow():
                 # self.API_STYLE = settings.get("api_style", self.API_STYLE) # FUTURE FEATURE REVISION
                 loaded_editable_settings = settings.get("editable_settings", {})
                 
-                # Get the list of boolean and integer settings for proper type conversion
-                # This ensures that settings loaded from the file are converted to the correct types
-                # For example, "1" -> True for boolean settings and "42" -> 42 for integer settings
-                boolean_settings = self.get_boolean_settings()
-                integer_settings = self.get_integer_settings()
-                
                 for key, value in loaded_editable_settings.items():
                     if key in self.editable_settings:
                         # Convert the value to the appropriate type based on the setting name
-                        self.editable_settings[key] = self.convert_setting_value(
-                            key, value, boolean_settings, integer_settings
-                        )
+                        self.editable_settings[key] = self.convert_setting_value(key, value)
 
                 if self.editable_settings["Use Docker Status Bar"] and self.main_window is not None:
                     self.main_window.create_docker_status_bar()
@@ -430,20 +397,10 @@ class SettingsWindow():
 
         self.editable_settings["Silence cut-off"] = silence_cutoff
 
-        # Get the list of boolean and integer settings for proper type conversion
-        # This is crucial when saving settings from UI elements (like Entry widgets or Checkbuttons)
-        # where values might be strings or other types that need conversion to the correct type
-        # before saving to the settings file
-        boolean_settings = self.get_boolean_settings()
-        integer_settings = self.get_integer_settings()
-
         for setting, entry in self.editable_settings_entries.items():     
             value = entry.get()
             # Convert the value to the appropriate type based on the setting name
-            # This ensures consistent types in the settings file regardless of the UI input
-            self.editable_settings[setting] = self.convert_setting_value(
-                setting, value, boolean_settings, integer_settings
-            )
+            self.editable_settings[setting] = self.convert_setting_value(setting, value)
 
         self.save_settings_to_file()
 
