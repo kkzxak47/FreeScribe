@@ -796,18 +796,9 @@ class SettingsWindowUI:
         tk.Label(frame, text=label).grid(row=row_idx, column=0, padx=0, pady=5, sticky="w")
         value = self.settings.editable_settings[setting_name]
         
-        # Check if this is an integer setting
-        integer_settings = []
-        if hasattr(self.settings, 'get_extended_integer_settings'):
-            integer_settings = self.settings.get_extended_integer_settings()
-        
-        # Ensure value is displayed correctly based on its type
-        if setting_name in integer_settings and not isinstance(value, int):
-            try:
-                value = int(value)
-            except (ValueError, TypeError):
-                # If conversion fails, keep the original value
-                logging.warning(f"Warning: Could not convert {setting_name} value to integer")
+        # Convert the value to the appropriate type using the helper method
+        if hasattr(self.settings, 'convert_setting_value'):
+            value = self.settings.convert_setting_value(setting_name, value)
         
         entry = tk.Entry(frame, width=LONG_ENTRY_WIDTH)
         entry.insert(0, str(value))

@@ -271,80 +271,6 @@ class SettingsWindow():
             self.scribe_template_values = ["Settings Template"]
             self.scribe_template_mapping["Settings Template"] = (self.AISCRIBE, self.AISCRIBE2)
 
-    def load_settings_from_file(self, filename='settings.txt'):
-        """
-        Loads settings from a JSON file.
-
-        The settings are read from 'settings.txt'. If the file does not exist or cannot be parsed,
-        default settings will be used. The method updates the instance attributes with loaded values.
-
-        Returns:
-            tuple: A tuple containing the IPs, ports, SSL settings, and API key.
-        """
-        try:
-            with open(get_resource_path(filename), 'r') as file:
-                try:
-                    settings = json.load(file)
-                except json.JSONDecodeError:
-                    print("Error loading settings file. Using default settings.")
-                    return self.OPENAI_API_KEY
-
-                self.OPENAI_API_KEY = settings.get("openai_api_key", self.OPENAI_API_KEY)
-                # self.API_STYLE = settings.get("api_style", self.API_STYLE) # FUTURE FEATURE REVISION
-                loaded_editable_settings = settings.get("editable_settings", {})
-                
-                # Get the list of boolean and integer settings
-                boolean_settings = self.get_boolean_settings()
-                integer_settings = self.get_extended_integer_settings()
-                
-                for key, value in loaded_editable_settings.items():
-                    if key in self.editable_settings:
-                        # Process based on the expected type
-                        if key in boolean_settings:
-                            # Convert to boolean (handles both int and string representations)
-                            if isinstance(value, (int, str)) and not isinstance(value, bool):
-                                value = bool(int(value) if isinstance(value, str) else value)
-                        elif key in integer_settings:
-                            # Convert to integer (handles string representations)
-                            if isinstance(value, str):
-                                try:
-                                    value = int(value)
-                                except (ValueError, TypeError):
-                                    print(f"Warning: Could not convert {key} value to integer")
-                        
-                        self.editable_settings[key] = value
-
-                if self.editable_settings["Use Docker Status Bar"] and self.main_window is not None:
-                    self.main_window.create_docker_status_bar()
-                
-                if self.editable_settings["Enable Scribe Template"] and self.main_window is not None:
-                    self.main_window.create_scribe_template()
-
-
-                return self.OPENAI_API_KEY
-        except FileNotFoundError:
-            print("Settings file not found. Using default settings.")
-            return self.OPENAI_API_KEY
-
-    def save_settings_to_file(self):
-        """
-        Saves the current settings to a JSON file.
-
-        The settings are written to 'settings.txt'. This includes all application settings 
-        such as IP addresses, ports, SSL settings, and editable settings.
-
-        Returns:
-            None
-        """
-        settings = {
-            "openai_api_key": self.OPENAI_API_KEY,
-            "editable_settings": self.editable_settings,
-            # "api_style": self.API_STYLE # FUTURE FEATURE REVISION
-            "app_version": get_application_version()
-        }
-        with open(get_resource_path('settings.txt'), 'w') as file:
-            json.dump(settings, file)
-
     def get_boolean_settings(self):
         """
         Returns a list of setting keys that have boolean values in the DEFAULT_SETTINGS_TABLE.
@@ -394,6 +320,115 @@ class SettingsWindow():
         boolean_settings = self.get_boolean_settings()
         return list(set(integer_settings) - set(boolean_settings))
 
+    def convert_setting_value(self, setting, value, boolean_settings=None, integer_settings=None):
+        """
+        Convert a setting value to the appropriate type based on the setting name.
+        
+        This helper method determines the correct type conversion for a setting value
+        based on whether it's a boolean or integer setting.
+        
+        :param setting: The name of the setting
+        :type setting: str
+        :param value: The value to convert
+        :type value: Any
+        :param boolean_settings: List of boolean setting names, defaults to None
+        :type boolean_settings: list, optional
+        :param integer_settings: List of integer setting names, defaults to None
+        :type integer_settings: list, optional
+        :returns: The converted value
+        :rtype: Any
+        """
+        # Get the lists if not provided
+        if boolean_settings is None:
+            boolean_settings = self.get_boolean_settings()
+        if integer_settings is None:
+            integer_settings = self.get_extended_integer_settings()
+            
+        # Convert based on setting type
+        if setting in boolean_settings:
+            # Convert to boolean (handles both int and string representations)
+            if not isinstance(value, bool):
+                try:
+                    return bool(int(value) if isinstance(value, str) else value)
+                except (ValueError, TypeError):
+                    print(f"Warning: Could not convert {setting} value to boolean")
+                    return value
+        elif setting in integer_settings:
+            # Convert to integer
+            if not isinstance(value, int) or isinstance(value, bool):  # bool is a subclass of int
+                try:
+                    return int(value)
+                except (ValueError, TypeError):
+                    print(f"Warning: Could not convert {setting} value to integer")
+                    return value
+        
+        # Return the original value if no conversion is needed
+        return value
+
+    def load_settings_from_file(self, filename='settings.txt'):
+        """
+        Loads settings from a JSON file.
+
+        The settings are read from 'settings.txt'. If the file does not exist or cannot be parsed,
+        default settings will be used. The method updates the instance attributes with loaded values.
+
+        Returns:
+            tuple: A tuple containing the IPs, ports, SSL settings, and API key.
+        """
+        try:
+            with open(get_resource_path(filename), 'r') as file:
+                try:
+                    settings = json.load(file)
+                except json.JSONDecodeError:
+                    print("Error loading settings file. Using default settings.")
+                    return self.OPENAI_API_KEY
+
+                self.OPENAI_API_KEY = settings.get("openai_api_key", self.OPENAI_API_KEY)
+                # self.API_STYLE = settings.get("api_style", self.API_STYLE) # FUTURE FEATURE REVISION
+                loaded_editable_settings = settings.get("editable_settings", {})
+                
+                # Get the list of boolean and integer settings
+                boolean_settings = self.get_boolean_settings()
+                integer_settings = self.get_extended_integer_settings()
+                
+                for key, value in loaded_editable_settings.items():
+                    if key in self.editable_settings:
+                        # Convert the value to the appropriate type
+                        self.editable_settings[key] = self.convert_setting_value(
+                            key, value, boolean_settings, integer_settings
+                        )
+
+                if self.editable_settings["Use Docker Status Bar"] and self.main_window is not None:
+                    self.main_window.create_docker_status_bar()
+                
+                if self.editable_settings["Enable Scribe Template"] and self.main_window is not None:
+                    self.main_window.create_scribe_template()
+
+
+                return self.OPENAI_API_KEY
+        except FileNotFoundError:
+            print("Settings file not found. Using default settings.")
+            return self.OPENAI_API_KEY
+
+    def save_settings_to_file(self):
+        """
+        Saves the current settings to a JSON file.
+
+        The settings are written to 'settings.txt'. This includes all application settings 
+        such as IP addresses, ports, SSL settings, and editable settings.
+
+        Returns:
+            None
+        """
+        settings = {
+            "openai_api_key": self.OPENAI_API_KEY,
+            "editable_settings": self.editable_settings,
+            # "api_style": self.API_STYLE # FUTURE FEATURE REVISION
+            "app_version": get_application_version()
+        }
+        with open(get_resource_path('settings.txt'), 'w') as file:
+            json.dump(settings, file)
+
     def save_settings(self, openai_api_key, aiscribe_text, aiscribe2_text, settings_window,
                     silence_cutoff):
         """
@@ -418,20 +453,10 @@ class SettingsWindow():
 
         for setting, entry in self.editable_settings_entries.items():     
             value = entry.get()
-            
-            # Process based on the expected type
-            if setting in boolean_settings:
-                # Convert to boolean (handles both int and string representations)
-                if not isinstance(value, bool):
-                    value = bool(int(value) if isinstance(value, str) else value)
-            elif setting in integer_settings:
-                # Convert to integer
-                try:
-                    value = int(value)
-                except (ValueError, TypeError):
-                    print(f"Warning: Could not convert {setting} value to integer")
-                    
-            self.editable_settings[setting] = value
+            # Convert the value to the appropriate type
+            self.editable_settings[setting] = self.convert_setting_value(
+                setting, value, boolean_settings, integer_settings
+            )
 
         self.save_settings_to_file()
 
