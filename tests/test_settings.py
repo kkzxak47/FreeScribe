@@ -86,17 +86,9 @@ def boolean_setting():
     """Get a specific boolean setting for testing."""
     # Use a known boolean setting from DEFAULT_SETTINGS_TABLE
     return "use_story"  # This is a known boolean setting
-def boolean_setting():
-    """Get a specific boolean setting for testing."""
-    # Use a known boolean setting from DEFAULT_SETTINGS_TABLE
-    return "use_story"  # This is a known boolean setting
 
 
 @pytest.fixture
-def integer_setting():
-    """Get a specific integer setting for testing."""
-    # Use a known integer setting from DEFAULT_SETTINGS_TABLE
-    return "max_context_length"  # This is a known integer setting
 def integer_setting():
     """Get a specific integer setting for testing."""
     # Use a known integer setting from DEFAULT_SETTINGS_TABLE
