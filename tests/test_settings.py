@@ -3,6 +3,7 @@ import json
 import pytest
 import tempfile
 import shutil
+from typing import List, Dict, Any, Union, Optional
 from unittest.mock import patch, MagicMock
 
 # Import the SettingsWindow class with the correct paths
@@ -11,7 +12,7 @@ from UI.SettingsConstant import SettingsKeys
 
 
 # Helper function to get extended integer settings
-def get_extended_integer_settings(settings_instance):
+def get_extended_integer_settings(settings_instance: SettingsWindow) -> List[str]:
     """
     Get integer settings extended with known integer settings.
     
@@ -27,7 +28,7 @@ def get_extended_integer_settings(settings_instance):
 
 
 # Helper function to write a settings file with custom content
-def write_settings_file(test_dir, content, filename='settings.txt'):
+def write_settings_file(test_dir: str, content: Union[str, Dict[str, Any]], filename: str = 'settings.txt') -> str:
     """
     Write content to a settings file in the test directory.
     
@@ -46,7 +47,7 @@ def write_settings_file(test_dir, content, filename='settings.txt'):
 
 
 # Helper function to verify settings remain unchanged
-def verify_settings_unchanged(original_settings, current_settings):
+def verify_settings_unchanged(original_settings: Dict[str, Any], current_settings: Dict[str, Any]) -> None:
     """
     Verify that settings remain unchanged.
     

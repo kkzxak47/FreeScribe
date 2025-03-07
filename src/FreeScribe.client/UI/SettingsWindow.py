@@ -23,6 +23,7 @@ import tkinter as tk
 from tkinter import messagebox
 import requests
 import logging
+from typing import List, Dict, Any, Union, Optional, Tuple
 
 from UI.SettingsConstant import SettingsKeys, Architectures, FeatureToggle, DEFAULT_CONTEXT_WINDOW_SIZE
 from utils.file_utils import get_resource_path, get_file_path
@@ -271,7 +272,7 @@ class SettingsWindow():
             self.scribe_template_values = ["Settings Template"]
             self.scribe_template_mapping["Settings Template"] = (self.AISCRIBE, self.AISCRIBE2)
 
-    def get_boolean_settings(self):
+    def get_boolean_settings(self) -> List[str]:
         """
         Returns a list of setting keys that have boolean values in the DEFAULT_SETTINGS_TABLE.
         
@@ -281,7 +282,7 @@ class SettingsWindow():
         return [key for key, value in self.DEFAULT_SETTINGS_TABLE.items() 
                 if isinstance(value, bool)]
 
-    def _get_integer_settings(self):
+    def _get_integer_settings(self) -> List[str]:
         """
         Returns a list of setting keys that have integer values in the DEFAULT_SETTINGS_TABLE.
         Excludes boolean values since bool is a subclass of int in Python.
@@ -292,7 +293,7 @@ class SettingsWindow():
         return [key for key, value in self.DEFAULT_SETTINGS_TABLE.items() 
                 if isinstance(value, int) and not isinstance(value, bool)]
 
-    def get_extended_integer_settings(self):
+    def get_extended_integer_settings(self) -> List[str]:
         """
         Returns an extended list of setting keys that should be treated as integers.
         
@@ -320,7 +321,9 @@ class SettingsWindow():
         boolean_settings = self.get_boolean_settings()
         return list(set(integer_settings) - set(boolean_settings))
 
-    def convert_setting_value(self, setting, value, boolean_settings=None, integer_settings=None):
+    def convert_setting_value(self, setting: str, value: Any, 
+                             boolean_settings: Optional[List[str]] = None, 
+                             integer_settings: Optional[List[str]] = None) -> Any:
         """
         Convert a setting value to the appropriate type based on the setting name.
         
