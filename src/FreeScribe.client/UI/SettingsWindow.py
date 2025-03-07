@@ -22,13 +22,11 @@ import os
 import tkinter as tk
 from tkinter import messagebox
 import requests
-import logging
-from typing import List, Dict, Any, Union, Optional, Tuple
+from typing import List, Any, Optional
 
 from UI.SettingsConstant import SettingsKeys, Architectures, FeatureToggle, DEFAULT_CONTEXT_WINDOW_SIZE
 from utils.file_utils import get_resource_path, get_file_path
 from utils.utils import get_application_version
-from Model import ModelManager
 from utils.ip_utils import is_valid_url
 import multiprocessing
 
@@ -282,18 +280,7 @@ class SettingsWindow():
         return [key for key, value in self.DEFAULT_SETTINGS_TABLE.items() 
                 if isinstance(value, bool)]
 
-    def _get_integer_settings(self) -> List[str]:
-        """
-        Returns a list of setting keys that have integer values in the DEFAULT_SETTINGS_TABLE.
-        Excludes boolean values since bool is a subclass of int in Python.
-        
-        :returns: List of setting keys with integer values (excluding booleans)
-        :rtype: list
-        """
-        return [key for key, value in self.DEFAULT_SETTINGS_TABLE.items() 
-                if isinstance(value, int) and not isinstance(value, bool)]
-
-    def get_extended_integer_settings(self) -> List[str]:
+    def get_integer_settings(self) -> List[str]:
         """
         Returns an extended list of setting keys that should be treated as integers.
         
@@ -304,20 +291,12 @@ class SettingsWindow():
         :returns: Extended list of setting keys that should be treated as integers
         :rtype: list
         """
-        # Get base integer settings
-        integer_settings = self._get_integer_settings()
-        
-        # Add known integer settings that might not be in DEFAULT_SETTINGS_TABLE
-        additional_integer_settings = [
-            "max_context_length", 
-            "max_length", 
-            "rep_pen_range", 
-            "top_k", 
-            SettingsKeys.LOCAL_LLM_CONTEXT_WINDOW.value
-        ]
-        integer_settings.extend(additional_integer_settings)
-        
+        # Get base integer settings from DEFAULT_SETTINGS_TABLE
+        integer_settings = [key for key, value in self.DEFAULT_SETTINGS_TABLE.items()
+                            if isinstance(value, int) and not isinstance(value, bool)]
+
         # Remove duplicates and ensure no overlap with boolean settings
+        # This prevents type conversion conflicts where a setting might be treated as both boolean and integer
         boolean_settings = self.get_boolean_settings()
         return list(set(integer_settings) - set(boolean_settings))
 
@@ -345,7 +324,7 @@ class SettingsWindow():
         if boolean_settings is None:
             boolean_settings = self.get_boolean_settings()
         if integer_settings is None:
-            integer_settings = self.get_extended_integer_settings()
+            integer_settings = self.get_integer_settings()
             
         # Convert based on setting type
         if setting in boolean_settings:
@@ -390,13 +369,15 @@ class SettingsWindow():
                 # self.API_STYLE = settings.get("api_style", self.API_STYLE) # FUTURE FEATURE REVISION
                 loaded_editable_settings = settings.get("editable_settings", {})
                 
-                # Get the list of boolean and integer settings
+                # Get the list of boolean and integer settings for proper type conversion
+                # This ensures that settings loaded from the file are converted to the correct types
+                # For example, "1" -> True for boolean settings and "42" -> 42 for integer settings
                 boolean_settings = self.get_boolean_settings()
-                integer_settings = self.get_extended_integer_settings()
+                integer_settings = self.get_integer_settings()
                 
                 for key, value in loaded_editable_settings.items():
                     if key in self.editable_settings:
-                        # Convert the value to the appropriate type
+                        # Convert the value to the appropriate type based on the setting name
                         self.editable_settings[key] = self.convert_setting_value(
                             key, value, boolean_settings, integer_settings
                         )
@@ -406,11 +387,14 @@ class SettingsWindow():
                 
                 if self.editable_settings["Enable Scribe Template"] and self.main_window is not None:
                     self.main_window.create_scribe_template()
-
-
+                
                 return self.OPENAI_API_KEY
         except FileNotFoundError:
             print("Settings file not found. Using default settings.")
+            self.save_settings_to_file()
+            return self.OPENAI_API_KEY
+        except Exception as e:
+            print(f"Error loading settings: {e}")
             return self.OPENAI_API_KEY
 
     def save_settings_to_file(self):
@@ -450,13 +434,17 @@ class SettingsWindow():
 
         self.editable_settings["Silence cut-off"] = silence_cutoff
 
-        # Get the list of boolean and integer settings
+        # Get the list of boolean and integer settings for proper type conversion
+        # This is crucial when saving settings from UI elements (like Entry widgets or Checkbuttons)
+        # where values might be strings or other types that need conversion to the correct type
+        # before saving to the settings file
         boolean_settings = self.get_boolean_settings()
-        integer_settings = self.get_extended_integer_settings()
+        integer_settings = self.get_integer_settings()
 
         for setting, entry in self.editable_settings_entries.items():     
             value = entry.get()
-            # Convert the value to the appropriate type
+            # Convert the value to the appropriate type based on the setting name
+            # This ensures consistent types in the settings file regardless of the UI input
             self.editable_settings[setting] = self.convert_setting_value(
                 setting, value, boolean_settings, integer_settings
             )

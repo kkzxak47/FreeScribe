@@ -24,7 +24,7 @@ def get_extended_integer_settings(settings_instance: SettingsWindow) -> List[str
     :return: List of integer setting keys
     """
     # Use the get_extended_integer_settings method directly
-    return settings_instance.get_extended_integer_settings()
+    return settings_instance.get_integer_settings()
 
 
 # Helper function to write a settings file with custom content
@@ -269,7 +269,7 @@ def test_invalid_string_to_integer_conversion(settings, integer_setting):
         
         # Get the boolean and integer settings lists
         boolean_settings = settings.get_boolean_settings()
-        integer_settings = settings.get_extended_integer_settings()
+        integer_settings = settings.get_integer_settings()
         
         # Call the convert_setting_value method directly
         result = settings.convert_setting_value(
