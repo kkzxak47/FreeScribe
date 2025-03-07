@@ -11,21 +11,6 @@ from UI.SettingsWindow import SettingsWindow
 from UI.SettingsConstant import SettingsKeys
 
 
-# Helper function to get extended integer settings
-def get_integer_settings(settings_instance: SettingsWindow) -> List[str]:
-    """
-    Get integer settings.
-    
-    This helper function gets the integer settings from the settings instance's setting_types dictionary.
-    
-    :param settings_instance: The settings instance
-    :return: List of integer setting keys
-    """
-    # Get integer settings from setting_types dictionary
-    return [key for key, type_value in settings_instance.setting_types.items() 
-            if type_value == int]
-
-
 # Helper function to write a settings file with custom content
 def write_settings_file(test_dir: str, content: Union[str, Dict[str, Any]], filename: str = 'settings.txt') -> str:
     """
@@ -84,22 +69,17 @@ def settings(test_dir):
 
 
 @pytest.fixture
-def boolean_setting(settings):
-    """Get a boolean setting for testing."""
-    boolean_settings = [key for key, type_value in settings.setting_types.items() 
-                        if type_value == bool]
-    if not boolean_settings:
-        pytest.skip("No boolean settings found to test")
-    return boolean_settings[0]
+def boolean_setting():
+    """Get a specific boolean setting for testing."""
+    # Use a known boolean setting from DEFAULT_SETTINGS_TABLE
+    return "use_story"  # This is a known boolean setting
 
 
 @pytest.fixture
-def integer_setting(settings):
-    """Get an integer setting for testing."""
-    integer_settings = get_integer_settings(settings)
-    if not integer_settings:
-        pytest.skip("No integer settings found to test")
-    return integer_settings[0]
+def integer_setting():
+    """Get a specific integer setting for testing."""
+    # Use a known integer setting from DEFAULT_SETTINGS_TABLE
+    return "max_context_length"  # This is a known integer setting
 
 
 @pytest.fixture
