@@ -256,6 +256,38 @@ def test_string_to_integer_conversion(settings, test_dir, integer_setting, setti
         f"Setting {integer_setting} value was not converted correctly"
 
 
+def test_invalid_string_to_integer_conversion(settings, integer_setting):
+    """Test that an invalid string for integer conversion is handled gracefully."""
+    # Backup the original value so that tests remain isolated
+    original_value = settings.editable_settings.get(integer_setting, None)
+    
+    try:
+        # Set an invalid string value that cannot be converted to an integer
+        invalid_value = "invalid_int"
+        settings.editable_settings[integer_setting] = invalid_value
+        
+        # Get the boolean and integer settings lists
+        boolean_settings = settings.get_boolean_settings()
+        integer_settings = settings.get_extended_integer_settings()
+        
+        # Call the convert_setting_value method directly
+        result = settings.convert_setting_value(
+            integer_setting, invalid_value, boolean_settings, integer_settings
+        )
+        
+        # The method should return the original value when conversion fails
+        assert result == invalid_value, \
+            "Invalid string should be returned as-is when conversion to integer fails"
+        
+        # The method should not modify the original value in editable_settings
+        assert settings.editable_settings[integer_setting] == invalid_value, \
+            "Original invalid value in editable_settings should not be modified"
+    finally:
+        # Restore the original value after the test
+        if original_value is not None:
+            settings.editable_settings[integer_setting] = original_value
+
+
 def test_invalid_json_settings(settings, test_dir, settings_file_path):
     """Test how settings handle an invalid JSON file."""
     # Create an invalid JSON content
