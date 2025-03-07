@@ -11,37 +11,35 @@ from UI.SettingsWindow import SettingsWindow
 from UI.SettingsConstant import SettingsKeys
 
 
-# Helper function to get extended integer settings
-def get_integer_settings(settings_instance: SettingsWindow) -> List[str]:
+# Helper function to write a settings file with a dictionary
+def write_settings_dict(test_dir: str, content: Dict[str, Any], filename: str = 'settings.txt') -> str:
     """
-    Get integer settings.
-    
-    This helper function gets the integer settings from the settings instance's setting_types dictionary.
-    
-    :param settings_instance: The settings instance
-    :return: List of integer setting keys
-    """
-    # Get integer settings from setting_types dictionary
-    return [key for key, type_value in settings_instance.setting_types.items() 
-            if type_value == int]
-
-
-# Helper function to write a settings file with custom content
-def write_settings_file(test_dir: str, content: Union[str, Dict[str, Any]], filename: str = 'settings.txt') -> str:
-    """
-    Write content to a settings file in the test directory.
+    Write a dictionary to a settings file in the test directory.
     
     :param test_dir: The test directory
-    :param content: The content to write (string or dict)
+    :param content: The dictionary content to write
     :param filename: The filename to use, defaults to 'settings.txt'
     :return: The path to the created file
     """
     path = os.path.join(test_dir, filename)
     with open(path, 'w') as f:
-        if isinstance(content, dict):
-            json.dump(content, f)
-        else:
-            f.write(content)
+        json.dump(content, f)
+    return path
+
+
+# Helper function to write a settings file with a string
+def write_settings_string(test_dir: str, content: str, filename: str = 'settings.txt') -> str:
+    """
+    Write a string to a settings file in the test directory.
+    
+    :param test_dir: The test directory
+    :param content: The string content to write
+    :param filename: The filename to use, defaults to 'settings.txt'
+    :return: The path to the created file
+    """
+    path = os.path.join(test_dir, filename)
+    with open(path, 'w') as f:
+        f.write(content)
     return path
 
 
@@ -84,22 +82,17 @@ def settings(test_dir):
 
 
 @pytest.fixture
-def boolean_setting(settings):
-    """Get a boolean setting for testing."""
-    boolean_settings = [key for key, type_value in settings.setting_types.items() 
-                        if type_value == bool]
-    if not boolean_settings:
-        pytest.skip("No boolean settings found to test")
-    return boolean_settings[0]
+def boolean_setting():
+    """Get a specific boolean setting for testing."""
+    # Use a known boolean setting from DEFAULT_SETTINGS_TABLE
+    return "use_story"  # This is a known boolean setting
 
 
 @pytest.fixture
-def integer_setting(settings):
-    """Get an integer setting for testing."""
-    integer_settings = get_integer_settings(settings)
-    if not integer_settings:
-        pytest.skip("No integer settings found to test")
-    return integer_settings[0]
+def integer_setting():
+    """Get a specific integer setting for testing."""
+    # Use a known integer setting from DEFAULT_SETTINGS_TABLE
+    return "max_context_length"  # This is a known integer setting
 
 
 @pytest.fixture
@@ -219,8 +212,7 @@ def test_integer_to_boolean_conversion(settings, test_dir, boolean_setting, sett
     }
     
     # Write the settings file
-    with open(settings_file_path, 'w') as f:
-        json.dump(settings_data, f)
+    write_settings_dict(test_dir, settings_data)
     
     # Load settings
     settings.load_settings_from_file()
@@ -244,8 +236,7 @@ def test_string_to_integer_conversion(settings, test_dir, integer_setting, setti
     }
     
     # Write the settings file
-    with open(settings_file_path, 'w') as f:
-        json.dump(settings_data, f)
+    write_settings_dict(test_dir, settings_data)
     
     # Load settings
     settings.load_settings_from_file()
@@ -262,27 +253,26 @@ def test_invalid_string_to_integer_conversion(settings, integer_setting):
     # Backup the original value so that tests remain isolated
     original_value = settings.editable_settings.get(integer_setting, None)
     
-    try:
-        # Set an invalid string value that cannot be converted to an integer
-        invalid_value = "invalid_int"
-        settings.editable_settings[integer_setting] = invalid_value
-        
-        # Call the convert_setting_value method directly
-        result = settings.convert_setting_value(
-            integer_setting, invalid_value
-        )
-        
-        # The method should return the original value when conversion fails
-        assert result == invalid_value, \
-            "Invalid string should be returned as-is when conversion to integer fails"
-        
-        # The method should not modify the original value in editable_settings
-        assert settings.editable_settings[integer_setting] == invalid_value, \
-            "Original invalid value in editable_settings should not be modified"
-    finally:
-        # Restore the original value after the test
-        if original_value is not None:
-            settings.editable_settings[integer_setting] = original_value
+    # Set an invalid string value that cannot be converted to an integer
+    invalid_value = "invalid_int"
+    settings.editable_settings[integer_setting] = invalid_value
+    
+    # Call the convert_setting_value method directly
+    result = settings.convert_setting_value(
+        integer_setting, invalid_value
+    )
+    
+    # The method should return the original value when conversion fails
+    assert result == invalid_value, \
+        "Invalid string should be returned as-is when conversion to integer fails"
+    
+    # The method should not modify the original value in editable_settings
+    assert settings.editable_settings[integer_setting] == invalid_value, \
+        "Original invalid value in editable_settings should not be modified"
+    
+    # Always restore the original value after the test
+    # Use a default value (e.g., 0) if original_value was None
+    settings.editable_settings[integer_setting] = original_value if original_value is not None else 0
 
 
 def test_invalid_json_settings(settings, test_dir, settings_file_path):
@@ -291,8 +281,7 @@ def test_invalid_json_settings(settings, test_dir, settings_file_path):
     invalid_json = "{invalid: 'json', missing quotes}"  # intentionally invalid JSON
     
     # Write the invalid JSON to the settings file
-    with open(settings_file_path, 'w') as f:
-        f.write(invalid_json)
+    write_settings_string(test_dir, invalid_json)
     
     # Save the original settings to compare later
     original_settings = settings.editable_settings.copy()
@@ -310,8 +299,7 @@ def test_settings_missing_keys(settings, test_dir, settings_file_path):
     incomplete_settings = '{"openai_api_key": "test_key"}'  # Missing editable_settings
     
     # Write the incomplete settings to the settings file
-    with open(settings_file_path, 'w') as f:
-        f.write(incomplete_settings)
+    write_settings_string(test_dir, incomplete_settings)
     
     # Save the original settings to compare later
     original_settings = settings.editable_settings.copy()
@@ -337,15 +325,14 @@ def test_settings_extra_data(settings, test_dir, boolean_setting, settings_file_
     }
     
     # Write the settings with extra data to the settings file
-    with open(settings_file_path, 'w') as f:
-        json.dump(extra_data_settings, f)
+    write_settings_dict(test_dir, extra_data_settings)
     
     # Load settings - should not raise an exception
     settings.load_settings_from_file()
     
     # Verify that the known setting was loaded correctly
     assert settings.editable_settings[boolean_setting] is True, \
-        f"Setting {boolean_setting} was not loaded correctly from settings with extra data"
+        f"Known setting {boolean_setting} was not loaded correctly"
     
     # Verify that the unexpected key was not added to editable_settings
     assert "unexpectedKey" not in settings.editable_settings, \
