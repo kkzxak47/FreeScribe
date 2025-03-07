@@ -22,12 +22,24 @@ def get_extended_integer_settings(settings_instance):
     :param settings_instance: The settings instance
     :return: List of integer setting keys
     """
-    # Get base integer settings
-    integer_settings = settings_instance.get_extended_integer_settings()
+    # Use the get_extended_integer_settings method directly
+    return settings_instance.get_extended_integer_settings()
+
+
+# Helper function to write a settings file with custom content
+def write_settings_file(test_dir, content, filename='settings.txt'):
+    """
+    Write content to a settings file in the test directory.
     
-    # Remove duplicates and ensure no overlap with boolean settings
-    boolean_settings = settings_instance.get_boolean_settings()
-    return list(set(integer_settings) - set(boolean_settings))
+    :param test_dir: The test directory
+    :param content: The content to write (string)
+    :param filename: The filename to use, defaults to 'settings.txt'
+    :return: The path to the created file
+    """
+    path = os.path.join(test_dir, filename)
+    with open(path, 'w') as f:
+        f.write(content)
+    return path
 
 
 @pytest.fixture
@@ -265,4 +277,75 @@ def test_string_to_integer_conversion(settings, test_dir):
     assert isinstance(settings.editable_settings[test_setting], int), \
         f"Setting {test_setting} was not converted to an integer"
     assert settings.editable_settings[test_setting] == 42, \
-        f"Setting {test_setting} value was not converted correctly" 
+        f"Setting {test_setting} value was not converted correctly"
+
+
+def test_invalid_json_settings(settings, test_dir):
+    """Test how settings handle an invalid JSON file."""
+    # Create an invalid JSON content
+    invalid_json = "{invalid: 'json', missing quotes}"  # intentionally invalid JSON
+    write_settings_file(test_dir, invalid_json)
+    
+    # Save the original settings to compare later
+    original_settings = settings.editable_settings.copy()
+    
+    # Load settings - should not raise an exception
+    settings.load_settings_from_file()
+    
+    # Verify that the settings remain unchanged when loading invalid JSON
+    for key, value in original_settings.items():
+        assert settings.editable_settings[key] == value, \
+            f"Setting {key} was changed after loading invalid JSON"
+
+
+def test_settings_missing_keys(settings, test_dir):
+    """Test how settings behave when required keys are missing."""
+    # Create a settings file missing required keys
+    incomplete_settings = '{"openai_api_key": "test_key"}'  # Missing editable_settings
+    write_settings_file(test_dir, incomplete_settings)
+    
+    # Save the original settings to compare later
+    original_settings = settings.editable_settings.copy()
+    
+    # Load settings - should not raise an exception
+    settings.load_settings_from_file()
+    
+    # Verify that the settings remain unchanged when loading incomplete settings
+    for key, value in original_settings.items():
+        assert settings.editable_settings[key] == value, \
+            f"Setting {key} was changed after loading settings with missing keys"
+
+
+def test_settings_extra_data(settings, test_dir):
+    """Test how settings behave when the settings file contains extra unexpected data."""
+    # Get a boolean setting to test
+    boolean_settings = settings.get_boolean_settings()
+    if not boolean_settings:
+        pytest.skip("No boolean settings found to test")
+    test_setting = boolean_settings[0]
+    
+    # Create a settings file with extra keys not defined in the schema
+    extra_data_settings = {
+        "openai_api_key": "test_key",
+        "editable_settings": {
+            test_setting: True,
+            "unexpectedKey": "unexpectedValue"
+        },
+        "app_version": "1.0.0",
+        "extraTopLevelKey": "extraTopLevelValue"
+    }
+    
+    settings_file = os.path.join(test_dir, 'settings.txt')
+    with open(settings_file, 'w') as f:
+        json.dump(extra_data_settings, f)
+    
+    # Load settings - should not raise an exception
+    settings.load_settings_from_file()
+    
+    # Verify that the known setting was loaded correctly
+    assert settings.editable_settings[test_setting] is True, \
+        f"Setting {test_setting} was not loaded correctly from settings with extra data"
+    
+    # Verify that the unexpected key was not added to editable_settings
+    assert "unexpectedKey" not in settings.editable_settings, \
+        "Unexpected key was added to editable_settings" 
