@@ -1,5 +1,15 @@
-"""
+"""Whisper Hallucination Cleaner.
+
 This module provides functionality to clean common hallucinations from Whisper transcriptions.
+It uses spaCy's vector similarity to detect and remove common phrases that Whisper tends to
+hallucinate at the end of transcriptions.
+
+Example:
+    >>> from services.whisper_hallucination_cleaner import hallucination_cleaner
+    >>> text = "This is a real transcription. Thanks for watching!"
+    >>> cleaned = hallucination_cleaner.clean_text(text)
+    >>> print(cleaned)
+    'This is a real transcription.'
 """
 
 from typing import List
@@ -61,11 +71,15 @@ SPACY_MODEL_NAME = "en_core_web_md"
 
 
 def download_spacy_model():
-    """
-    Download the spacy model with retries.
+    """Download the spacy model with retries.
     
-    Returns:
-        bool: True if model was downloaded successfully, False otherwise
+    Attempts to download the spaCy model if not already installed.
+    Will retry up to 3 times with a 2-second delay between attempts.
+    
+    :returns: True if model was downloaded successfully, False otherwise
+    :rtype: bool
+    
+    :raises: No exceptions are raised, failures are logged and False is returned
     """
     max_retries = 3
     retry_delay = 2  # seconds
@@ -94,15 +108,22 @@ def download_spacy_model():
 
 
 class WhisperHallucinationCleaner:
-    """A class to clean common hallucinations from Whisper transcriptions."""
+    """A class to clean common hallucinations from Whisper transcriptions.
+    
+    This class uses spaCy's vector similarity to detect and remove common phrases
+    that Whisper tends to hallucinate, particularly at the end of transcriptions.
+    
+    :param similarity_threshold: The minimum similarity ratio (0-1) between a sentence
+                               and a hallucination to consider it a match
+    :type similarity_threshold: float
+    """
     
     def __init__(self, similarity_threshold: float = SIMILARITY_THRESHOLD):
-        """
-        Initialize the cleaner with a similarity threshold.
+        """Initialize the cleaner with a similarity threshold.
         
-        Args:
-            similarity_threshold (float): The minimum similarity ratio (0-1) 
-                                        between a sentence and a hallucination to consider it a match.
+        :param similarity_threshold: The minimum similarity ratio (0-1) between a sentence
+                                   and a hallucination to consider it a match
+        :type similarity_threshold: float
         """
         self.similarity_threshold = similarity_threshold
         # Store hallucinations as a set for O(1) membership tests
@@ -112,7 +133,12 @@ class WhisperHallucinationCleaner:
         
     @property
     def nlp(self):
-        """Lazy load the spacy model."""
+        """Lazy load the spacy model.
+        
+        :returns: The loaded spaCy model
+        :rtype: spacy.language.Language
+        :raises RuntimeError: If the spaCy model fails to download
+        """
         if self._nlp is None:
             if not download_spacy_model():
                 raise RuntimeError("Failed to download spacy model")
@@ -121,7 +147,11 @@ class WhisperHallucinationCleaner:
     
     @property
     def hallucination_docs(self):
-        """Lazy load the hallucination docs."""
+        """Lazy load the hallucination docs.
+        
+        :returns: List of processed spaCy docs for each hallucination
+        :rtype: list[spacy.tokens.Doc]
+        """
         if self._hallucination_docs is None:
             # Process all hallucinations and store their docs
             self._hallucination_docs = [
@@ -131,14 +161,12 @@ class WhisperHallucinationCleaner:
         return self._hallucination_docs
     
     def _normalize_text(self, text: str) -> str:
-        """
-        Normalize text by removing punctuation and extra whitespace.
+        """Normalize text by removing punctuation and extra whitespace.
         
-        Args:
-            text (str): Text to normalize
-            
-        Returns:
-            str: Normalized text
+        :param text: Text to normalize
+        :type text: str
+        :returns: Normalized text
+        :rtype: str
         """
         # Remove punctuation and normalize whitespace
         text = text.strip().lower()
@@ -146,14 +174,12 @@ class WhisperHallucinationCleaner:
         return text
     
     def _is_similar_to_hallucination(self, sentence: str) -> bool:
-        """
-        Check if a sentence is similar to any known hallucination using vector similarity.
+        """Check if a sentence is similar to any known hallucination using vector similarity.
         
-        Args:
-            sentence (str): The sentence to check
-            
-        Returns:
-            bool: True if the sentence is similar to a hallucination, False otherwise
+        :param sentence: The sentence to check
+        :type sentence: str
+        :returns: True if the sentence is similar to a hallucination, False otherwise
+        :rtype: bool
         """
         if not sentence:
             return True
@@ -181,14 +207,12 @@ class WhisperHallucinationCleaner:
                   for hallucination_doc in self.hallucination_docs)
     
     def _split_into_sentences(self, text: str) -> List[str]:
-        """
-        Split text into sentences using spacy.
+        """Split text into sentences using spacy.
         
-        Args:
-            text (str): The text to split
-            
-        Returns:
-            List[str]: List of sentences
+        :param text: The text to split
+        :type text: str
+        :returns: List of sentences
+        :rtype: list[str]
         """
         if not text:
             return []
@@ -199,14 +223,19 @@ class WhisperHallucinationCleaner:
         return [sent.text.strip() for sent in doc.sents]
     
     def clean_text(self, text: str) -> str:
-        """
-        Clean the text by removing sentences similar to known hallucinations.
+        """Clean the text by removing sentences similar to known hallucinations.
         
-        Args:
-            text (str): The text to clean
-            
-        Returns:
-            str: The cleaned text
+        :param text: The text to clean
+        :type text: str
+        :returns: The cleaned text with hallucinations removed
+        :rtype: str
+        
+        Example:
+            >>> cleaner = WhisperHallucinationCleaner()
+            >>> text = "This is a real transcription. Thanks for watching!"
+            >>> cleaned = cleaner.clean_text(text)
+            >>> print(cleaned)
+            'This is a real transcription.'
         """
         if not text:
             return text

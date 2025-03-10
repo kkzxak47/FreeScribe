@@ -5,18 +5,30 @@ import spacy
 
 @pytest.fixture
 def cleaner():
-    """Fixture to create a WhisperHallucinationCleaner instance."""
+    """Create a WhisperHallucinationCleaner instance for testing.
+
+    :returns: A configured WhisperHallucinationCleaner instance
+    :rtype: WhisperHallucinationCleaner
+    """
     return WhisperHallucinationCleaner(similarity_threshold=SIMILARITY_THRESHOLD)
 
 def test_initialization(cleaner):
-    """Test the initialization of WhisperHallucinationCleaner."""
+    """Test the initialization of WhisperHallucinationCleaner.
+    
+    :param cleaner: The WhisperHallucinationCleaner fixture
+    :type cleaner: WhisperHallucinationCleaner
+    """
     assert cleaner.similarity_threshold == SIMILARITY_THRESHOLD
     assert isinstance(cleaner.hallucinations, set)
     # Both should already be sets of lowercase strings
     assert cleaner.hallucinations == set(h.lower() for h in COMMON_HALUCINATIONS)
 
 def test_nlp_loading(cleaner):
-    """Test that the spacy model loads correctly."""
+    """Test that the spacy model loads correctly.
+    
+    :param cleaner: The WhisperHallucinationCleaner fixture
+    :type cleaner: WhisperHallucinationCleaner
+    """
     nlp = cleaner.nlp
     assert nlp is not None
     # Test that it can process text
@@ -24,7 +36,13 @@ def test_nlp_loading(cleaner):
     assert len(list(doc.sents)) == 1
 
 def test_is_similar_to_hallucination(cleaner):
-    """Test similarity checking against hallucinations."""
+    """Test similarity checking against hallucinations.
+    
+    Tests exact matches, similar matches, and completely different text.
+    
+    :param cleaner: The WhisperHallucinationCleaner fixture
+    :type cleaner: WhisperHallucinationCleaner
+    """
     # Test with exact match
     assert cleaner._is_similar_to_hallucination("thank you") is True
     
@@ -35,7 +53,13 @@ def test_is_similar_to_hallucination(cleaner):
     assert not cleaner._is_similar_to_hallucination("the quick brown fox jumps over the lazy dog")
 
 def test_split_into_sentences(cleaner):
-    """Test sentence splitting functionality."""
+    """Test sentence splitting functionality.
+    
+    Tests multiple sentences, empty text, and various punctuation.
+    
+    :param cleaner: The WhisperHallucinationCleaner fixture
+    :type cleaner: WhisperHallucinationCleaner
+    """
     # Test with multiple sentences
     text = "First sentence. Second sentence. Third sentence."
     sentences = cleaner._split_into_sentences(text)
@@ -90,7 +114,16 @@ def test_clean_text_with_different_threshold():
     assert "thanks for watching" not in lenient_cleaned
 
 def test_clean_text_with_edge_cases(cleaner):
-    """Test text cleaning with various edge cases."""
+    """Test text cleaning with various edge cases.
+    
+    Tests handling of:
+        * Multiple spaces
+        * Mixed case text
+        * Various punctuation
+    
+    :param cleaner: The WhisperHallucinationCleaner fixture
+    :type cleaner: WhisperHallucinationCleaner
+    """
     # Test with text containing multiple spaces
     text = "This  has  multiple  spaces.  thank  you."
     cleaned = cleaner.clean_text(text)
@@ -110,7 +143,16 @@ def test_clean_text_with_edge_cases(cleaner):
     assert "This is another sentence" in cleaned 
 
 def test_normalize_text(cleaner):
-    """Test text normalization functionality."""
+    """Test text normalization functionality.
+    
+    Tests handling of:
+        * Extra whitespace
+        * Mixed case text
+        * Empty strings
+    
+    :param cleaner: The WhisperHallucinationCleaner fixture
+    :type cleaner: WhisperHallucinationCleaner
+    """
     # Test with extra whitespace
     assert cleaner._normalize_text("  Hello   World  ") == "hello world"
     
@@ -121,7 +163,16 @@ def test_normalize_text(cleaner):
     assert cleaner._normalize_text("") == ""
 
 def test_hallucination_docs_property(cleaner):
-    """Test the hallucination_docs property."""
+    """Test the hallucination_docs property.
+    
+    Tests:
+        * Correct creation of spaCy docs
+        * Proper handling of case-insensitive duplicates
+        * Caching behavior
+    
+    :param cleaner: The WhisperHallucinationCleaner fixture
+    :type cleaner: WhisperHallucinationCleaner
+    """
     # Test that docs are created correctly
     docs = cleaner.hallucination_docs
     # Get unique lowercase hallucinations since some might be duplicates when lowercased
@@ -132,7 +183,16 @@ def test_hallucination_docs_property(cleaner):
     assert cleaner.hallucination_docs is docs
 
 def test_is_similar_to_hallucination_with_long_sentences(cleaner):
-    """Test similarity checking with very long sentences."""
+    """Test similarity checking with sentences of varying lengths.
+    
+    Tests:
+        * Very long sentences (should not be detected)
+        * Single hallucination
+        * Hallucination within a reasonable length sentence
+    
+    :param cleaner: The WhisperHallucinationCleaner fixture
+    :type cleaner: WhisperHallucinationCleaner
+    """
     # Create a sentence longer than MAX_SENTENCE_LENGTH
     long_sentence = "This is a very long sentence that " * 10
     assert not cleaner._is_similar_to_hallucination(long_sentence)
@@ -146,7 +206,15 @@ def test_is_similar_to_hallucination_with_long_sentences(cleaner):
     assert cleaner._is_similar_to_hallucination(sentence_with_hallucination)
 
 def test_vector_similarity(cleaner):
-    """Test vector similarity comparisons."""
+    """Test vector similarity comparisons.
+    
+    Tests:
+        * Semantically similar phrases that should be detected
+        * Dissimilar phrases that should not be detected
+    
+    :param cleaner: The WhisperHallucinationCleaner fixture
+    :type cleaner: WhisperHallucinationCleaner
+    """
     # Test phrases that are semantically similar but not exact matches
     similar_phrases = [
         "thanks for your time",
@@ -174,7 +242,17 @@ def test_vector_similarity(cleaner):
     (False, RuntimeError("Download failed")),  # Failure
 ])
 def test_download_spacy_model(monkeypatch, attempt_scenario):
-    """Test spacy model download with different scenarios."""
+    """Test spacy model download functionality.
+    
+    Tests:
+        * Successful download on first attempt
+        * Failed download with retry behavior
+    
+    :param monkeypatch: pytest's monkeypatch fixture
+    :type monkeypatch: pytest.MonkeyPatch
+    :param attempt_scenario: Tuple of (success_flag, error_to_raise)
+    :type attempt_scenario: tuple[bool, Exception|None]
+    """
     success, error = attempt_scenario
     calls = []
     
@@ -197,7 +275,12 @@ def test_download_spacy_model(monkeypatch, attempt_scenario):
         assert len(calls) == 3  # Should try 3 times
 
 def test_global_hallucination_cleaner():
-    """Test the global hallucination cleaner instance."""
+    """Test the global hallucination cleaner instance.
+    
+    Tests:
+        * Instance type
+        * Default configuration
+    """
     from services.whisper_hallucination_cleaner import hallucination_cleaner
     
     assert isinstance(hallucination_cleaner, WhisperHallucinationCleaner)
