@@ -36,6 +36,11 @@ class Model:
         generate_response: Generates a text response based on an input prompt using
                         the specified sampling parameters.
         get_gpu_info: Returns the current GPU configuration and batch size details.
+
+    Note:
+        The best_of parameter allows generating multiple responses and selecting the best one
+        based on the sum of token log probabilities. When best_of > 1, the model will generate
+        multiple responses and return the one with the highest cumulative log probability.
     """
     def __init__(
         self,
@@ -106,6 +111,31 @@ class Model:
         """
         return self.generate_best_of_response(prompt, max_tokens, temperature, top_p, repeat_penalty=1.1, best_of=1)
 
+    def _select_best_response(self, responses: list, best_of: int) -> tuple[float, str]:
+        """
+        Selects the best response from a list of responses based on token log probabilities.
+        
+        Args:
+            responses: List of response dictionaries from the model
+            best_of: Number of responses to consider
+            
+        Returns:
+            Tuple containing (sum of log probabilities, selected response content)
+        """
+        if best_of <= 1:
+            return (0, responses[0]["choices"][0]["message"]["content"])
+            
+        result = []
+        for response in responses:
+            result.append((
+                sum(response["choices"][0]["logprobs"]["token_logprobs"]),
+                response["choices"][0]["message"]["content"]
+            ))
+        logger.debug(f"Result: {result}")
+        result.sort(key=lambda x: x[0])
+        logger.debug(f"Sorted Result: {result}")
+        return result[-1]
+
     def generate_best_of_response(
         self,
         prompt: str,
@@ -158,18 +188,8 @@ class Model:
                 )
                 responses.append(response)
             logger.debug(f"Responses: {responses}")
-            # saves tuple of (sum of token logprobs, content)
-            result = []
-            if _best_of > 1:
-                for response in responses:
-                    result.append((sum(response["choices"][0]["logprobs"]["token_logprobs"]), response["choices"][0]["message"]["content"]))
-                logger.debug(f"Result: {result}")
-                result.sort(key=lambda x: x[0])
-                logger.debug(f"Sorted Result: {result}")
-            else:
-                result = [(0, responses[0]["choices"][0]["message"]["content"])]
             
-            response = result[-1]
+            response = self._select_best_response(responses, _best_of)
             # reset the model tokens
             self.model.reset()
             logger.debug(f"Response: {response}")
