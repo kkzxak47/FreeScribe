@@ -57,6 +57,8 @@ COMMON_HALUCINATIONS = [
     "thanks mate",
 ]
 
+SIMILARITY_THRESHOLD = 0.9
+
 
 def download_spacy_model():
     """
@@ -93,7 +95,7 @@ def download_spacy_model():
 class WhisperHallucinationCleaner:
     """A class to clean common hallucinations from Whisper transcriptions."""
     
-    def __init__(self, similarity_threshold: float = 0.7):
+    def __init__(self, similarity_threshold: float = SIMILARITY_THRESHOLD):
         """
         Initialize the cleaner with a similarity threshold.
         
@@ -153,6 +155,10 @@ class WhisperHallucinationCleaner:
         Returns:
             bool: True if the sentence is similar to a hallucination, False otherwise
         """
+        if not sentence:
+            return True
+        if sentence in self.hallucinations:
+            return True
         sentence = sentence.strip().lower()
         sentence_vector = self.nlp(sentence).vector
         
