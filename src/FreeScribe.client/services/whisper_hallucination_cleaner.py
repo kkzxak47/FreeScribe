@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 COMMON_HALUCINATIONS = [
-    "thank y'all",
+    "thank y all",
     "thank you again",
     "thank you all so much",
     "thank you all very much",
@@ -24,40 +24,40 @@ COMMON_HALUCINATIONS = [
     "thank you too",
     "thank you very much",
     "thank you",
-    "thank you, bye",
-    "thank you, sir",
-    "thank you. bye",
-    "thank you. thank",
+    "thank you bye",
+    "thank you sir",
+    "thank you thank",
     "thanks a lot",
     "thanks so much",
     "thanks very much",
     "thanks",
-    "thanks, everyone",
-    "sorry, don't ask me if i asked about this question right, and i mean the lightening",
-    "don't forget to like, commentary, and subscribe to the channel",
-    "thank you very much. thank you very much",
-    "thank you very much for watching!",
+    "thanks everyone",
+    "sorry don t ask me if i asked about this question right and i mean the lightening",
+    "don t forget to like comment and subscribe to the channel",
+    "thank you very much thank you very much",
     "thank you very much for watching",
-    "i'll see you in the next video",
+    "i ll see you in the next video",
     "thank you for your watching",
-    "bye, ladies and gentlemen",
+    "bye ladies and gentlemen",
     "see you in the next video",
     "thank you for watching",
-    "i'll see you next time",
+    "i ll see you next time",
     "he was gonna catch it",
-    "thank you. bye bye",
-    "Thanks for watching!",
+    "thank you bye bye",
     "thanks for watching",
-    "thanks for watching!",
     "thank you very much",
-    "it's no good to me",
+    "it s no good to me",
     "see you next video",
     "see you next time",
     "see you in the next one",
     "thanks mate",
+    "hello",
+    "bye",
 ]
 
+MAX_SENTENCE_LENGTH = max(len(sentence) for sentence in COMMON_HALUCINATIONS)
 SIMILARITY_THRESHOLD = 0.9
+SPACY_MODEL_NAME = "en_core_web_md"
 
 
 def download_spacy_model():
@@ -70,25 +70,26 @@ def download_spacy_model():
     max_retries = 3
     retry_delay = 2  # seconds
     
+    logger.info(f"Downloading spacy model {SPACY_MODEL_NAME}...")
     for attempt in range(max_retries):
         try:
             # Check if model is already installed
-            if spacy.util.is_package("en_core_web_md"):
-                print("Spacy model already installed")
+            if spacy.util.is_package(SPACY_MODEL_NAME):
+                logger.info("Spacy model already installed")
                 return True
                 
-            print(f"Downloading spacy model (attempt {attempt + 1}/{max_retries})...")
-            spacy.cli.download("en_core_web_sm")
-            print("Spacy model downloaded successfully")
+            logger.info(f"Downloading spacy model (attempt {attempt + 1}/{max_retries})...")
+            spacy.cli.download(SPACY_MODEL_NAME)
+            logger.info("Spacy model downloaded successfully")
             return True
             
         except Exception as e:
-            print(f"Error downloading spacy model: {e}")
+            logger.error(f"Error downloading spacy model: {e}")
             if attempt < max_retries - 1:
-                print(f"Retrying in {retry_delay} seconds...")
+                logger.info(f"Retrying in {retry_delay} seconds...")
                 time.sleep(retry_delay)
             else:
-                print("Failed to download spacy model after all retries")
+                logger.error("Failed to download spacy model after all retries")
                 return False
 
 
@@ -104,9 +105,10 @@ class WhisperHallucinationCleaner:
                                         between a sentence and a hallucination to consider it a match.
         """
         self.similarity_threshold = similarity_threshold
-        self.hallucinations = set(COMMON_HALUCINATIONS)
+        # Store hallucinations as a set for O(1) membership tests
+        self.hallucinations = set(h.lower() for h in COMMON_HALUCINATIONS)
         self._nlp = None
-        self._hallucination_vectors = None
+        self._hallucination_docs = None
         
     @property
     def nlp(self):
@@ -114,36 +116,34 @@ class WhisperHallucinationCleaner:
         if self._nlp is None:
             if not download_spacy_model():
                 raise RuntimeError("Failed to download spacy model")
-            self._nlp = spacy.load("en_core_web_sm")
+            self._nlp = spacy.load(SPACY_MODEL_NAME)
         return self._nlp
     
     @property
-    def hallucination_vectors(self):
-        """Lazy load the hallucination vectors."""
-        if self._hallucination_vectors is None:
-            # Process all hallucinations and store their vectors
-            self._hallucination_vectors = [
-                self.nlp(hallucination).vector 
-                for hallucination in self.hallucinations
+    def hallucination_docs(self):
+        """Lazy load the hallucination docs."""
+        if self._hallucination_docs is None:
+            # Process all hallucinations and store their docs
+            self._hallucination_docs = [
+                self.nlp(hallucination)
+                for hallucination in sorted(self.hallucinations)  # Sort for consistent ordering
             ]
-        return self._hallucination_vectors
-        
-    def _cosine_similarity(self, vec1: np.ndarray, vec2: np.ndarray) -> float:
+        return self._hallucination_docs
+    
+    def _normalize_text(self, text: str) -> str:
         """
-        Calculate cosine similarity between two vectors.
+        Normalize text by removing punctuation and extra whitespace.
         
         Args:
-            vec1 (np.ndarray): First vector
-            vec2 (np.ndarray): Second vector
+            text (str): Text to normalize
             
         Returns:
-            float: Cosine similarity between 0 and 1
+            str: Normalized text
         """
-        result = np.dot(vec1, vec2) / (np.linalg.norm(vec1) * np.linalg.norm(vec2))
-        logger.debug(f"vec1: {vec1}")
-        logger.debug(f"vec2: {vec2}")
-        logger.debug(f"Cosine similarity: {result}")
-        return result
+        # Remove punctuation and normalize whitespace
+        text = text.strip().lower()
+        text = ' '.join(text.split())  # Normalize whitespace
+        return text
     
     def _is_similar_to_hallucination(self, sentence: str) -> bool:
         """
@@ -157,19 +157,28 @@ class WhisperHallucinationCleaner:
         """
         if not sentence:
             return True
-        if sentence in self.hallucinations:
+
+        logger.debug(f"Checking sentence: {sentence}")
+        # use spacy to normalize the sentence
+        sentence_doc = self.nlp(sentence)
+        sentence = " ".join([token.text.lower() for token in sentence_doc if not token.is_punct])
+        logger.debug(f"Normalized sentence: {sentence}")
+
+        # First check for exact matches (case insensitive)
+        if any(h in sentence for h in self.hallucinations):
+            logger.debug(f"Sentence contains a hallucination: {sentence}")
             return True
-        sentence = sentence.strip().lower()
-        sentence_vector = self.nlp(sentence).vector
+            
+        # Process the sentence
+        sentence_doc = self.nlp(sentence)
         
-        # Calculate similarity with all hallucination vectors
-        similarities = [
-            self._cosine_similarity(sentence_vector, vec)
-            for vec in self.hallucination_vectors
-        ]
-        
-        # Return True if any similarity is above threshold
-        return max(similarities) >= self.similarity_threshold
+        # Longer sentences are less likely to be hallucinations
+        if len(sentence_doc) > MAX_SENTENCE_LENGTH:
+            return False
+            
+        # Use pre-processed hallucination docs for similarity check
+        return any(sentence_doc.similarity(hallucination_doc) >= self.similarity_threshold 
+                  for hallucination_doc in self.hallucination_docs)
     
     def _split_into_sentences(self, text: str) -> List[str]:
         """
@@ -186,8 +195,8 @@ class WhisperHallucinationCleaner:
             
         # Process the text with spacy
         doc = self.nlp(text)
-        # Get sentences and clean them
-        return [sent.text.strip() for sent in doc.sents if sent.text.strip()]
+        # Get sentences and preserve their original text
+        return [sent.text.strip() for sent in doc.sents]
     
     def clean_text(self, text: str) -> str:
         """
@@ -203,12 +212,12 @@ class WhisperHallucinationCleaner:
             return text
             
         sentences = self._split_into_sentences(text)
-        logger.debug(f"Sentences: {sentences}")
         cleaned_sentences = [s for s in sentences if not self._is_similar_to_hallucination(s)]
         
-        logger.debug(f"Cleaned sentences: {cleaned_sentences}")
-        # Join sentences back together with periods
-        return '. '.join(cleaned_sentences) 
+        # Join sentences back together
+        result = ' '.join(s.strip() for s in cleaned_sentences)
+        logger.debug(f"Cleaned text: {result}")
+        return result
 
 # Initialize the hallucination cleaner
 hallucination_cleaner = WhisperHallucinationCleaner()
