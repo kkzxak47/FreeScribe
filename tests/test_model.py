@@ -149,7 +149,123 @@ class TestModel:
         # Verify the method selected the response with highest logprob sum
         assert response == "Better response"
         assert llama_instance.create_chat_completion.call_count == 2
+
+    def test_generate_best_of_response_single_candidate(self, model_instance):
+        """Test generate_best_of_response when best_of is 1"""
+        model, llama_instance = model_instance
         
+        # Configure mock response
+        mock_response = {
+            "choices": [{"message": {"content": "Single response"}}]
+        }
+        llama_instance.create_chat_completion.return_value = mock_response
+        
+        # Call the method with best_of=1
+        response = model.generate_best_of_response("Test prompt", best_of=1)
+        
+        # Verify only one response was generated and returned
+        assert response == "Single response"
+        llama_instance.create_chat_completion.assert_called_once()
+        
+        # Verify logprobs were not requested
+        args, kwargs = llama_instance.create_chat_completion.call_args
+        assert "logprobs" not in kwargs
+
+    def test_generate_best_of_response_equal_logprobs(self, model_instance):
+        """Test generate_best_of_response when responses have equal logprobs"""
+        model, llama_instance = model_instance
+        
+        # Configure mock responses with equal logprobs
+        responses = [
+            {"choices": [{"message": {"content": "First equal response"}, 
+                         "logprobs": {"token_logprobs": [-0.1, -0.1, -0.1]}}]},
+            {"choices": [{"message": {"content": "Second equal response"}, 
+                         "logprobs": {"token_logprobs": [-0.1, -0.1, -0.1]}}]}
+        ]
+        llama_instance.create_chat_completion.side_effect = responses
+        
+        # Call the method
+        response = model.generate_best_of_response("Test prompt", best_of=2)
+        
+        # Verify one of the responses was selected (implementation detail)
+        assert response in ["First equal response", "Second equal response"]
+        assert llama_instance.create_chat_completion.call_count == 2
+
+    def test_generate_best_of_response_empty_responses(self, model_instance):
+        """Test generate_best_of_response with empty responses"""
+        model, llama_instance = model_instance
+        
+        # Configure mock responses with empty content
+        responses = [
+            {"choices": [{"message": {"content": ""}, 
+                         "logprobs": {"token_logprobs": [-0.1]}}]},
+            {"choices": [{"message": {"content": ""}, 
+                         "logprobs": {"token_logprobs": [-0.1]}}]}
+        ]
+        llama_instance.create_chat_completion.side_effect = responses
+        
+        # Call the method
+        response = model.generate_best_of_response("Test prompt", best_of=2)
+        
+        # Verify empty string is returned
+        assert response == ""
+        assert llama_instance.create_chat_completion.call_count == 2
+
+    def test_generate_best_of_response_error_handling(self, model_instance):
+        """Test error handling in generate_best_of_response"""
+        model, llama_instance = model_instance
+        
+        # Configure mock to raise exception
+        error_message = "Generation failed"
+        llama_instance.create_chat_completion.side_effect = RuntimeError(error_message)
+        
+        # Call the method
+        response = model.generate_best_of_response("Test prompt", best_of=2)
+        
+        # Verify error is handled and returned as string
+        assert "(RuntimeError): Generation failed" in response
+        assert llama_instance.create_chat_completion.call_count == 1  # Should stop after first error
+
+    def test_generate_best_of_response_invalid_best_of(self, model_instance):
+        """Test generate_best_of_response with invalid best_of values"""
+        model, llama_instance = model_instance
+        
+        # Configure mock response
+        mock_response = {
+            "choices": [{"message": {"content": "Default response"}}]
+        }
+        llama_instance.create_chat_completion.return_value = mock_response
+        
+        # Test with best_of=0
+        response = model.generate_best_of_response("Test prompt", best_of=0)
+        assert response == "Default response"  # Should return the first response since best_of <= 1
+        
+        # Test with negative best_of
+        response = model.generate_best_of_response("Test prompt", best_of=-1)
+        assert "(IndexError): list index out of range" in response  # Should fail with IndexError for negative best_of
+        
+        # Verify only one call was made for best_of=0
+        assert llama_instance.create_chat_completion.call_count == 1
+
+    def test_generate_best_of_response_mixed_errors(self, model_instance):
+        """Test generate_best_of_response with mix of successful and failed responses"""
+        model, llama_instance = model_instance
+        
+        # Configure mock responses with one success and one error
+        responses = [
+            {"choices": [{"message": {"content": "Successful response"}, 
+                         "logprobs": {"token_logprobs": [-0.1]}}]},
+            RuntimeError("Second generation failed")
+        ]
+        llama_instance.create_chat_completion.side_effect = responses
+        
+        # Call the method
+        response = model.generate_best_of_response("Test prompt", best_of=2)
+        
+        # Verify error is returned when any generation fails
+        assert "(RuntimeError): Second generation failed" in response
+        assert llama_instance.create_chat_completion.call_count == 2
+    
     def test_get_gpu_info(self, model_instance):
         """Test the get_gpu_info method returns correct configuration"""
         model, _ = model_instance
