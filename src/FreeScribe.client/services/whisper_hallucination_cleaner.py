@@ -151,7 +151,7 @@ class WhisperHallucinationCleaner:
         # Create a translation table (all punctuation -> spaces)
         self._trans_table = str.maketrans(string.punctuation, ' ' * len(string.punctuation))
         # Store normalized hallucinations for exact matching
-        self.hallucinations = set(self._normalize_text(h) for h in COMMON_HALUCINATIONS)
+        self.hallucinations = {self._normalize_text(h) for h in COMMON_HALUCINATIONS}
         self._nlp = None
         self._hallucination_docs = None
         
@@ -196,6 +196,7 @@ class WhisperHallucinationCleaner:
         # remove all punctuation
         text = text.translate(self._trans_table)
         text = ' '.join(t for t in text.split() if t.isalnum())
+        logger.debug(f"Normalized text: {text}")
         return text
     
     def _is_similar_to_hallucination(self, sentence: str) -> bool:
@@ -211,9 +212,6 @@ class WhisperHallucinationCleaner:
 
         # Normalize for exact matching
         normalized = self._normalize_text(sentence)
-        
-        logger.debug(f"Checking normalized sentence: {normalized}")
-
         # First check for exact matches (case insensitive)
         if any(h in normalized for h in self.hallucinations):
             logger.debug(f"Sentence contains a hallucination: {normalized}")

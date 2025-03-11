@@ -21,7 +21,7 @@ def test_initialization(cleaner):
     assert cleaner.similarity_threshold == SIMILARITY_THRESHOLD
     assert isinstance(cleaner.hallucinations, set)
     # Both should already be sets of lowercase strings
-    assert cleaner.hallucinations == set(h.lower() for h in COMMON_HALUCINATIONS)
+    assert cleaner.hallucinations == {h.lower() for h in COMMON_HALUCINATIONS}
 
 def test_nlp_loading(cleaner):
     """Test that the spacy model loads correctly.
@@ -181,7 +181,7 @@ def test_hallucination_docs_property(cleaner):
     # Test that docs are created correctly
     docs = cleaner.hallucination_docs
     # Get unique lowercase hallucinations since some might be duplicates when lowercased
-    unique_hallucinations = len(set(h.lower() for h in COMMON_HALUCINATIONS))
+    unique_hallucinations = len({h.lower() for h in COMMON_HALUCINATIONS})
     assert len(docs) == unique_hallucinations
     
     # Test caching - should return same object
