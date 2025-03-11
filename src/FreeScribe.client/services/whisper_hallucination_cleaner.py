@@ -225,8 +225,11 @@ class WhisperHallucinationCleaner:
             return False
             
         # Use pre-processed hallucination docs for similarity check
-        return any(doc.similarity(h_doc) >= self.similarity_threshold 
+        result = any(doc.similarity(h_doc) >= self.similarity_threshold 
                   for h_doc in self.hallucination_docs)
+        if result:
+            logger.debug(f"Sentence is similar to hallucination: {sentence}")
+        return result
     
     def _split_into_sentences(self, text: str) -> List[str]:
         """Split text into sentences using spacy.
