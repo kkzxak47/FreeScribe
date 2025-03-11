@@ -25,6 +25,7 @@ class SettingsKeys(Enum):
     LLM_SERVER_API_KEY = "AI Server API Key"
     Enable_Word_Count_Validation = "Enable Word Count Validation"
     Enable_AI_Conversation_Validation = "Enable AI Conversation Validation"
+    ENABLE_HALLUCINATION_CLEAN = "Enable Hallucination Cleaning (Experimental)"
 
 
 class Architectures(Enum):

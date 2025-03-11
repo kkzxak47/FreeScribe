@@ -69,7 +69,8 @@ else:
 
 logging.basicConfig(
     level=LOG_LEVEL,
-    format='%(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[logging.StreamHandler()]
 )
 
 logger = logging.getLogger(__name__)
@@ -1801,9 +1802,12 @@ def faster_whisper_transcribe(audio):
 
         result = "".join(f"{segment.text} " for segment in segments)
         logger.debug(f"Result: {result}")
-        cleaned_result = hallucination_cleaner.clean_text(result)
-        logger.debug(f"Cleaned result: {cleaned_result}")
-        return cleaned_result
+
+        # Only clean hallucinations if enabled in settings
+        if app_settings.editable_settings[SettingsKeys.ENABLE_HALLUCINATION_CLEAN.value]:
+            result = hallucination_cleaner.clean_text(result)
+            logger.debug(f"Cleaned result: {result}")
+        return result
     except Exception as e:
         logger.exception(f"Error during transcription: {str(e)}")
         error_message = f"Transcription failed: {str(e)}"
