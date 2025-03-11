@@ -21,7 +21,7 @@ def test_initialization(cleaner):
     assert cleaner.similarity_threshold == SIMILARITY_THRESHOLD
     assert isinstance(cleaner.hallucinations, set)
     # Both should already be sets of lowercase strings
-    assert cleaner.hallucinations == {h.lower() for h in COMMON_HALUCINATIONS}
+    assert cleaner.hallucinations == {cleaner._normalize_text(h) for h in COMMON_HALUCINATIONS}
 
 def test_nlp_loading(cleaner):
     """Test that the spacy model loads correctly.

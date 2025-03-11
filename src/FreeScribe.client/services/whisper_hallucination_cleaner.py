@@ -20,51 +20,52 @@ import time
 import logging
 import subprocess
 import sys
-from pathlib import Path
+# Create a punctuation string without apostrophe
+punct_without_apostrophe = string.punctuation.replace("'", "")
 
 
 logger = logging.getLogger(__name__)
 
 
 COMMON_HALUCINATIONS = [
-    'sorry don t ask me if i asked about this question right and i mean the lightening',
-    'don t forget to like comment and subscribe to the channel',
-    'thank you very much thank you very much',
-    'thank you very much for watching',
-    'i ll see you in the next video',
-    'thank you for your watching',
-    'see you in the next video',
-    'bye ladies and gentlemen',
-    'thank you all very much',
-    'see you in the next one',
-    'thank you for watching',
-    'i ll see you next time',
-    'thank you all so much',
-    'he was gonna catch it',
-    'thanks for watching',
-    'thank you very much',
-    'thank you everyone',
-    'see you next video',
-    'it s no good to me',
-    'thank you so much',
-    'thank you bye bye',
-    'see you next time',
-    'thanks very much',
-    'thanks everyone',
-    'thank you thank',
-    'thank you again',
-    'thanks so much',
-    'thank you too',
-    'thank you sir',
-    'thank you for',
-    'thank you bye',
-    'thank you all',
-    'thanks a lot',
-    'thanks mate',
-    'thank y all',
-    'thank you',
-    'thanks for',
-    'your watching',
+    "sorry don't ask me if i asked about this question right and i mean the lightening",
+    "don't forget to like comment and subscribe to the channel",
+    "like comment and subscribe to the channel",
+    "thank you very much thank you very much",
+    "thank you very much for watching",
+    "i'll see you in the next video",
+    "thank you for your watching",
+    "see you in the next video",
+    "bye ladies and gentlemen",
+    "thank you all very much",
+    "see you in the next one",
+    "thank you for watching",
+    "i'll see you next time",
+    "thank you all so much",
+    "he was gonna catch it",
+    "thanks for your watching",
+    "thanks for watching",
+    "thank you very much",
+    "thank you everyone",
+    "see you next video",
+    "it's no good to me",
+    "thank you so much",
+    "thank you bye bye",
+    "see you next time",
+    "thanks very much",
+    "thanks everyone",
+    "thank you thank",
+    "thank you again",
+    "thanks so much",
+    "thank you too",
+    "thank you sir",
+    "thank you for",
+    "thank you bye",
+    "thank you all",
+    "thanks a lot",
+    "thanks mate",
+    "thank y'all",
+    "thank you",
 ]
 
 # Calculate max length based on tokens instead of characters for more accurate comparison
@@ -148,7 +149,7 @@ class WhisperHallucinationCleaner:
         """
         self.similarity_threshold = similarity_threshold
         # Create a translation table (all punctuation -> spaces)
-        self._trans_table = str.maketrans(string.punctuation, ' ' * len(string.punctuation))
+        self._trans_table = str.maketrans(punct_without_apostrophe, ' ' * len(punct_without_apostrophe))
         # Store normalized hallucinations for exact matching
         self.hallucinations = {self._normalize_text(h) for h in COMMON_HALUCINATIONS}
         self._nlp = None
