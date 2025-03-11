@@ -4,14 +4,22 @@ import spacy
 
 
 @pytest.fixture(scope="session")
-def spacy_model():
+def ensure_spacy_model():
+    """Ensure the spaCy model is downloaded.
+    
+    :raises: pytest.fail: If the model download fails
+    """
+    download_success = download_spacy_model()
+    not download_success and pytest.fail("Failed to download spacy model")
+
+
+@pytest.fixture(scope="session")
+def spacy_model(ensure_spacy_model):
     """Create a shared spaCy model for all tests.
     
     :returns: A loaded spaCy model
     :rtype: spacy.language.Language
     """
-    if not download_spacy_model():
-        pytest.fail("Failed to download spacy model")
     return spacy.load(SPACY_MODEL_NAME)
 
 
@@ -203,28 +211,22 @@ def test_is_similar_to_hallucination_cases(cleaner, test_case):
     {
         "name": "multiple sentences",
         "input": "First sentence. Second sentence. Third sentence.",
-        "expected_count": 3,
-        "expected_first": "First sentence.",
-        "expected_last": "Third sentence."
+        "expected_count": 3
     },
     {
         "name": "empty text",
         "input": "",
-        "expected_count": 0,
-        "expected_first": None,
-        "expected_last": None
+        "expected_count": 0
     },
     {
         "name": "mixed punctuation",
         "input": "Sentence one! Sentence two? Sentence three.",
-        "expected_count": 3,
-        "expected_first": "Sentence one!",
-        "expected_last": "Sentence three."
+        "expected_count": 3
     }
 ])
 @pytest.mark.sentences
-def test_split_into_sentences(cleaner, test_case):
-    """Test sentence splitting functionality.
+def test_split_into_sentences_count(cleaner, test_case):
+    """Test sentence splitting functionality - count check.
     
     :param cleaner: The WhisperHallucinationCleaner fixture
     :type cleaner: WhisperHallucinationCleaner
@@ -233,10 +235,54 @@ def test_split_into_sentences(cleaner, test_case):
     """
     sentences = cleaner._split_into_sentences(test_case["input"])
     assert len(sentences) == test_case["expected_count"]
+
+@pytest.mark.parametrize("test_case", [
+    {
+        "name": "first of multiple periods",
+        "input": "First sentence. Second sentence. Third sentence.",
+        "expected": "First sentence."
+    },
+    {
+        "name": "first with mixed punctuation",
+        "input": "Sentence one! Sentence two? Sentence three.",
+        "expected": "Sentence one!"
+    }
+])
+@pytest.mark.sentences
+def test_split_into_sentences_first(cleaner, test_case):
+    """Test sentence splitting functionality - first sentence check.
     
-    if test_case["expected_count"] > 0:
-        assert sentences[0].strip() == test_case["expected_first"]
-        assert sentences[-1].strip() == test_case["expected_last"]
+    :param cleaner: The WhisperHallucinationCleaner fixture
+    :type cleaner: WhisperHallucinationCleaner
+    :param test_case: Dictionary containing test case data
+    :type test_case: dict
+    """
+    sentences = cleaner._split_into_sentences(test_case["input"])
+    assert sentences[0].strip() == test_case["expected"]
+
+@pytest.mark.parametrize("test_case", [
+    {
+        "name": "last of multiple periods",
+        "input": "First sentence. Second sentence. Third sentence.",
+        "expected": "Third sentence."
+    },
+    {
+        "name": "last with mixed punctuation",
+        "input": "Sentence one! Sentence two? Sentence three.",
+        "expected": "Sentence three."
+    }
+])
+@pytest.mark.sentences
+def test_split_into_sentences_last(cleaner, test_case):
+    """Test sentence splitting functionality - last sentence check.
+    
+    :param cleaner: The WhisperHallucinationCleaner fixture
+    :type cleaner: WhisperHallucinationCleaner
+    :param test_case: Dictionary containing test case data
+    :type test_case: dict
+    """
+    sentences = cleaner._split_into_sentences(test_case["input"])
+    assert sentences[-1].strip() == test_case["expected"]
 
 @pytest.mark.parametrize("test_case", [
     {
