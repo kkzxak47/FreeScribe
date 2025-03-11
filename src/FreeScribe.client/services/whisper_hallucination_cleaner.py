@@ -68,7 +68,8 @@ COMMON_HALUCINATIONS = [
     "bye",
 ]
 
-MAX_SENTENCE_LENGTH = max(len(sentence) for sentence in COMMON_HALUCINATIONS)
+# Calculate max length based on tokens instead of characters for more accurate comparison
+MAX_SENTENCE_LENGTH = max(len(hallucination.split()) for hallucination in COMMON_HALUCINATIONS)
 SIMILARITY_THRESHOLD = 0.9
 SPACY_MODEL_NAME = "en_core_web_md"
 
