@@ -27,45 +27,45 @@ logger = logging.getLogger(__name__)
 
 
 COMMON_HALUCINATIONS = [
-    "thank y all",
-    "thank you again",
-    "thank you all so much",
-    "thank you all very much",
-    "thank you all",
-    "thank you everyone",
-    "thank you for",
-    "thank you so much",
-    "thank you too",
-    "thank you very much",
-    "thank you",
-    "thank you bye",
-    "thank you sir",
-    "thank you thank",
-    "thanks a lot",
-    "thanks so much",
-    "thanks very much",
-    "thanks",
-    "thanks everyone",
-    "sorry don t ask me if i asked about this question right and i mean the lightening",
-    "don t forget to like comment and subscribe to the channel",
-    "thank you very much thank you very much",
-    "thank you very much for watching",
-    "i ll see you in the next video",
-    "thank you for your watching",
-    "bye ladies and gentlemen",
-    "see you in the next video",
-    "thank you for watching",
-    "i ll see you next time",
-    "he was gonna catch it",
-    "thank you bye bye",
-    "thanks for watching",
-    "it s no good to me",
-    "see you next video",
-    "see you next time",
-    "see you in the next one",
-    "thanks mate",
-    "hello",
-    "bye",
+    'sorry don t ask me if i asked about this question right and i mean the lightening',
+    'don t forget to like comment and subscribe to the channel',
+    'thank you very much thank you very much',
+    'thank you very much for watching',
+    'i ll see you in the next video',
+    'thank you for your watching',
+    'see you in the next video',
+    'bye ladies and gentlemen',
+    'thank you all very much',
+    'see you in the next one',
+    'thank you for watching',
+    'i ll see you next time',
+    'thank you all so much',
+    'he was gonna catch it',
+    'thanks for watching',
+    'thank you very much',
+    'thank you everyone',
+    'see you next video',
+    'it s no good to me',
+    'thank you so much',
+    'thank you bye bye',
+    'see you next time',
+    'thanks very much',
+    'thanks everyone',
+    'thank you thank',
+    'thank you again',
+    'thanks so much',
+    'thank you too',
+    'thank you sir',
+    'thank you for',
+    'thank you bye',
+    'thank you all',
+    'thanks a lot',
+    'thanks mate',
+    'thank y all',
+    'thank you',
+    'thanks',
+    'hello',
+    'bye',
 ]
 
 # Calculate max length based on tokens instead of characters for more accurate comparison
@@ -152,7 +152,7 @@ class WhisperHallucinationCleaner:
         self._trans_table = str.maketrans(string.punctuation, ' ' * len(string.punctuation))
         # Store normalized hallucinations for exact matching
         self.hallucinations = {self._normalize_text(h) for h in COMMON_HALUCINATIONS}
-        self._nlp = None
+        self._nlp = spacy.load(SPACY_MODEL_NAME)
         self._hallucination_docs = None
         
     @property
@@ -221,7 +221,7 @@ class WhisperHallucinationCleaner:
         doc = self.nlp(sentence)
         
         # Longer sentences are less likely to be hallucinations
-        if len(doc) > MAX_SENTENCE_LENGTH:
+        if len(doc) > MAX_SENTENCE_LENGTH * 1.5:
             return False
             
         # Use pre-processed hallucination docs for similarity check
