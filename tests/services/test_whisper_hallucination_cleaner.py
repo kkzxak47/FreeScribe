@@ -12,6 +12,51 @@ def cleaner():
     """
     return WhisperHallucinationCleaner(similarity_threshold=SIMILARITY_THRESHOLD)
 
+@pytest.fixture
+def strict_cleaner():
+    """Create a WhisperHallucinationCleaner instance with strict threshold.
+    
+    :returns: A WhisperHallucinationCleaner with high similarity threshold
+    :rtype: WhisperHallucinationCleaner
+    """
+    return WhisperHallucinationCleaner(similarity_threshold=0.95)
+
+@pytest.fixture
+def lenient_cleaner():
+    """Create a WhisperHallucinationCleaner instance with lenient threshold.
+    
+    :returns: A WhisperHallucinationCleaner with low similarity threshold
+    :rtype: WhisperHallucinationCleaner
+    """
+    return WhisperHallucinationCleaner(similarity_threshold=0.5)
+
+@pytest.fixture
+def similar_phrases():
+    """Provide test phrases that should be detected as similar to hallucinations.
+    
+    :returns: List of phrases similar to hallucinations
+    :rtype: list[str]
+    """
+    return [
+        "thanks for your attention",
+        "thank you for listening",
+        "see you in another one",
+        "Thanks for watching, and I'll see you in the next video, and I'll see you in the next video.",
+    ]
+
+@pytest.fixture
+def dissimilar_phrases():
+    """Provide test phrases that should not be detected as similar to hallucinations.
+    
+    :returns: List of phrases not similar to hallucinations
+    :rtype: list[str]
+    """
+    return [
+        "the weather is nice today",
+        "please pass the salt",
+        "what time is the meeting"
+    ]
+
 def test_initialization(cleaner):
     """Test the initialization of WhisperHallucinationCleaner.
     
@@ -99,14 +144,14 @@ def test_clean_text(cleaner):
     cleaned = cleaner.clean_text(text)
     assert cleaned == text  # Punctuation should be preserved correctly
 
-def test_clean_text_with_different_threshold():
-    """Test text cleaning with different similarity thresholds."""
-    # Create cleaner with higher threshold (more strict)
-    strict_cleaner = WhisperHallucinationCleaner(similarity_threshold=0.95)
+def test_clean_text_with_different_threshold(strict_cleaner, lenient_cleaner):
+    """Test text cleaning with different similarity thresholds.
     
-    # Create cleaner with lower threshold (more lenient)
-    lenient_cleaner = WhisperHallucinationCleaner(similarity_threshold=0.5)
-    
+    :param strict_cleaner: Cleaner with high similarity threshold
+    :type strict_cleaner: WhisperHallucinationCleaner
+    :param lenient_cleaner: Cleaner with low similarity threshold
+    :type lenient_cleaner: WhisperHallucinationCleaner
+    """
     text = "This is a normal sentence. thank you. This is another normal sentence. thanks for watching!"
     
     # Strict cleaner should remove fewer matches
@@ -210,38 +255,6 @@ def test_is_similar_to_hallucination_with_long_sentences(cleaner):
     sentence_with_hallucination = f"I wanted to say {COMMON_HALUCINATIONS[0]} to everyone"
     assert cleaner._is_similar_to_hallucination(sentence_with_hallucination)
 
-def test_vector_similarity(cleaner):
-    """Test vector similarity comparisons.
-    
-    Tests:
-        * Semantically similar phrases that should be detected
-        * Dissimilar phrases that should not be detected
-    
-    :param cleaner: The WhisperHallucinationCleaner fixture
-    :type cleaner: WhisperHallucinationCleaner
-    """
-    # Test phrases that are semantically similar but not exact matches
-    similar_phrases = [
-        "thanks for your attention",
-        "thank you for listening",
-        "see you in another one",
-        "Thanks for watching, and I'll see you in the next video, and I'll see you in the next video.",
-    ]
-    
-    for phrase in similar_phrases:
-        # These should be caught by vector similarity
-        assert cleaner._is_similar_to_hallucination(phrase)
-    
-    # Test phrases that shouldn't be similar
-    dissimilar_phrases = [
-        "the weather is nice today",
-        "please pass the salt",
-        "what time is the meeting"
-    ]
-    
-    for phrase in dissimilar_phrases:
-        assert not cleaner._is_similar_to_hallucination(phrase)
-
 @pytest.mark.parametrize("attempt_scenario", [
     (True, None),  # Success on first try
     (False, RuntimeError("Download failed")),  # Failure
@@ -298,3 +311,34 @@ def test_global_hallucination_cleaner():
     
     assert isinstance(hallucination_cleaner, WhisperHallucinationCleaner)
     assert hallucination_cleaner.similarity_threshold == SIMILARITY_THRESHOLD 
+
+@pytest.mark.parametrize("phrase", [
+    "thanks for your attention",
+    "thank you for listening",
+    "see you in another one",
+    "Thanks for watching, and I'll see you in the next video, and I'll see you in the next video.",
+])
+def test_similar_phrases(cleaner, phrase):
+    """Test that phrases similar to hallucinations are detected.
+    
+    :param cleaner: The WhisperHallucinationCleaner fixture
+    :type cleaner: WhisperHallucinationCleaner
+    :param phrase: A phrase that should be detected as similar
+    :type phrase: str
+    """
+    assert cleaner._is_similar_to_hallucination(phrase)
+
+@pytest.mark.parametrize("phrase", [
+    "the weather is nice today",
+    "please pass the salt",
+    "what time is the meeting"
+])
+def test_dissimilar_phrases(cleaner, phrase):
+    """Test that dissimilar phrases are not detected as hallucinations.
+    
+    :param cleaner: The WhisperHallucinationCleaner fixture
+    :type cleaner: WhisperHallucinationCleaner
+    :param phrase: A phrase that should not be detected as similar
+    :type phrase: str
+    """
+    assert not cleaner._is_similar_to_hallucination(phrase) 
