@@ -63,14 +63,13 @@ COMMON_HALUCINATIONS = [
     'thanks mate',
     'thank y all',
     'thank you',
-    'thanks',
-    'hello',
-    'bye',
+    'thanks for',
+    'your watching',
 ]
 
 # Calculate max length based on tokens instead of characters for more accurate comparison
 MAX_SENTENCE_LENGTH = max(len(hallucination.split()) for hallucination in COMMON_HALUCINATIONS)
-SIMILARITY_THRESHOLD = 0.9
+SIMILARITY_THRESHOLD = 0.95
 SPACY_MODEL_NAME = "en_core_web_md"
 
 

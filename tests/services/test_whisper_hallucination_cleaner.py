@@ -222,10 +222,10 @@ def test_vector_similarity(cleaner):
     """
     # Test phrases that are semantically similar but not exact matches
     similar_phrases = [
-        "thanks for your time",
-        "appreciate your watching",
-        "see you in our next video",
-        "goodbye everyone"
+        "thanks for your attention",
+        "thank you for listening",
+        "see you in another one",
+        "Thanks for watching, and I'll see you in the next video, and I'll see you in the next video.",
     ]
     
     for phrase in similar_phrases:
