@@ -13,6 +13,7 @@ Example:
 """
 
 from typing import List
+import string
 import spacy
 import spacy.cli
 import time
@@ -147,6 +148,8 @@ class WhisperHallucinationCleaner:
         :type similarity_threshold: float
         """
         self.similarity_threshold = similarity_threshold
+        # Create a translation table (all punctuation -> spaces)
+        self._trans_table = str.maketrans(string.punctuation, ' ' * len(string.punctuation))
         # Store normalized hallucinations for exact matching
         self.hallucinations = set(self._normalize_text(h) for h in COMMON_HALUCINATIONS)
         self._nlp = None
@@ -190,7 +193,9 @@ class WhisperHallucinationCleaner:
         """
         # Remove punctuation and normalize whitespace
         text = text.strip().lower()
-        text = ' '.join(text.split())  # Normalize whitespace
+        # remove all punctuation
+        text = text.translate(self._trans_table)
+        text = ' '.join(t for t in text.split() if t.isalnum())
         return text
     
     def _is_similar_to_hallucination(self, sentence: str) -> bool:
@@ -202,7 +207,7 @@ class WhisperHallucinationCleaner:
         :rtype: bool
         """
         if not sentence:
-            return True
+            return False
 
         # Normalize for exact matching
         normalized = self._normalize_text(sentence)
@@ -222,8 +227,8 @@ class WhisperHallucinationCleaner:
             return False
             
         # Use pre-processed hallucination docs for similarity check
-        return any(doc.similarity(hallucination_doc) >= self.similarity_threshold 
-                  for hallucination_doc in self.hallucination_docs)
+        return any(doc.similarity(h_doc) >= self.similarity_threshold 
+                  for h_doc in self.hallucination_docs)
     
     def _split_into_sentences(self, text: str) -> List[str]:
         """Split text into sentences using spacy.

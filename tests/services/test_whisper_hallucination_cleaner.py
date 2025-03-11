@@ -79,7 +79,7 @@ def test_split_into_sentences(cleaner):
 def test_clean_text(cleaner):
     """Test the main text cleaning functionality."""
     # Test with text containing hallucinations
-    text = "This is a normal sentence. thank you. This is another normal sentence. thanks for watching!"
+    text = "This is a normal sentence. thank you. This is another normal sentence. thanks for watching! It's great to see you all again. I'll be back soon."
     cleaned = cleaner.clean_text(text)
     assert "thank you" not in cleaned
     assert "thanks for watching" not in cleaned
