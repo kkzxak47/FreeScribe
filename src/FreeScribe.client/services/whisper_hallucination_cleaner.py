@@ -265,7 +265,7 @@ class WhisperHallucinationCleaner:
         sentences = self._split_into_sentences(text)
         cleaned_sentences = [s for s in sentences if not self._is_similar_to_hallucination(s)]
         
-        # Join sentences back together
+        # Join sentences back together with a single space, since each sentence already has its punctuation
         result = ' '.join(s.strip() for s in cleaned_sentences)
         logger.debug(f"Cleaned text: {result}")
         return result

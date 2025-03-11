@@ -92,7 +92,12 @@ def test_clean_text(cleaner):
     # Test with text containing no hallucinations
     text = "This is a normal sentence. This is another normal sentence."
     cleaned = cleaner.clean_text(text)
-    assert cleaned.replace("..", ".") == text  # Account for potential double periods
+    assert cleaned == text  # No double periods should occur
+    
+    # Test with multiple sentence endings
+    text = "First sentence! Second sentence? Third sentence."
+    cleaned = cleaner.clean_text(text)
+    assert cleaned == text  # Punctuation should be preserved correctly
 
 def test_clean_text_with_different_threshold():
     """Test text cleaning with different similarity thresholds."""
@@ -258,21 +263,29 @@ def test_download_spacy_model(monkeypatch, attempt_scenario):
     
     def mock_is_package(name):
         return False
-    
-    def mock_download(name):
-        calls.append(name)
-        if not success:
-            raise error
+        
+    def mock_run(*args, **kwargs):
+        calls.append(args[0])
+        # Create a mock CompletedProcess object
+        class MockCompletedProcess:
+            def __init__(self, returncode, stderr=""):
+                self.returncode = returncode
+                self.stderr = stderr
+                
+        if success:
+            return MockCompletedProcess(0)
+        else:
+            return MockCompletedProcess(1, "Download failed")
     
     monkeypatch.setattr(spacy.util, "is_package", mock_is_package)
-    monkeypatch.setattr(spacy.cli, "download", mock_download)
+    monkeypatch.setattr("subprocess.run", mock_run)
     
     if success:
         assert download_spacy_model()
-        assert len(calls) == 1
+        assert len(calls) == 1  # Should be called once on success
     else:
         assert not download_spacy_model()
-        assert len(calls) == 3  # Should try 3 times
+        assert len(calls) == 3  # Should try 3 times on failure
 
 def test_global_hallucination_cleaner():
     """Test the global hallucination cleaner instance.
