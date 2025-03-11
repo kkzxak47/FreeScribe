@@ -58,7 +58,6 @@ COMMON_HALUCINATIONS = [
     "he was gonna catch it",
     "thank you bye bye",
     "thanks for watching",
-    "thank you very much",
     "it s no good to me",
     "see you next video",
     "see you next time",
@@ -148,8 +147,8 @@ class WhisperHallucinationCleaner:
         :type similarity_threshold: float
         """
         self.similarity_threshold = similarity_threshold
-        # Store hallucinations as a set for O(1) membership tests
-        self.hallucinations = set(h.lower() for h in COMMON_HALUCINATIONS)
+        # Store normalized hallucinations for exact matching
+        self.hallucinations = set(self._normalize_text(h) for h in COMMON_HALUCINATIONS)
         self._nlp = None
         self._hallucination_docs = None
         
@@ -177,8 +176,7 @@ class WhisperHallucinationCleaner:
         if self._hallucination_docs is None:
             # Process all hallucinations and store their docs
             self._hallucination_docs = [
-                self.nlp(hallucination)
-                for hallucination in sorted(self.hallucinations)  # Sort for consistent ordering
+                self.nlp(h) for h in sorted(COMMON_HALUCINATIONS)  # Use original text for semantic similarity
             ]
         return self._hallucination_docs
     
@@ -206,26 +204,25 @@ class WhisperHallucinationCleaner:
         if not sentence:
             return True
 
-        logger.debug(f"Checking sentence: {sentence}")
-        # use spacy to normalize the sentence
-        sentence_doc = self.nlp(sentence)
-        sentence = " ".join([token.text.lower() for token in sentence_doc if not token.is_punct])
-        logger.debug(f"Normalized sentence: {sentence}")
+        # Normalize for exact matching
+        normalized = self._normalize_text(sentence)
+        
+        logger.debug(f"Checking normalized sentence: {normalized}")
 
         # First check for exact matches (case insensitive)
-        if any(h in sentence for h in self.hallucinations):
-            logger.debug(f"Sentence contains a hallucination: {sentence}")
+        if any(h in normalized for h in self.hallucinations):
+            logger.debug(f"Sentence contains a hallucination: {normalized}")
             return True
             
-        # Process the sentence
-        sentence_doc = self.nlp(sentence)
+        # Process the original sentence for semantic similarity
+        doc = self.nlp(sentence)
         
         # Longer sentences are less likely to be hallucinations
-        if len(sentence_doc) > MAX_SENTENCE_LENGTH:
+        if len(doc) > MAX_SENTENCE_LENGTH:
             return False
             
         # Use pre-processed hallucination docs for similarity check
-        return any(sentence_doc.similarity(hallucination_doc) >= self.similarity_threshold 
+        return any(doc.similarity(hallucination_doc) >= self.similarity_threshold 
                   for hallucination_doc in self.hallucination_docs)
     
     def _split_into_sentences(self, text: str) -> List[str]:
