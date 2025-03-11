@@ -1807,7 +1807,6 @@ def faster_whisper_transcribe(audio):
     except Exception as e:
         logger.exception(f"Error during transcription: {str(e)}")
         error_message = f"Transcription failed: {str(e)}"
-        print(f"Error during transcription: {str(e)}")
         raise TranscribeError(error_message) from e
 
 def set_cuda_paths():
