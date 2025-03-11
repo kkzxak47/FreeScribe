@@ -152,7 +152,7 @@ class WhisperHallucinationCleaner:
         self._trans_table = str.maketrans(string.punctuation, ' ' * len(string.punctuation))
         # Store normalized hallucinations for exact matching
         self.hallucinations = {self._normalize_text(h) for h in COMMON_HALUCINATIONS}
-        self._nlp = spacy.load(SPACY_MODEL_NAME)
+        self._nlp = None
         self._hallucination_docs = None
         
     @property
