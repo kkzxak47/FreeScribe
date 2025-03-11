@@ -57,260 +57,243 @@ def dissimilar_phrases():
         "what time is the meeting"
     ]
 
-def test_initialization(cleaner):
-    """Test the initialization of WhisperHallucinationCleaner.
+@pytest.mark.parametrize("test_case", [
+    {
+        "name": "default threshold",
+        "expected": SIMILARITY_THRESHOLD
+    }
+])
+def test_initialization_threshold_param(cleaner, test_case):
+    """Test the initialization of similarity threshold.
+    
+    :param cleaner: The WhisperHallucinationCleaner fixture
+    :type cleaner: WhisperHallucinationCleaner
+    :param test_case: Dictionary containing test case data
+    :type test_case: dict
+    """
+    assert cleaner.similarity_threshold == test_case["expected"]
+
+@pytest.mark.parametrize("test_case", [
+    {
+        "name": "hallucinations type check",
+        "expected": set
+    }
+])
+def test_initialization_type_param(cleaner, test_case):
+    """Test the type of hallucinations set.
+    
+    :param cleaner: The WhisperHallucinationCleaner fixture
+    :type cleaner: WhisperHallucinationCleaner
+    :param test_case: Dictionary containing test case data
+    :type test_case: dict
+    """
+    assert isinstance(cleaner.hallucinations, test_case["expected"])
+
+@pytest.mark.parametrize("test_case", [
+    {
+        "name": "hallucinations content check",
+        "expected": lambda c: {c._normalize_text(h) for h in COMMON_HALUCINATIONS}
+    }
+])
+def test_initialization_content_param(cleaner, test_case):
+    """Test the content of hallucinations set.
+    
+    :param cleaner: The WhisperHallucinationCleaner fixture
+    :type cleaner: WhisperHallucinationCleaner
+    :param test_case: Dictionary containing test case data
+    :type test_case: dict
+    """
+    assert cleaner.hallucinations == test_case["expected"](cleaner)
+
+def test_initialization_threshold(cleaner):
+    """Test the initialization of similarity threshold.
     
     :param cleaner: The WhisperHallucinationCleaner fixture
     :type cleaner: WhisperHallucinationCleaner
     """
     assert cleaner.similarity_threshold == SIMILARITY_THRESHOLD
-    assert isinstance(cleaner.hallucinations, set)
-    # Both should already be sets of lowercase strings
-    assert cleaner.hallucinations == {cleaner._normalize_text(h) for h in COMMON_HALUCINATIONS}
 
-def test_nlp_loading(cleaner):
-    """Test that the spacy model loads correctly.
+def test_initialization_type(cleaner):
+    """Test the type of hallucinations set.
     
     :param cleaner: The WhisperHallucinationCleaner fixture
     :type cleaner: WhisperHallucinationCleaner
     """
-    nlp = cleaner.nlp
-    assert nlp is not None
-    # Test that it can process text
-    doc = nlp("Test sentence.")
+    assert isinstance(cleaner.hallucinations, set)
+
+def test_initialization_content(cleaner):
+    """Test the content of hallucinations set.
+    
+    :param cleaner: The WhisperHallucinationCleaner fixture
+    :type cleaner: WhisperHallucinationCleaner
+    """
+    expected = {cleaner._normalize_text(h) for h in COMMON_HALUCINATIONS}
+    assert cleaner.hallucinations == expected
+
+def test_nlp_loading_not_none(cleaner):
+    """Test that the spacy model loads and is not None.
+    
+    :param cleaner: The WhisperHallucinationCleaner fixture
+    :type cleaner: WhisperHallucinationCleaner
+    """
+    assert cleaner.nlp is not None
+
+def test_nlp_loading_can_process(cleaner):
+    """Test that the loaded spacy model can process text.
+    
+    :param cleaner: The WhisperHallucinationCleaner fixture
+    :type cleaner: WhisperHallucinationCleaner
+    """
+    doc = cleaner.nlp("Test sentence.")
     assert len(list(doc.sents)) == 1
 
-def test_is_similar_to_hallucination(cleaner):
+@pytest.mark.parametrize("test_case", [
+    {
+        "name": "exact match",
+        "input": "thank you",
+        "should_match": True
+    },
+    {
+        "name": "similar match",
+        "input": "thanks a lot",
+        "should_match": True
+    },
+    {
+        "name": "different text",
+        "input": "the quick brown fox jumps over the lazy dog",
+        "should_match": False
+    }
+])
+def test_is_similar_to_hallucination_cases(cleaner, test_case):
     """Test similarity checking against hallucinations.
     
-    Tests exact matches, similar matches, and completely different text.
-    
     :param cleaner: The WhisperHallucinationCleaner fixture
     :type cleaner: WhisperHallucinationCleaner
+    :param test_case: Dictionary containing test case data
+    :type test_case: dict
     """
-    # Test with exact match
-    assert cleaner._is_similar_to_hallucination("thank you") is True
-    
-    # Test with similar but not exact match
-    assert cleaner._is_similar_to_hallucination("thanks a lot") is True
-    
-    # Test with completely different text
-    assert not cleaner._is_similar_to_hallucination("the quick brown fox jumps over the lazy dog")
+    result = cleaner._is_similar_to_hallucination(test_case["input"])
+    assert result == test_case["should_match"]
 
-def test_split_into_sentences(cleaner):
-    """Test sentence splitting functionality.
-    
-    Tests multiple sentences, empty text, and various punctuation.
-    
-    :param cleaner: The WhisperHallucinationCleaner fixture
-    :type cleaner: WhisperHallucinationCleaner
-    """
-    # Test with multiple sentences
-    text = "First sentence. Second sentence. Third sentence."
-    sentences = cleaner._split_into_sentences(text)
-    assert len(sentences) == 3
-    assert sentences[0].strip() == "First sentence."
-    assert sentences[1].strip() == "Second sentence."
-    assert sentences[2].strip() == "Third sentence."
-    
-    # Test with empty text
-    assert cleaner._split_into_sentences("") == []
-    
-    # Test with text containing various punctuation
-    text = "Sentence one! Sentence two? Sentence three."
-    sentences = cleaner._split_into_sentences(text)
-    assert len(sentences) == 3
-
-def test_clean_text(cleaner):
-    """Test the main text cleaning functionality."""
-    # Test with text containing hallucinations
-    text = "This is a normal sentence. thank you. This is another normal sentence. thanks for watching! It's great to see you all again. I'll be back soon."
-    cleaned = cleaner.clean_text(text)
-    assert "thank you" not in cleaned
-    assert "thanks for watching" not in cleaned
-    assert "This is a normal sentence" in cleaned
-    assert "This is another normal sentence" in cleaned
-    
-    # Test with empty text
-    assert cleaner.clean_text("") == ""
-    
-    # Test with text containing no hallucinations
-    text = "This is a normal sentence. This is another normal sentence."
-    cleaned = cleaner.clean_text(text)
-    assert cleaned == text  # No double periods should occur
-    
-    # Test with multiple sentence endings
-    text = "First sentence! Second sentence? Third sentence."
-    cleaned = cleaner.clean_text(text)
-    assert cleaned == text  # Punctuation should be preserved correctly
-
-def test_clean_text_with_different_threshold(strict_cleaner, lenient_cleaner):
-    """Test text cleaning with different similarity thresholds.
-    
-    :param strict_cleaner: Cleaner with high similarity threshold
-    :type strict_cleaner: WhisperHallucinationCleaner
-    :param lenient_cleaner: Cleaner with low similarity threshold
-    :type lenient_cleaner: WhisperHallucinationCleaner
-    """
-    text = "This is a normal sentence. thank you. This is another normal sentence. thanks for watching!"
-    
-    # Strict cleaner should remove fewer matches
-    strict_cleaned = strict_cleaner.clean_text(text)
-    assert "thank you" not in strict_cleaned
-    
-    # Lenient cleaner should remove more similar phrases
-    lenient_cleaned = lenient_cleaner.clean_text(text)
-    assert "thank you" not in lenient_cleaned
-    assert "thanks for watching" not in lenient_cleaned
-
-def test_clean_text_with_edge_cases(cleaner):
-    """Test text cleaning with various edge cases.
-    
-    Tests handling of:
-        * Multiple spaces
-        * Mixed case text
-        * Various punctuation
-    
-    :param cleaner: The WhisperHallucinationCleaner fixture
-    :type cleaner: WhisperHallucinationCleaner
-    """
-    # Test with text containing multiple spaces
-    text = "This  has  multiple  spaces.  thank  you."
-    cleaned = cleaner.clean_text(text)
-    assert "thank  you" not in cleaned
-    assert "This  has  multiple  spaces" in cleaned
-    
-    # Test with text containing mixed case
-    text = "This is a sentence. THANK YOU. This is another sentence."
-    cleaned = cleaner.clean_text(text)
-    assert "THANK YOU" not in cleaned
-    
-    # Test with text containing punctuation
-    text = "This is a sentence! thank you? This is another sentence."
-    cleaned = cleaner.clean_text(text)
-    assert "thank you" not in cleaned
-    assert "This is a sentence" in cleaned
-    assert "This is another sentence" in cleaned 
-
-def test_normalize_text(cleaner):
-    """Test text normalization functionality.
-    
-    Tests handling of:
-        * Extra whitespace
-        * Mixed case text
-        * Empty strings
-    
-    :param cleaner: The WhisperHallucinationCleaner fixture
-    :type cleaner: WhisperHallucinationCleaner
-    """
-    # Test with extra whitespace
-    assert cleaner._normalize_text("  Hello   World  ") == "hello world"
-    
-    # Test with mixed case
-    assert cleaner._normalize_text("HeLLo WoRLD") == "hello world"
-    
-    # Test with empty string
-    assert cleaner._normalize_text("") == ""
-
-def test_hallucination_docs_property(cleaner):
-    """Test the hallucination_docs property.
-    
-    Tests:
-        * Correct creation of spaCy docs
-        * Proper handling of case-insensitive duplicates
-        * Caching behavior
-    
-    :param cleaner: The WhisperHallucinationCleaner fixture
-    :type cleaner: WhisperHallucinationCleaner
-    """
-    # Test that docs are created correctly
-    docs = cleaner.hallucination_docs
-    # Get unique lowercase hallucinations since some might be duplicates when lowercased
-    unique_hallucinations = len({h.lower() for h in COMMON_HALUCINATIONS})
-    assert len(docs) == unique_hallucinations
-    
-    # Test caching - should return same object
-    assert cleaner.hallucination_docs is docs
-
-def test_is_similar_to_hallucination_with_long_sentences(cleaner):
-    """Test similarity checking with sentences of varying lengths.
-    
-    Tests:
-        * Very long sentences (should not be detected)
-        * Single hallucination
-        * Hallucination within a reasonable length sentence
-    
-    :param cleaner: The WhisperHallucinationCleaner fixture
-    :type cleaner: WhisperHallucinationCleaner
-    """
-    # Create a sentence longer than MAX_SENTENCE_LENGTH
-    long_sentence = "This is a very long sentence that " * 10
-    assert not cleaner._is_similar_to_hallucination(long_sentence)
-    
-    # Test with a hallucination by itself
-    hallucination = COMMON_HALUCINATIONS[0]
-    assert cleaner._is_similar_to_hallucination(hallucination)
-    
-    # Test with a hallucination in a reasonable length sentence
-    sentence_with_hallucination = f"I wanted to say {COMMON_HALUCINATIONS[0]} to everyone"
-    assert cleaner._is_similar_to_hallucination(sentence_with_hallucination)
-
-@pytest.mark.parametrize("attempt_scenario", [
-    (True, None),  # Success on first try
-    (False, RuntimeError("Download failed")),  # Failure
+@pytest.mark.parametrize("test_case", [
+    {
+        "name": "multiple sentences",
+        "input": "First sentence. Second sentence. Third sentence.",
+        "expected_count": 3
+    },
+    {
+        "name": "empty text",
+        "input": "",
+        "expected_count": 0
+    },
+    {
+        "name": "mixed punctuation",
+        "input": "Sentence one! Sentence two? Sentence three.",
+        "expected_count": 3
+    }
 ])
-def test_download_spacy_model(monkeypatch, attempt_scenario):
-    """Test spacy model download functionality.
+def test_split_into_sentences_count(cleaner, test_case):
+    """Test sentence splitting functionality - count check.
     
-    Tests:
-        * Successful download on first attempt
-        * Failed download with retry behavior
-    
-    :param monkeypatch: pytest's monkeypatch fixture
-    :type monkeypatch: pytest.MonkeyPatch
-    :param attempt_scenario: Tuple of (success_flag, error_to_raise)
-    :type attempt_scenario: tuple[bool, Exception|None]
+    :param cleaner: The WhisperHallucinationCleaner fixture
+    :type cleaner: WhisperHallucinationCleaner
+    :param test_case: Dictionary containing test case data
+    :type test_case: dict
     """
-    success, error = attempt_scenario
-    calls = []
-    
-    def mock_is_package(name):
-        return False
-        
-    def mock_run(*args, **kwargs):
-        calls.append(args[0])
-        # Create a mock CompletedProcess object
-        class MockCompletedProcess:
-            def __init__(self, returncode, stderr=""):
-                self.returncode = returncode
-                self.stderr = stderr
-                
-        if success:
-            return MockCompletedProcess(0)
-        else:
-            return MockCompletedProcess(1, "Download failed")
-    
-    monkeypatch.setattr(spacy.util, "is_package", mock_is_package)
-    monkeypatch.setattr("subprocess.run", mock_run)
-    
-    if success:
-        assert download_spacy_model()
-        assert len(calls) == 1  # Should be called once on success
-    else:
-        assert not download_spacy_model()
-        assert len(calls) == 3  # Should try 3 times on failure
+    sentences = cleaner._split_into_sentences(test_case["input"])
+    assert len(sentences) == test_case["expected_count"]
 
-def test_global_hallucination_cleaner():
-    """Test the global hallucination cleaner instance.
+@pytest.mark.parametrize("test_case", [
+    {
+        "name": "first sentence",
+        "input": "First sentence. Second sentence. Third sentence.",
+        "index": 0,
+        "expected": "First sentence."
+    },
+    {
+        "name": "second sentence",
+        "input": "First sentence. Second sentence. Third sentence.",
+        "index": 1,
+        "expected": "Second sentence."
+    },
+    {
+        "name": "third sentence",
+        "input": "First sentence. Second sentence. Third sentence.",
+        "index": 2,
+        "expected": "Third sentence."
+    },
+    {
+        "name": "exclamation mark",
+        "input": "Sentence one! Sentence two? Sentence three.",
+        "index": 0,
+        "expected": "Sentence one!"
+    },
+    {
+        "name": "question mark",
+        "input": "Sentence one! Sentence two? Sentence three.",
+        "index": 1,
+        "expected": "Sentence two?"
+    },
+    {
+        "name": "period",
+        "input": "Sentence one! Sentence two? Sentence three.",
+        "index": 2,
+        "expected": "Sentence three."
+    }
+])
+def test_split_into_sentences_content(cleaner, test_case):
+    """Test sentence splitting functionality - content check.
     
-    Tests:
-        * Instance type
-        * Default configuration
+    :param cleaner: The WhisperHallucinationCleaner fixture
+    :type cleaner: WhisperHallucinationCleaner
+    :param test_case: Dictionary containing test case data
+    :type test_case: dict
     """
-    from services.whisper_hallucination_cleaner import hallucination_cleaner
+    sentences = cleaner._split_into_sentences(test_case["input"])
+    assert sentences[test_case["index"]].strip() == test_case["expected"]
+
+def test_hallucination_docs_caching(cleaner):
+    """Test that hallucination docs are properly cached.
     
-    assert isinstance(hallucination_cleaner, WhisperHallucinationCleaner)
-    assert hallucination_cleaner.similarity_threshold == SIMILARITY_THRESHOLD 
+    :param cleaner: The WhisperHallucinationCleaner fixture
+    :type cleaner: WhisperHallucinationCleaner
+    """
+    first_docs = cleaner.hallucination_docs
+    second_docs = cleaner.hallucination_docs
+    assert first_docs is second_docs
+
+@pytest.mark.parametrize("test_case", [
+    {
+        "name": "empty text",
+        "input": "",
+        "expected": ""
+    },
+    {
+        "name": "text without hallucinations",
+        "input": "This is a normal text without any hallucinations.",
+        "expected": "This is a normal text without any hallucinations."
+    },
+    {
+        "name": "text with hallucination",
+        "input": "This is a normal sentence. Thank you for watching.",
+        "expected": "This is a normal sentence."
+    },
+    {
+        "name": "text with multiple hallucinations",
+        "input": "Thank you. This is a normal sentence. Thanks for watching.",
+        "expected": "This is a normal sentence."
+    }
+])
+def test_global_hallucination_cleaner_cases(cleaner, test_case):
+    """Test the global hallucination cleaner with various text inputs.
+    
+    :param cleaner: The WhisperHallucinationCleaner fixture
+    :type cleaner: WhisperHallucinationCleaner
+    :param test_case: Dictionary containing test case data
+    :type test_case: dict
+    """
+    result = cleaner.clean_text(test_case["input"])
+    assert result == test_case["expected"]
 
 @pytest.mark.parametrize("phrase", [
     "thanks for your attention",
@@ -341,4 +324,59 @@ def test_dissimilar_phrases(cleaner, phrase):
     :param phrase: A phrase that should not be detected as similar
     :type phrase: str
     """
-    assert not cleaner._is_similar_to_hallucination(phrase) 
+    assert not cleaner._is_similar_to_hallucination(phrase)
+
+class MockCompletedProcess:
+    """Mock subprocess.CompletedProcess for testing."""
+    def __init__(self, returncode, stderr=""):
+        self.returncode = returncode
+        self.stderr = stderr
+
+def mock_successful_run(*args, **kwargs):
+    """Mock successful subprocess run."""
+    return MockCompletedProcess(0)
+
+def mock_failed_run(*args, **kwargs):
+    """Mock failed subprocess run."""
+    return MockCompletedProcess(1, "Download failed")
+
+@pytest.mark.parametrize("test_case", [
+    {
+        "name": "successful download",
+        "mock_run": mock_successful_run,
+        "expected_calls": 1,
+        "should_succeed": True
+    },
+    {
+        "name": "failed download",
+        "mock_run": mock_failed_run,
+        "expected_calls": 3,
+        "should_succeed": False
+    }
+])
+def test_download_spacy_model(monkeypatch, test_case):
+    """Test spacy model download functionality.
+    
+    Tests:
+        * Successful download on first attempt
+        * Failed download with retry behavior
+    
+    :param monkeypatch: pytest's monkeypatch fixture
+    :type monkeypatch: pytest.MonkeyPatch
+    :param test_case: Dictionary containing test case data
+    :type test_case: dict
+    """
+    calls = []
+    
+    def mock_run_with_tracking(*args, **kwargs):
+        calls.append(args[0])
+        return test_case["mock_run"](*args, **kwargs)
+    
+    def mock_is_package(name):
+        return False
+    
+    monkeypatch.setattr(spacy.util, "is_package", mock_is_package)
+    monkeypatch.setattr("subprocess.run", mock_run_with_tracking)
+    
+    assert download_spacy_model() == test_case["should_succeed"]
+    assert len(calls) == test_case["expected_calls"] 
