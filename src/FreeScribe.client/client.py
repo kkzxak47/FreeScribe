@@ -594,7 +594,7 @@ def save_audio():
         threaded_send_audio_to_server()
 
 def toggle_recording():
-    global is_recording, recording_thread, DEFAULT_BUTTON_COLOUR, audio_queue, current_view, REALTIME_TRANSCRIBE_THREAD_ID, frames
+    global is_recording, recording_thread, DEFAULT_BUTTON_COLOUR, audio_queue, current_view, REALTIME_TRANSCRIBE_THREAD_ID, frames, silent_warning_duration
 
     # Reset the cancel flags going into a fresh recording
     if not is_recording:
@@ -621,6 +621,7 @@ def toggle_recording():
 
         # reset frames before new recording so old data is not used
         frames = []
+        silent_warning_duration = 0
         recording_thread = threading.Thread(target=record_audio)
         recording_thread.start()
 
