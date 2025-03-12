@@ -13,7 +13,10 @@ Alex Simko, Pemba Sherpa, Naitik Patel, Yogesh Kumar and Xun Zhong.
 
 import numpy as np
 
-def pad_audio_chunk(chunk, pad_seconds=0.5):
+DEFAULT_RATE = 16000
+DEFAULT_CHUNK_SIZE = 512
+
+def pad_audio_chunk(chunk, pad_seconds=0.5, rate = DEFAULT_RATE, chunk_size = DEFAULT_CHUNK_SIZE):
     """
     Pad an audio chunk with silence at the beginning and end.
     
@@ -31,14 +34,14 @@ def pad_audio_chunk(chunk, pad_seconds=0.5):
     """
 
     # Calculate how many chunks make up half a second
-    pad_chunk_leng = int(pad_seconds * RATE / CHUNK)
+    pad_chunk_leng = int(pad_seconds * rate / chunk_size)
 
     # Create half a second of silence (all zeros)
-    silent_chunk = np.zeros(CHUNK, dtype=np.int16).tobytes()
+    silent_chunk = np.zeros(chunk_size, dtype=np.int16).tobytes()
 
     # Create arrays of silent chunks
-    silence_start = [silent_chunk] * half_second_chunks
-    silence_end = [silent_chunk] * half_second_chunks
+    silence_start = [silent_chunk] * pad_chunk_leng
+    silence_end = [silent_chunk] * pad_chunk_leng
 
     # Add silence to the beginning and end of chunk
     padded_chunk = silence_start + chunk + silence_end
