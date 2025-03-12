@@ -113,7 +113,7 @@ class SettingsWindow():
             SettingsKeys.WHISPER_MODEL.value: "medium",
             "Current Mic": "None",
             SettingsKeys.WHISPER_REAL_TIME.value: True,
-            "Real Time Audio Length": 10,
+            "Real Time Audio Length": 3,
             "Real Time Silence Length": 1,
             "Silence cut-off": 0.035,
             "LLM Container Name": "ollama",
@@ -133,7 +133,7 @@ class SettingsWindow():
             "Post-Processing": "\n\nUsing the provided list of facts, review the SOAP note for accuracy. Verify that all details align with the information provided in the list of facts and ensure consistency throughout. Update or adjust the SOAP note as necessary to reflect the listed facts without offering opinions or subjective commentary. Ensure that the revised note excludes a \"Notes\" section and does not include a header for the SOAP note. Provide the revised note after making any necessary corrections.",
             "Show Scrub PHI": False,
             SettingsKeys.AUDIO_PROCESSING_TIMEOUT_LENGTH.value: 180,
-            SettingsKeys.SILERO_SPEECH_THRESHOLD.value: 0.75,
+            SettingsKeys.SILERO_SPEECH_THRESHOLD.value: 0.4,
             SettingsKeys.USE_TRANSLATE_TASK.value: False,
             SettingsKeys.WHISPER_LANGUAGE_CODE.value: "None (Auto Detect)",
             SettingsKeys.Enable_Word_Count_Validation.value : True,  # Default to enabled
