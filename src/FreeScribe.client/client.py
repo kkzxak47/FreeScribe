@@ -408,6 +408,7 @@ def record_audio():
             clear_application_press()
             messagebox.showerror("Error", f"An error occurred while trying to record audio: {stream_exception}")
         
+        audio_data_leng = 0
         while is_recording and stream is not None:
             if not is_paused:
                 data = stream.read(CHUNK, exception_on_overflow=False)
@@ -426,9 +427,11 @@ def record_audio():
                     silent_duration += CHUNK / RATE
                     silent_warning_duration += CHUNK / RATE
                 else:
-                    current_chunk.append(data)
                     silent_duration = 0
                     silent_warning_duration = 0
+                    audio_data_leng += CHUNK / RATE
+
+                current_chunk.append(data)
                 
                 record_duration += CHUNK / RATE
 
@@ -436,10 +439,28 @@ def record_audio():
                 check_silence_warning(silent_warning_duration)
 
                 # 1 second of silence at the end so we dont cut off speech
-                if silent_duration >= minimum_silent_duration:
+                if silent_duration >= minimum_silent_duration and audio_data_leng > 1.5  and record_duration > minimum_audio_duration:
                     if app_settings.editable_settings[SettingsKeys.WHISPER_REAL_TIME.value] and current_chunk:
-                        audio_queue.put(b''.join(current_chunk))
+                        # Calculate how many chunks make up half a second
+                        half_second_chunks = int(0.5 * RATE / CHUNK)
+                        
+                        # Create half a second of silence (all zeros)
+                        silent_chunk = np.zeros(CHUNK, dtype=np.int16).tobytes()
+                        
+                        # Create arrays of silent chunks
+                        silence_start = [silent_chunk] * half_second_chunks
+                        silence_end = [silent_chunk] * half_second_chunks
+                        
+                        # Add silence to the beginning and end of current_chunk
+                        padded_chunk = silence_start + current_chunk + silence_end
+                        
+                        # Send the padded audio to the queue
+                        audio_queue.put(b''.join(padded_chunk))
+
+                    carry_over_chunk = current_chunk[-int(0.1 * RATE / CHUNK):]
                     current_chunk = []
+                    current_chunk.extend(carry_over_chunk)
+                    audio_data_leng = 0
                     silent_duration = 0
                     record_duration = 0
 
