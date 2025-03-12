@@ -113,7 +113,7 @@ class SettingsWindow():
             SettingsKeys.WHISPER_MODEL.value: "medium",
             "Current Mic": "None",
             SettingsKeys.WHISPER_REAL_TIME.value: True,
-            "Real Time Audio Length": 10,
+            "Real Time Audio Length": 3,
             "Real Time Silence Length": 1,
             "Silence cut-off": 0.035,
             "LLM Container Name": "ollama",

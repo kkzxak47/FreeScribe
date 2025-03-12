@@ -50,6 +50,7 @@ from utils.ip_utils import is_private_ip
 from utils.file_utils import get_file_path, get_resource_path
 from utils.OneInstance import OneInstance
 from utils.utils import get_application_version
+import utils.audio
 from UI.DebugWindow import DualOutput
 from UI.Widgets.MicrophoneTestFrame import MicrophoneTestFrame
 from utils.utils import window_has_running_instance, bring_to_front, close_mutex
@@ -412,6 +413,7 @@ def record_audio():
             clear_application_press()
             messagebox.showerror("Error", f"An error occurred while trying to record audio: {stream_exception}")
         
+        audio_data_leng = 0
         while is_recording and stream is not None:
             if not is_paused:
                 data = stream.read(CHUNK, exception_on_overflow=False)
@@ -430,9 +432,11 @@ def record_audio():
                     silent_duration += CHUNK / RATE
                     silent_warning_duration += CHUNK / RATE
                 else:
-                    current_chunk.append(data)
                     silent_duration = 0
                     silent_warning_duration = 0
+                    audio_data_leng += CHUNK / RATE
+
+                current_chunk.append(data)
                 
                 record_duration += CHUNK / RATE
 
@@ -440,10 +444,18 @@ def record_audio():
                 check_silence_warning(silent_warning_duration)
 
                 # 1 second of silence at the end so we dont cut off speech
-                if silent_duration >= minimum_silent_duration:
+                if silent_duration >= minimum_silent_duration and audio_data_leng > 1.5  and record_duration > minimum_audio_duration:
                     if app_settings.editable_settings[SettingsKeys.WHISPER_REAL_TIME.value] and current_chunk:
-                        audio_queue.put(b''.join(current_chunk))
-                    current_chunk = []
+                        padded_audio = utils.audio.pad_audio_chunk(current_chunk, pad_seconds=0.5)
+                        audio_queue.put(b''.join(padded_audio))
+
+                    # Carry over the last .1 seconds of audio to the next one so next speech does not start abruptly or in middle of a word
+                    carry_over_chunk = current_chunk[-int(0.1 * RATE / CHUNK):]
+                    current_chunk = [] 
+                    current_chunk.extend(carry_over_chunk)
+
+                    # reset the variables and state holders for realtime audio processing
+                    audio_data_leng = 0
                     silent_duration = 0
                     record_duration = 0
             else:
