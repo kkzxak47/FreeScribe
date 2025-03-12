@@ -50,6 +50,7 @@ from utils.ip_utils import is_private_ip
 from utils.file_utils import get_file_path, get_resource_path
 from utils.OneInstance import OneInstance
 from utils.utils import get_application_version
+import utils.audio
 from UI.DebugWindow import DualOutput
 from UI.Widgets.MicrophoneTestFrame import MicrophoneTestFrame
 from utils.utils import window_has_running_instance, bring_to_front, close_mutex
@@ -441,25 +442,15 @@ def record_audio():
                 # 1 second of silence at the end so we dont cut off speech
                 if silent_duration >= minimum_silent_duration and audio_data_leng > 1.5  and record_duration > minimum_audio_duration:
                     if app_settings.editable_settings[SettingsKeys.WHISPER_REAL_TIME.value] and current_chunk:
-                        # Calculate how many chunks make up half a second
-                        half_second_chunks = int(0.5 * RATE / CHUNK)
-                        
-                        # Create half a second of silence (all zeros)
-                        silent_chunk = np.zeros(CHUNK, dtype=np.int16).tobytes()
-                        
-                        # Create arrays of silent chunks
-                        silence_start = [silent_chunk] * half_second_chunks
-                        silence_end = [silent_chunk] * half_second_chunks
-                        
-                        # Add silence to the beginning and end of current_chunk
-                        padded_chunk = silence_start + current_chunk + silence_end
-                        
-                        # Send the padded audio to the queue
-                        audio_queue.put(b''.join(padded_chunk))
+                        padded_audio = utils.audio.pad_audio_chunk(current_chunk, pad_seconds=0.5)
+                        audio_queue.put(b''.join(padded_audio))
 
+                    # Carry over the last .1 seconds of audio to the next one so next speech does not start abruptly or in middle of a word
                     carry_over_chunk = current_chunk[-int(0.1 * RATE / CHUNK):]
-                    current_chunk = []
+                    current_chunk = [] 
                     current_chunk.extend(carry_over_chunk)
+
+                    # reset the variables and state holders for realtime audio processing
                     audio_data_leng = 0
                     silent_duration = 0
                     record_duration = 0
