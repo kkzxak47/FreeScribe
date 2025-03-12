@@ -43,7 +43,4 @@ def pad_audio_chunk(chunk, pad_seconds=0.5, rate = DEFAULT_RATE, chunk_size = DE
     silence_start = [silent_chunk] * pad_chunk_leng
     silence_end = [silent_chunk] * pad_chunk_leng
 
-    # Add silence to the beginning and end of chunk
-    padded_chunk = silence_start + chunk + silence_end
-
-    return padded_chunk
+    return silence_start + chunk + silence_end
