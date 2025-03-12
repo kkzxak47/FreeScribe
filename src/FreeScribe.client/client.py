@@ -59,6 +59,7 @@ from UI.Widgets.PopupBox import PopupBox
 from UI.Widgets.TimestampListbox import TimestampListbox
 from UI.ScrubWindow import ScrubWindow
 from Model import ModelStatus
+from services.whisper_hallucination_cleaner import hallucination_cleaner
 
 
 if os.environ.get("FREESCRIBE_DEBUG"):
@@ -68,8 +69,11 @@ else:
 
 logging.basicConfig(
     level=LOG_LEVEL,
-    format='%(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[logging.StreamHandler()]
 )
+
+logger = logging.getLogger(__name__)
 
 dual = DualOutput()
 sys.stdout = dual
@@ -1773,7 +1777,7 @@ def faster_whisper_transcribe(audio):
         if stt_local_model is None:
             load_stt_model()
             raise TranscribeError("Speech2Text model not loaded. Please try again once loaded.")
-
+        
         # Validate beam_size
         try:
             beam_size = int(app_settings.editable_settings[SettingsKeys.WHISPER_BEAM_SIZE.value])
@@ -1801,10 +1805,17 @@ def faster_whisper_transcribe(audio):
         if type(audio) in [str, np.ndarray]:
             print(f"took {time.monotonic() - start_time:.3f} seconds to process {len(audio)=} {type(audio)=} audio.")
 
-        return "".join(f"{segment.text} " for segment in segments)
+        result = "".join(f"{segment.text} " for segment in segments)
+        logger.debug(f"Result: {result}")
+
+        # Only clean hallucinations if enabled in settings
+        if app_settings.editable_settings[SettingsKeys.ENABLE_HALLUCINATION_CLEAN.value]:
+            result = hallucination_cleaner.clean_text(result)
+            logger.debug(f"Cleaned result: {result}")
+        return result
     except Exception as e:
+        logger.exception(f"Error during transcription: {str(e)}")
         error_message = f"Transcription failed: {str(e)}"
-        print(f"Error during transcription: {str(e)}")
         raise TranscribeError(error_message) from e
 
 def set_cuda_paths():
