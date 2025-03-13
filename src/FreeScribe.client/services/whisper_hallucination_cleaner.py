@@ -78,7 +78,8 @@ COMMON_HALUCINATIONS = [
 # Calculate max length based on tokens instead of characters for more accurate comparison
 MAX_SENTENCE_LENGTH = max(len(hallucination.split()) for hallucination in COMMON_HALUCINATIONS)
 SIMILARITY_THRESHOLD = 0.95
-SPACY_MODEL_PATH = os.path.join(spacy.util.get_package_path("en_core_web_md"), "en_core_web_md-3.7.1")
+SPACY_MODEL_NAME = "en_core_web_md"
+SPACY_MODEL_PATH = os.path.join(spacy.util.get_package_path(SPACY_MODEL_NAME), f"{SPACY_MODEL_NAME}-3.7.1")
 
 
 class WhisperHallucinationCleaner:

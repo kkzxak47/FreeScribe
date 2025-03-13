@@ -6,33 +6,21 @@ from services.whisper_hallucination_cleaner import (
     WhisperHallucinationCleaner,
     COMMON_HALUCINATIONS,
     SIMILARITY_THRESHOLD,
-    download_spacy_model,
-    SPACY_MODEL_NAME,
+    SPACY_MODEL_PATH,
     HallucinationCleanerException,
     default_logger,
 )
 import spacy
-import time
 
 
 @pytest.fixture(scope="session")
-def ensure_spacy_model():
-    """Ensure the spaCy model is downloaded.
-    
-    :raises: pytest.fail: If the model download fails
-    """
-    download_success = download_spacy_model()
-    not download_success and pytest.fail("Failed to download spacy model")
-
-
-@pytest.fixture(scope="session")
-def spacy_model(ensure_spacy_model):
+def spacy_model():
     """Create a shared spaCy model for all tests.
     
     :returns: A loaded spaCy model
     :rtype: spacy.language.Language
     """
-    return spacy.load(SPACY_MODEL_NAME)
+    return spacy.load(SPACY_MODEL_PATH)
 
 
 @pytest.fixture
@@ -425,151 +413,6 @@ def test_dissimilar_phrases(cleaner, phrase):
     assert not cleaner._is_similar_to_hallucination(phrase)
 
 
-class MockSpacyCLI:
-    """Mock spacy.cli for testing."""
-    def __init__(self, should_succeed=True, max_attempts=3):
-        self.should_succeed = should_succeed
-        self.called = False
-        self.attempt_count = 0
-        self.attempt_times = []  # Track all attempt times
-        self.max_attempts = max_attempts
-
-    def download(self, model_name):
-        self.called = True
-        self.attempt_count += 1
-        self.attempt_times.append(time.time())
-        
-        if self.attempt_count >= self.max_attempts:
-            if not self.should_succeed:
-                raise HallucinationCleanerException("Download failed")
-            return True
-        return False
-
-
-@pytest.fixture
-def single_attempt_mock(monkeypatch):
-    """Fixture that mocks a single download attempt.
-    
-    :param monkeypatch: pytest's monkeypatch fixture
-    :type monkeypatch: pytest.MonkeyPatch
-    """
-    mock_cli = MockSpacyCLI(should_succeed=False, max_attempts=1)
-    
-    def mock_is_package(name):
-        return False
-    
-    monkeypatch.setattr(spacy.util, "is_package", mock_is_package)
-    monkeypatch.setattr(spacy.cli, "download", mock_cli.download)
-    return mock_cli
-
-
-@pytest.fixture
-def two_attempts_mock(monkeypatch):
-    """Fixture that mocks two download attempts.
-    
-    :param monkeypatch: pytest's monkeypatch fixture
-    :type monkeypatch: pytest.MonkeyPatch
-    """
-    mock_cli = MockSpacyCLI(should_succeed=False, max_attempts=2)
-    
-    def mock_is_package(name):
-        return False
-    
-    monkeypatch.setattr(spacy.util, "is_package", mock_is_package)
-    monkeypatch.setattr(spacy.cli, "download", mock_cli.download)
-    return mock_cli
-
-
-@pytest.fixture
-def three_attempts_mock(monkeypatch):
-    """Fixture that mocks three download attempts.
-    
-    :param monkeypatch: pytest's monkeypatch fixture
-    :type monkeypatch: pytest.MonkeyPatch
-    """
-    mock_cli = MockSpacyCLI(should_succeed=False, max_attempts=3)
-    
-    def mock_is_package(name):
-        return False
-    
-    monkeypatch.setattr(spacy.util, "is_package", mock_is_package)
-    monkeypatch.setattr(spacy.cli, "download", mock_cli.download)
-    return mock_cli
-
-
-def test_download_failure_first_attempt(single_attempt_mock):
-    """Test first download attempt failure.
-    
-    :param single_attempt_mock: Mock for single failed download attempt
-    :type single_attempt_mock: MockSpacyCLI
-    """
-    result = download_spacy_model(max_retries=1)
-    assert result is False
-    assert single_attempt_mock.called
-    assert single_attempt_mock.attempt_count == 1
-
-
-def test_download_failure_second_attempt(two_attempts_mock):
-    """Test second download attempt failure.
-    
-    :param two_attempts_mock: Mock for two failed download attempts
-    :type two_attempts_mock: MockSpacyCLI
-    """
-    result = download_spacy_model(max_retries=2)
-    assert result is False
-    assert two_attempts_mock.called
-    assert two_attempts_mock.attempt_count == 2
-
-
-def test_download_failure_final_attempt(three_attempts_mock):
-    """Test final download attempt failure.
-    
-    :param three_attempts_mock: Mock for three failed download attempts
-    :type three_attempts_mock: MockSpacyCLI
-    """
-    result = download_spacy_model(max_retries=3)
-    assert result is False
-    assert three_attempts_mock.called
-    assert three_attempts_mock.attempt_count == 3
-
-
-def test_download_failure_timing(three_attempts_mock, attempt_timing_fixture):
-    """Test timing between download attempts.
-    
-    :param three_attempts_mock: Mock for three failed download attempts
-    :type three_attempts_mock: MockSpacyCLI
-    :param attempt_timing_fixture: Fixture to verify timing between attempts
-    :type attempt_timing_fixture: callable
-    """
-    result = download_spacy_model(max_retries=3)
-    assert result is False
-    attempt_timing_fixture(three_attempts_mock.attempt_times)
-
-
-def test_download_failure_final_result(three_attempts_mock):
-    """Test final result after all download attempts fail.
-    
-    :param three_attempts_mock: Mock for three failed download attempts
-    :type three_attempts_mock: MockSpacyCLI
-    """
-    result = download_spacy_model(max_retries=3)
-    assert result is False
-    assert isinstance(result, bool)
-
-
-def test_download_with_custom_retry_delay(three_attempts_mock):
-    """Test download with custom retry delay.
-    
-    :param three_attempts_mock: Mock for three failed download attempts
-    :type three_attempts_mock: MockSpacyCLI
-    """
-    custom_delay = 5
-    result = download_spacy_model(max_retries=3, retry_delay=custom_delay)
-    assert result is False
-    assert three_attempts_mock.called
-    assert three_attempts_mock.attempt_count == 3
-
-
 @pytest.fixture
 def mock_spacy_model():
     """Fixture that creates a mock spaCy model.
@@ -599,13 +442,9 @@ def successful_init_mocks(monkeypatch, mock_spacy_model):
     :type monkeypatch: pytest.MonkeyPatch
     :param mock_spacy_model: Mock spaCy model
     """
-    def mock_download_spacy_model():
-        return True
-    
-    def mock_spacy_load(model_name):
+    def mock_spacy_load(model_path):
         return mock_spacy_model
     
-    monkeypatch.setattr("services.whisper_hallucination_cleaner.download_spacy_model", mock_download_spacy_model)
     monkeypatch.setattr(spacy, "load", mock_spacy_load)
 
 
@@ -646,7 +485,7 @@ def test_failed_initialization(failed_init_mocks):
     cleaner = WhisperHallucinationCleaner()
     error = cleaner.initialize_model()
     
-    assert "Failed to download spaCy model" in error
+    assert "Failed to initialize spaCy model" in error
     assert cleaner._nlp is None
     assert cleaner._hallucination_docs is None
 
@@ -689,13 +528,9 @@ def failed_init_mocks(monkeypatch):
     :param monkeypatch: pytest's monkeypatch fixture
     :type monkeypatch: pytest.MonkeyPatch
     """
-    def mock_download_spacy_model():
-        return False
-    
-    def mock_spacy_load(model_name):
+    def mock_spacy_load(model_path):
         raise HallucinationCleanerException("Mock load failure")
     
-    monkeypatch.setattr("services.whisper_hallucination_cleaner.download_spacy_model", mock_download_spacy_model)
     monkeypatch.setattr(spacy, "load", mock_spacy_load)
 
 
@@ -771,26 +606,6 @@ def test_unload_model_can_be_called_before_initialization():
     assert cleaner._hallucination_docs is None
 
 
-@pytest.fixture
-def attempt_timing_fixture():
-    """Fixture to verify timing between download attempts.
-    
-    :returns: Function to verify timing between attempts
-    :rtype: callable
-    """
-    def verify_attempt_timing(attempt_times):
-        """Verify timing between download attempts.
-        
-        :param attempt_times: List of timestamps for each attempt
-        :type attempt_times: list[float]
-        """
-        if len(attempt_times) > 1:
-            for i in range(1, len(attempt_times)):
-                time_diff = attempt_times[i] - attempt_times[i-1]
-                assert time_diff >= 1.5  # Allow some flexibility in timing
-    return verify_attempt_timing
-
-
 def test_cleaner_with_custom_model_input_text(mock_nlp, test_input_text):
     """Test that cleaner processes input text with custom model."""
     cleaner = WhisperHallucinationCleaner(nlp=mock_nlp)
@@ -840,18 +655,18 @@ def test_cleaner_with_custom_similarity_threshold():
     assert cleaner.similarity_threshold == threshold
 
 
-def test_cleaner_with_custom_model_name():
-    """Test cleaner with custom spaCy model name."""
-    model_name = "custom_model"
-    cleaner = WhisperHallucinationCleaner(spacy_model_name=model_name)
-    assert cleaner.spacy_model_name == model_name
+def test_cleaner_with_custom_model_path():
+    """Test cleaner with custom spaCy model path."""
+    model_path = "custom/model/path"
+    cleaner = WhisperHallucinationCleaner(spacy_model_path=model_path)
+    assert cleaner.spacy_model_path == model_path
 
 
 def test_cleaner_with_all_custom_dependencies(mock_nlp, mock_logger, custom_hallucinations):
     """Test cleaner with all dependencies customized."""
     cleaner = WhisperHallucinationCleaner(
         similarity_threshold=0.8,
-        spacy_model_name="custom_model",
+        spacy_model_path="custom_model",
         hallucinations=custom_hallucinations,
         nlp=mock_nlp,
         logger=mock_logger
@@ -859,7 +674,7 @@ def test_cleaner_with_all_custom_dependencies(mock_nlp, mock_logger, custom_hall
     
     # Verify all customizations are applied
     assert cleaner.similarity_threshold == 0.8
-    assert cleaner.spacy_model_name == "custom_model"
+    assert cleaner.spacy_model_path == "custom_model"
     assert len(cleaner.hallucinations) == len(custom_hallucinations)
     assert cleaner._nlp == mock_nlp
     assert cleaner.logger == mock_logger
@@ -871,6 +686,6 @@ def test_cleaner_with_default_dependencies():
     
     # Verify default values are used
     assert cleaner.similarity_threshold == 0.95  # Default from module
-    assert cleaner.spacy_model_name == "en_core_web_md"  # Default from module
+    assert cleaner.spacy_model_path == SPACY_MODEL_PATH  # Default from module
     assert cleaner._nlp is None  # Should be None initially
     assert cleaner.logger is not None  # Should have default logger 
