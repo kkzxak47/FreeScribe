@@ -20,6 +20,8 @@ import time
 import logging
 from spacy.language import Language
 from spacy.tokens import Doc
+from utils.resource_utils import get_resource_path
+
 
 # Create a punctuation string without apostrophe
 punct_without_apostrophe = string.punctuation.replace("'", "")
@@ -98,6 +100,8 @@ def download_spacy_model(max_retries: int = 3, retry_delay: int = 2):
     default_logger.info(f"Checking/downloading spacy model {SPACY_MODEL_NAME}...")
     for attempt in range(max_retries):
         try:
+            model_path = get_resource_path(SPACY_MODEL_NAME)
+            spacy.util.set_data_path(model_path)
             # Check if model is already installed
             if spacy.util.is_package(SPACY_MODEL_NAME):
                 default_logger.info("Spacy model already installed")
