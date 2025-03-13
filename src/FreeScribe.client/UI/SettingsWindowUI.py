@@ -31,7 +31,7 @@ from UI.MarkdownWindow import MarkdownWindow
 from UI.SettingsWindow import SettingsWindow
 from UI.SettingsConstant import SettingsKeys, Architectures, FeatureToggle
 from UI.Widgets.PopupBox import PopupBox
-from UI.Widgets.LoadingWindow import LoadingWindow
+from UI.LoadingWindow import LoadingWindow
 
 
 LONG_ENTRY_WIDTH = 30
@@ -923,14 +923,19 @@ class SettingsWindowUI:
         Loads the hallucination cleaner.
         """
         # Check if hallucination cleaning was enabled
-        old_hallucination_clean = self.settings.editable_settings[SettingsKeys.ENABLE_HALLUCINATION_CLEAN.value]
-        new_hallucination_clean = self.settings.editable_settings_entries[SettingsKeys.ENABLE_HALLUCINATION_CLEAN.value].get()
-        
-        if new_hallucination_clean and not old_hallucination_clean:
+        hallucination_clean_enabled = self.settings.editable_settings[SettingsKeys.ENABLE_HALLUCINATION_CLEAN.value]
+        setting_entry = self.settings.editable_settings_entries.get(SettingsKeys.ENABLE_HALLUCINATION_CLEAN.value)
+        if setting_entry is None:
+            new_hallucination_clean_enabled = None
+        else:
+            new_hallucination_clean_enabled = setting_entry.get()
+        # first we check when the app is starting, at that time the editable setting entry is not yet initialized so it is None
+        # then we check if the setting is changed from False to True, at that time the settings panel is open and the editable setting entry is initialized, so we can compare old and new value
+        if (hallucination_clean_enabled and new_hallucination_clean_enabled is None) or (not hallucination_clean_enabled and new_hallucination_clean_enabled):
             # Initialize spaCy model in a separate thread to avoid blocking UI
             def init_spacy():
                 from services.whisper_hallucination_cleaner import hallucination_cleaner
-                loading_window = LoadingWindow(self.settings_window, "Loading SpaCy Model", 
+                loading_window = LoadingWindow(self.root, "Loading SpaCy Model", 
                                             "Downloading and initializing spaCy model for hallucination cleaning. Please wait...",
                                             note_text="Note: This may take a few minutes on first run.")
                 error = hallucination_cleaner.initialize_model()

@@ -2001,6 +2001,9 @@ if app_settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value]:
     print("Using Local Whisper for transcription.")
     root.after(100, lambda: (load_stt_model()))
 
+if app_settings.editable_settings[SettingsKeys.ENABLE_HALLUCINATION_CLEAN.value]:
+    root.after(100, lambda: (window.setting_window.load_hallucination_cleaner()))
+
 # wait for both whisper and llm to be loaded before unlocking the settings button
 def await_models(timeout_length=60):
     """
