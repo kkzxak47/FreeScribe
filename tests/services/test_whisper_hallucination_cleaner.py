@@ -1,6 +1,7 @@
 import pytest
 from services.whisper_hallucination_cleaner import WhisperHallucinationCleaner, COMMON_HALUCINATIONS, SIMILARITY_THRESHOLD, download_spacy_model, SPACY_MODEL_NAME
 import spacy
+import time
 
 
 @pytest.fixture(scope="session")
@@ -356,9 +357,13 @@ class MockSpacyCLI:
     def __init__(self, should_succeed=True):
         self.should_succeed = should_succeed
         self.called = False
+        self.attempt_count = 0
+        self.attempt_times = []  # Track all attempt times
 
     def download(self, model_name):
         self.called = True
+        self.attempt_count += 1
+        self.attempt_times.append(time.time())
         if not self.should_succeed:
             raise Exception("Download failed")
 
@@ -413,6 +418,57 @@ def test_failed_download(failed_download_mock):
     result = download_spacy_model()
     assert result is False
     assert failed_download_mock.called
+
+def test_consistent_download_failures(repeated_failed_download_mock):
+    """Test behavior when downloads consistently fail after all retries.
+    
+    This test verifies that:
+    1. The download is attempted the correct number of times
+    2. The function returns False after all retries are exhausted
+    3. No infinite loop occurs
+    4. Retries happen with appropriate delays
+    5. Each attempt raises an exception
+    
+    :param repeated_failed_download_mock: Mock for repeated failed download
+    :type repeated_failed_download_mock: MockSpacyCLI
+    """
+    result = download_spacy_model()
+    
+    # Verify the result is False
+    assert result is False
+    
+    # Verify the download was attempted exactly max_retries times
+    assert repeated_failed_download_mock.called
+    assert repeated_failed_download_mock.attempt_count == 3  # max_retries from the function
+    
+    # Verify timing between attempts (should be ~2 seconds apart)
+    attempt_times = repeated_failed_download_mock.attempt_times
+    if len(attempt_times) > 1:
+        for i in range(1, len(attempt_times)):
+            time_diff = attempt_times[i] - attempt_times[i-1]
+            assert time_diff >= 1.5  # Allow some flexibility in timing
+
+def test_download_failure_handling(repeated_failed_download_mock):
+    """Test that download failures are handled gracefully.
+    
+    This test verifies that:
+    1. Each download attempt raises an exception
+    2. The function continues after catching exceptions
+    3. The final result is False
+    
+    :param repeated_failed_download_mock: Mock for repeated failed download
+    :type repeated_failed_download_mock: MockSpacyCLI
+    """
+    result = download_spacy_model()
+    
+    # Verify the result is False
+    assert result is False
+    
+    # Verify multiple attempts were made
+    assert repeated_failed_download_mock.attempt_count > 1
+    
+    # Verify the function didn't crash
+    assert isinstance(result, bool)
 
 @pytest.fixture
 def mock_spacy_model():
@@ -600,4 +656,25 @@ def test_unload_model_can_be_called_before_initialization():
     
     # References should be None
     assert cleaner._nlp is None
-    assert cleaner._hallucination_docs is None 
+    assert cleaner._hallucination_docs is None
+
+@pytest.fixture
+def repeated_failed_download_mock(monkeypatch):
+    """Fixture that mocks repeated failed spaCy model downloads.
+    
+    This fixture ensures the download fails consistently and tracks
+    timing between attempts to verify retry delays.
+    
+    :param monkeypatch: pytest's monkeypatch fixture
+    :type monkeypatch: pytest.MonkeyPatch
+    :returns: Mock CLI with timing information
+    :rtype: MockSpacyCLI
+    """
+    mock_cli = MockSpacyCLI(should_succeed=False)
+    
+    def mock_is_package(name):
+        return False
+    
+    monkeypatch.setattr(spacy.util, "is_package", mock_is_package)
+    monkeypatch.setattr(spacy.cli, "download", mock_cli.download)
+    return mock_cli 
