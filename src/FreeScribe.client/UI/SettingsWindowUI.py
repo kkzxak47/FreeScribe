@@ -31,6 +31,7 @@ from UI.MarkdownWindow import MarkdownWindow
 from UI.SettingsWindow import SettingsWindow
 from UI.SettingsConstant import SettingsKeys, Architectures, FeatureToggle
 from UI.Widgets.PopupBox import PopupBox
+from UI.Widgets.LoadingWindow import LoadingWindow
 
 
 LONG_ENTRY_WIDTH = 30
@@ -662,6 +663,8 @@ class SettingsWindowUI:
         # delay update, or the update thread might be reading old settings value
         update_whisper_model_flag = self.settings.update_whisper_model()
 
+        self.load_hallucination_cleaner()
+
         if FeatureToggle.PRE_PROCESSING is True:
             self.settings.editable_settings["Pre-Processing"] = self.preprocess_text.get("1.0", "end-1c") # end-1c removes the trailing newline
         
@@ -914,3 +917,30 @@ class SettingsWindowUI:
         self.settings_window.destroy()
 
         self.__focus_and_lift_root_window()
+
+    def load_hallucination_cleaner(self):
+        """
+        Loads the hallucination cleaner.
+        """
+        # Check if hallucination cleaning was enabled
+        old_hallucination_clean = self.settings.editable_settings[SettingsKeys.ENABLE_HALLUCINATION_CLEAN.value]
+        new_hallucination_clean = self.settings.editable_settings_entries[SettingsKeys.ENABLE_HALLUCINATION_CLEAN.value].get()
+        
+        if new_hallucination_clean and not old_hallucination_clean:
+            # Initialize spaCy model in a separate thread to avoid blocking UI
+            def init_spacy():
+                from services.whisper_hallucination_cleaner import hallucination_cleaner
+                loading_window = LoadingWindow(self.settings_window, "Loading SpaCy Model", 
+                                            "Downloading and initializing spaCy model for hallucination cleaning. Please wait...",
+                                            note_text="Note: This may take a few minutes on first run.")
+                error = hallucination_cleaner.initialize_model()
+                loading_window.destroy()
+                if error:
+                    messagebox.showerror("SpaCy Model Error", 
+                                       f"Failed to initialize spaCy model for hallucination cleaning: {error}\n\n"
+                                       "Hallucination cleaning will be disabled.")
+                    # Reset the checkbox
+                    self.settings.editable_settings_entries[SettingsKeys.ENABLE_HALLUCINATION_CLEAN.value].set(False)
+            
+            thread = threading.Thread(target=init_spacy)
+            thread.start()

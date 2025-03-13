@@ -362,41 +362,188 @@ class MockSpacyCLI:
         if not self.should_succeed:
             raise Exception("Download failed")
 
-@pytest.mark.parametrize("test_case", [
-    {
-        "name": "successful download",
-        "should_succeed": True,
-        "expected_calls": 1,
-        "expected_result": True
-    },
-    {
-        "name": "failed download",
-        "should_succeed": False,
-        "expected_calls": 3,
-        "expected_result": False
-    }
-])
-def test_download_spacy_model(monkeypatch, test_case):
-    """Test spacy model download functionality.
-    
-    Tests:
-        * Successful download on first attempt
-        * Failed download with retry behavior
+@pytest.fixture
+def successful_download_mock(monkeypatch):
+    """Fixture that mocks a successful spaCy model download.
     
     :param monkeypatch: pytest's monkeypatch fixture
     :type monkeypatch: pytest.MonkeyPatch
-    :param test_case: Dictionary containing test case data
-    :type test_case: dict
     """
-    mock_cli = MockSpacyCLI(should_succeed=test_case["should_succeed"])
+    mock_cli = MockSpacyCLI(should_succeed=True)
     
     def mock_is_package(name):
-        # Return True only after successful download
-        return mock_cli.called and test_case["should_succeed"]
+        return mock_cli.called
     
     monkeypatch.setattr(spacy.util, "is_package", mock_is_package)
     monkeypatch.setattr(spacy.cli, "download", mock_cli.download)
+    return mock_cli
+
+@pytest.fixture
+def failed_download_mock(monkeypatch):
+    """Fixture that mocks a failed spaCy model download.
     
+    :param monkeypatch: pytest's monkeypatch fixture
+    :type monkeypatch: pytest.MonkeyPatch
+    """
+    mock_cli = MockSpacyCLI(should_succeed=False)
+    
+    def mock_is_package(name):
+        return False
+    
+    monkeypatch.setattr(spacy.util, "is_package", mock_is_package)
+    monkeypatch.setattr(spacy.cli, "download", mock_cli.download)
+    return mock_cli
+
+def test_successful_download(successful_download_mock):
+    """Test successful spacy model download.
+    
+    :param successful_download_mock: Mock for successful download
+    :type successful_download_mock: MockSpacyCLI
+    """
     result = download_spacy_model()
-    assert result == test_case["expected_result"]
-    assert mock_cli.called 
+    assert result is True
+    assert successful_download_mock.called
+
+def test_failed_download(failed_download_mock):
+    """Test failed spacy model download with retries.
+    
+    :param failed_download_mock: Mock for failed download
+    :type failed_download_mock: MockSpacyCLI
+    """
+    result = download_spacy_model()
+    assert result is False
+    assert failed_download_mock.called
+
+@pytest.fixture
+def mock_spacy_model():
+    """Fixture that creates a mock spaCy model.
+    
+    :returns: A mock spaCy model with required attributes
+    """
+    class MockDoc:
+        def __init__(self, text):
+            self.text = text
+            self.sents = [self]
+            
+    class MockModel:
+        def __init__(self):
+            pass
+            
+        def __call__(self, text):
+            return MockDoc(text)
+            
+    return MockModel()
+
+@pytest.fixture
+def successful_init_mocks(monkeypatch, mock_spacy_model):
+    """Fixture that mocks successful model initialization.
+    
+    :param monkeypatch: pytest's monkeypatch fixture
+    :type monkeypatch: pytest.MonkeyPatch
+    :param mock_spacy_model: Mock spaCy model
+    """
+    def mock_download_spacy_model():
+        return True
+    
+    def mock_spacy_load(model_name):
+        return mock_spacy_model
+    
+    monkeypatch.setattr("services.whisper_hallucination_cleaner.download_spacy_model", mock_download_spacy_model)
+    monkeypatch.setattr(spacy, "load", mock_spacy_load)
+
+@pytest.fixture
+def mock_successful_initialize(monkeypatch):
+    """Fixture that mocks successful model initialization.
+    
+    :param monkeypatch: pytest's monkeypatch fixture
+    :type monkeypatch: pytest.MonkeyPatch
+    :returns: Tuple of (cleaner, initialize_called flag)
+    """
+    cleaner = WhisperHallucinationCleaner()
+    initialize_called = [False]  # Using list to allow modification in closure
+    
+    def mock_initialize_model():
+        initialize_called[0] = True
+        return None
+    
+    monkeypatch.setattr(cleaner, "initialize_model", mock_initialize_model)
+    return cleaner, initialize_called[0], initialize_called
+
+def test_nlp_property_calls_initialize(mock_successful_initialize):
+    """Test that nlp property triggers initialization.
+    
+    :param mock_successful_initialize: Tuple of (cleaner, initialize_called flag, flag_ref)
+    """
+    cleaner, _, flag_ref = mock_successful_initialize
+    _ = cleaner.nlp
+    assert flag_ref[0]
+
+def test_failed_initialization(failed_init_mocks):
+    """Test failed model initialization.
+    
+    :param failed_init_mocks: Mocks for failed initialization
+    """
+    cleaner = WhisperHallucinationCleaner()
+    error = cleaner.initialize_model()
+    
+    assert "Failed to download spaCy model" in error
+    assert cleaner._nlp is None
+    assert cleaner._hallucination_docs is None
+
+@pytest.fixture
+def mock_failed_initialize(monkeypatch):
+    """Fixture that mocks failed model initialization.
+    
+    :param monkeypatch: pytest's monkeypatch fixture
+    :type monkeypatch: pytest.MonkeyPatch
+    :returns: Tuple of (cleaner, error message)
+    """
+    cleaner = WhisperHallucinationCleaner()
+    error_message = "Test initialization error"
+    
+    def mock_initialize_model():
+        return error_message
+    
+    monkeypatch.setattr(cleaner, "initialize_model", mock_initialize_model)
+    return cleaner, error_message
+
+def test_nlp_property_propagates_error(mock_failed_initialize):
+    """Test that nlp property propagates initialization errors.
+    
+    :param mock_failed_initialize: Tuple of (cleaner, error message)
+    """
+    cleaner, error_message = mock_failed_initialize
+    
+    with pytest.raises(RuntimeError) as exc_info:
+        _ = cleaner.nlp
+    
+    assert error_message in str(exc_info.value)
+
+@pytest.fixture
+def failed_init_mocks(monkeypatch):
+    """Fixture that mocks failed model initialization.
+    
+    :param monkeypatch: pytest's monkeypatch fixture
+    :type monkeypatch: pytest.MonkeyPatch
+    """
+    def mock_download_spacy_model():
+        return False
+    
+    def mock_spacy_load(model_name):
+        raise Exception("Mock load failure")
+    
+    monkeypatch.setattr("services.whisper_hallucination_cleaner.download_spacy_model", mock_download_spacy_model)
+    monkeypatch.setattr(spacy, "load", mock_spacy_load)
+
+def test_successful_initialization(successful_init_mocks, mock_spacy_model):
+    """Test successful model initialization.
+    
+    :param successful_init_mocks: Mocks for successful initialization
+    :param mock_spacy_model: Mock spaCy model
+    """
+    cleaner = WhisperHallucinationCleaner()
+    error = cleaner.initialize_model()
+    
+    assert error is None
+    assert cleaner._nlp is not None
+    assert cleaner._hallucination_docs is not None 

@@ -12,14 +12,12 @@ Example:
     'This is a real transcription.'
 """
 
-from typing import List
+from typing import List, Optional
 import string
 import spacy
 import spacy.cli
 import time
 import logging
-import subprocess
-import sys
 # Create a punctuation string without apostrophe
 punct_without_apostrophe = string.punctuation.replace("'", "")
 
@@ -151,6 +149,31 @@ class WhisperHallucinationCleaner:
         self.hallucinations = {self._normalize_text(h) for h in COMMON_HALUCINATIONS}
         self._nlp = None
         self._hallucination_docs = None
+
+    def initialize_model(self) -> Optional[str]:
+        """Initialize the spaCy model proactively.
+        
+        This method should be called when the hallucination cleaning feature is enabled
+        in settings. It downloads and loads the model if necessary.
+        
+        :returns: Error message if initialization fails, None if successful
+        :rtype: Optional[str]
+        """
+        try:
+            if not download_spacy_model():
+                return "Failed to download spaCy model. Please check your internet connection and try again."
+            
+            # Try to load the model
+            self._nlp = spacy.load(SPACY_MODEL_NAME)
+            # Pre-process hallucination docs
+            self._hallucination_docs = [
+                self._nlp(h) for h in sorted(COMMON_HALUCINATIONS)
+            ]
+            return None
+        except Exception as e:
+            error_msg = f"Failed to initialize spaCy model: {str(e)}"
+            logger.error(error_msg)
+            return error_msg
         
     @property
     def nlp(self):
@@ -161,9 +184,9 @@ class WhisperHallucinationCleaner:
         :raises RuntimeError: If the spaCy model fails to download
         """
         if self._nlp is None:
-            if not download_spacy_model():
-                raise RuntimeError("Failed to download spacy model")
-            self._nlp = spacy.load(SPACY_MODEL_NAME)
+            error = self.initialize_model()
+            if error:
+                raise RuntimeError(error)
         return self._nlp
     
     @property
