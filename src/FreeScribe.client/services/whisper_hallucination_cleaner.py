@@ -18,11 +18,14 @@ import spacy
 import spacy.cli
 import time
 import logging
+from spacy.language import Language
+from spacy.tokens import Doc
+
 # Create a punctuation string without apostrophe
 punct_without_apostrophe = string.punctuation.replace("'", "")
 
-
-logger = logging.getLogger(__name__)
+# Default logger
+default_logger = logging.getLogger(__name__)
 
 class HallucinationCleanerException(Exception):
     """Exception raised for errors in the hallucination cleaner."""
@@ -95,36 +98,36 @@ def download_spacy_model():
     max_retries = 3
     retry_delay = 2  # seconds
     
-    logger.info(f"Checking/downloading spacy model {SPACY_MODEL_NAME}...")
+    default_logger.info(f"Checking/downloading spacy model {SPACY_MODEL_NAME}...")
     for attempt in range(max_retries):
         try:
             # Check if model is already installed
             if spacy.util.is_package(SPACY_MODEL_NAME):
-                logger.info("Spacy model already installed")
+                default_logger.info("Spacy model already installed")
                 return True
             
-            logger.info(f"Downloading spacy model (attempt {attempt + 1}/{max_retries})...")
+            default_logger.info(f"Downloading spacy model (attempt {attempt + 1}/{max_retries})...")
             
             # Use spacy.cli.download directly
             spacy.cli.download(SPACY_MODEL_NAME)
             
             # Verify the download was successful
             if spacy.util.is_package(SPACY_MODEL_NAME):
-                logger.info("Spacy model downloaded successfully")
+                default_logger.info("Spacy model downloaded successfully")
                 return True
             else:
-                logger.error("Model download appeared to succeed but model not found")
+                default_logger.error("Model download appeared to succeed but model not found")
                 if attempt < max_retries - 1:
-                    logger.info(f"Retrying in {retry_delay} seconds...")
+                    default_logger.info(f"Retrying in {retry_delay} seconds...")
                     time.sleep(retry_delay)
                     
         except Exception as e:
-            logger.error(f"Unexpected error downloading spacy model: {str(e)}")
+            default_logger.error(f"Unexpected error downloading spacy model: {str(e)}")
             if attempt < max_retries - 1:
-                logger.info(f"Retrying in {retry_delay} seconds...")
+                default_logger.info(f"Retrying in {retry_delay} seconds...")
                 time.sleep(retry_delay)
     
-    logger.error("Failed to download spacy model after all retries")
+    default_logger.error("Failed to download spacy model after all retries")
     return False
 
 
@@ -136,24 +139,41 @@ class WhisperHallucinationCleaner:
     
     :param similarity_threshold: The minimum similarity ratio (0-1) between a sentence
                                and a hallucination to consider it a match
+    :param spacy_model_name: Name of the spaCy model to use
+    :param hallucinations: List of hallucination phrases to check against
+    :param nlp: Optional pre-configured spaCy model
+    :param logger: Logger instance for debugging
     :type similarity_threshold: float
+    :type spacy_model_name: str
+    :type hallucinations: List[str]
+    :type nlp: Optional[Language]
+    :type logger: logging.Logger
     """
     
-    def __init__(self, similarity_threshold: float = SIMILARITY_THRESHOLD):
-        """Initialize the cleaner with a similarity threshold.
+    def __init__(
+        self,
+        similarity_threshold: float = SIMILARITY_THRESHOLD,
+        spacy_model_name: str = SPACY_MODEL_NAME,
+        hallucinations: List[str] = COMMON_HALUCINATIONS,
+        nlp: Optional[Language] = None,
+        logger: logging.Logger = default_logger
+    ):
+        """Initialize the cleaner with configurable dependencies.
         
-        :param similarity_threshold: The minimum similarity ratio (0-1) between a sentence
-                                   and a hallucination to consider it a match
-        :type similarity_threshold: float
+        :param similarity_threshold: The minimum similarity ratio (0-1)
+        :param spacy_model_name: Name of the spaCy model to use
+        :param hallucinations: List of hallucination phrases to check against
+        :param nlp: Optional pre-configured spaCy model
+        :param logger: Logger instance for debugging
         """
+        self.logger = logger
         self.similarity_threshold = similarity_threshold
-        # Create a translation table (all punctuation -> spaces)
+        self.spacy_model_name = spacy_model_name
         self._trans_table = str.maketrans(punct_without_apostrophe, ' ' * len(punct_without_apostrophe))
-        # Store normalized hallucinations for exact matching
-        self.hallucinations = {self._normalize_text(h) for h in COMMON_HALUCINATIONS}
-        self._nlp = None
+        self.hallucinations = {self._normalize_text(h) for h in hallucinations}
+        self._nlp = nlp
         self._hallucination_docs = None
-
+        
     def initialize_model(self) -> Optional[str]:
         """Initialize the spaCy model proactively.
         
@@ -164,11 +184,14 @@ class WhisperHallucinationCleaner:
         :rtype: Optional[str]
         """
         try:
+            if self._nlp is not None:
+                return None
+                
             if not download_spacy_model():
                 return "Failed to download spaCy model. Please check your internet connection and try again."
             
             # Try to load the model
-            self._nlp = spacy.load(SPACY_MODEL_NAME)
+            self._nlp = spacy.load(self.spacy_model_name)
             # Pre-process hallucination docs
             self._hallucination_docs = [
                 self._nlp(h) for h in sorted(COMMON_HALUCINATIONS)
@@ -176,21 +199,17 @@ class WhisperHallucinationCleaner:
             return None
         except Exception as e:
             error_msg = f"Failed to initialize spaCy model: {str(e)}"
-            logger.error(error_msg)
+            self.logger.error(error_msg)
             return error_msg
 
     def unload_model(self):
-        """Unload the spaCy model and free resources.
-        
-        This method should be called when the hallucination cleaning feature is disabled
-        in settings to free up memory and resources.
-        """
+        """Unload the spaCy model and free resources."""
         self._nlp = None
         self._hallucination_docs = None
-        logger.info("Unloaded spaCy model")
+        self.logger.info("Unloaded spaCy model")
         
     @property
-    def nlp(self):
+    def nlp(self) -> Language:
         """Lazy load the spacy model.
         
         :returns: The loaded spaCy model
@@ -203,7 +222,7 @@ class WhisperHallucinationCleaner:
         return self._nlp
     
     @property
-    def hallucination_docs(self):
+    def hallucination_docs(self) -> List[Doc]:
         """Lazy load the hallucination docs.
         
         :returns: List of processed spaCy docs for each hallucination
@@ -217,29 +236,17 @@ class WhisperHallucinationCleaner:
         return self._hallucination_docs
     
     def _normalize_text(self, text: str) -> str:
-        """Normalize text by removing punctuation and extra whitespace.
-        
-        :param text: Text to normalize
-        :type text: str
-        :returns: Normalized text
-        :rtype: str
-        """
+        """Normalize text by removing punctuation and extra whitespace."""
         # Remove punctuation and normalize whitespace
         text = text.strip().lower()
         # remove all punctuation
         text = text.translate(self._trans_table)
         text = ' '.join(t for t in text.split() if t.isalnum())
-        logger.debug(f"Normalized text: {text}")
+        self.logger.debug(f"Normalized text: {text}")
         return text
     
     def _is_similar_to_hallucination(self, sentence: str) -> bool:
-        """Check if a sentence is similar to any known hallucination using vector similarity.
-        
-        :param sentence: The sentence to check
-        :type sentence: str
-        :returns: True if the sentence is similar to a hallucination, False otherwise
-        :rtype: bool
-        """
+        """Check if a sentence is similar to any known hallucination using vector similarity."""
         if not sentence:
             return False
 
@@ -247,7 +254,7 @@ class WhisperHallucinationCleaner:
         normalized = self._normalize_text(sentence)
         # First check for exact matches (case insensitive)
         if any(h in normalized for h in self.hallucinations):
-            logger.debug(f"Sentence contains a hallucination: {normalized}")
+            self.logger.debug(f"Sentence contains a hallucination: {normalized}")
             return True
             
         # Process the original sentence for semantic similarity
@@ -261,17 +268,11 @@ class WhisperHallucinationCleaner:
         result = any(doc.similarity(h_doc) >= self.similarity_threshold 
                   for h_doc in self.hallucination_docs)
         if result:
-            logger.debug(f"Sentence is similar to hallucination: {sentence}")
+            self.logger.debug(f"Sentence is similar to hallucination: {sentence}")
         return result
     
     def _split_into_sentences(self, text: str) -> List[str]:
-        """Split text into sentences using spacy.
-        
-        :param text: The text to split
-        :type text: str
-        :returns: List of sentences
-        :rtype: list[str]
-        """
+        """Split text into sentences using spacy."""
         if not text:
             return []
             
@@ -281,20 +282,7 @@ class WhisperHallucinationCleaner:
         return [sent.text.strip() for sent in doc.sents]
     
     def clean_text(self, text: str) -> str:
-        """Clean the text by removing sentences similar to known hallucinations.
-        
-        :param text: The text to clean
-        :type text: str
-        :returns: The cleaned text with hallucinations removed
-        :rtype: str
-        
-        Example:
-            >>> cleaner = WhisperHallucinationCleaner()
-            >>> text = "This is a real transcription. Thanks for watching!"
-            >>> cleaned = cleaner.clean_text(text)
-            >>> print(cleaned)
-            'This is a real transcription.'
-        """
+        """Clean the text by removing sentences similar to known hallucinations."""
         if not text:
             return text
             
@@ -303,8 +291,8 @@ class WhisperHallucinationCleaner:
         
         # Join sentences back together with a single space, since each sentence already has its punctuation
         result = ' '.join(s.strip() for s in cleaned_sentences)
-        logger.debug(f"Cleaned text: {result}")
+        self.logger.debug(f"Cleaned text: {result}")
         return result
 
-# Initialize the hallucination cleaner
+# Initialize the hallucination cleaner with default settings
 hallucination_cleaner = WhisperHallucinationCleaner()
