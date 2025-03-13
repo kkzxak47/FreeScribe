@@ -932,20 +932,27 @@ class SettingsWindowUI:
         # first we check when the app is starting, at that time the editable setting entry is not yet initialized so it is None
         # then we check if the setting is changed from False to True, at that time the settings panel is open and the editable setting entry is initialized, so we can compare old and new value
         if (hallucination_clean_enabled and new_hallucination_clean_enabled is None) or (not hallucination_clean_enabled and new_hallucination_clean_enabled):
-            # Initialize spaCy model in a separate thread to avoid blocking UI
-            def init_spacy():
-                from services.whisper_hallucination_cleaner import hallucination_cleaner
+            init_model = True
+        else:
+            init_model = False
+        # Initialize spaCy model in a separate thread to avoid blocking UI
+        def set_spacy_model(is_init_model: bool):
+            from services.whisper_hallucination_cleaner import hallucination_cleaner
+            
+            if is_init_model:
                 loading_window = LoadingWindow(self.root, "Loading SpaCy Model", 
-                                            "Downloading and initializing spaCy model for hallucination cleaning. Please wait...",
-                                            note_text="Note: This may take a few minutes on first run.")
+                                        "Setting up spaCy model for hallucination cleaning. Please wait...",
+                                        note_text="Note: This may take a few minutes on first run.")
                 error = hallucination_cleaner.initialize_model()
                 loading_window.destroy()
                 if error:
                     messagebox.showerror("SpaCy Model Error", 
-                                       f"Failed to initialize spaCy model for hallucination cleaning: {error}\n\n"
-                                       "Hallucination cleaning will be disabled.")
+                                        f"Failed to initialize spaCy model for hallucination cleaning: {error}\n\n"
+                                        "Hallucination cleaning will be disabled.")
                     # Reset the checkbox
                     self.settings.editable_settings_entries[SettingsKeys.ENABLE_HALLUCINATION_CLEAN.value].set(False)
+            else:
+                hallucination_cleaner.unload_model()
             
-            thread = threading.Thread(target=init_spacy)
-            thread.start()
+        thread = threading.Thread(target=set_spacy_model, args=(init_model,))
+        thread.start()

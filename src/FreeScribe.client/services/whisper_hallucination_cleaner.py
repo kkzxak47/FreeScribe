@@ -174,6 +174,16 @@ class WhisperHallucinationCleaner:
             error_msg = f"Failed to initialize spaCy model: {str(e)}"
             logger.error(error_msg)
             return error_msg
+
+    def unload_model(self):
+        """Unload the spaCy model and free resources.
+        
+        This method should be called when the hallucination cleaning feature is disabled
+        in settings to free up memory and resources.
+        """
+        self._nlp = None
+        self._hallucination_docs = None
+        logger.info("Unloaded spaCy model")
         
     @property
     def nlp(self):

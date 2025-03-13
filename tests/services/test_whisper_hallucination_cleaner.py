@@ -546,4 +546,58 @@ def test_successful_initialization(successful_init_mocks, mock_spacy_model):
     
     assert error is None
     assert cleaner._nlp is not None
-    assert cleaner._hallucination_docs is not None 
+    assert cleaner._hallucination_docs is not None
+
+@pytest.fixture
+def initialized_cleaner(successful_init_mocks, mock_spacy_model):
+    """Fixture that provides an initialized cleaner.
+    
+    :param successful_init_mocks: Mocks for successful initialization
+    :param mock_spacy_model: Mock spaCy model
+    :returns: Initialized WhisperHallucinationCleaner
+    """
+    cleaner = WhisperHallucinationCleaner()
+    cleaner.initialize_model()
+    return cleaner
+
+def test_unload_model_clears_references(initialized_cleaner):
+    """Test that unload_model clears model references.
+    
+    :param initialized_cleaner: Initialized cleaner fixture
+    """
+    # Verify cleaner is initialized
+    assert initialized_cleaner._nlp is not None
+    assert initialized_cleaner._hallucination_docs is not None
+    
+    # Unload the model
+    initialized_cleaner.unload_model()
+    
+    # Verify references are cleared
+    assert initialized_cleaner._nlp is None
+    assert initialized_cleaner._hallucination_docs is None
+
+def test_unload_model_can_be_called_multiple_times(initialized_cleaner):
+    """Test that unload_model can be called safely multiple times.
+    
+    :param initialized_cleaner: Initialized cleaner fixture
+    """
+    # First unload
+    initialized_cleaner.unload_model()
+    
+    # Second unload should not raise errors
+    initialized_cleaner.unload_model()
+    
+    # References should still be None
+    assert initialized_cleaner._nlp is None
+    assert initialized_cleaner._hallucination_docs is None
+
+def test_unload_model_can_be_called_before_initialization():
+    """Test that unload_model can be called safely before initialization."""
+    cleaner = WhisperHallucinationCleaner()
+    
+    # Should not raise errors
+    cleaner.unload_model()
+    
+    # References should be None
+    assert cleaner._nlp is None
+    assert cleaner._hallucination_docs is None 
