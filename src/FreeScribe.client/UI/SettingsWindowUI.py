@@ -922,19 +922,23 @@ class SettingsWindowUI:
         """
         Loads the hallucination cleaner.
         """
-        # Check if hallucination cleaning was enabled
+                # Check if hallucination cleaning was enabled
         hallucination_clean_enabled = self.settings.editable_settings[SettingsKeys.ENABLE_HALLUCINATION_CLEAN.value]
         setting_entry = self.settings.editable_settings_entries.get(SettingsKeys.ENABLE_HALLUCINATION_CLEAN.value)
         if setting_entry is None:
             new_hallucination_clean_enabled = None
         else:
             new_hallucination_clean_enabled = setting_entry.get()
-        # first we check when the app is starting, at that time the editable setting entry is not yet initialized so it is None
-        # then we check if the setting is changed from False to True, at that time the settings panel is open and the editable setting entry is initialized, so we can compare old and new value
-        if (hallucination_clean_enabled and new_hallucination_clean_enabled is None) or (not hallucination_clean_enabled and new_hallucination_clean_enabled):
-            init_model = True
+
+        # Determine if the model should be initialized:
+        # Case 1: During app startup, the settings UI is not initialized (new_hallucination_clean_enabled is None),
+        #         so initialize the model if the current setting is enabled.
+        # Case 2: If the settings panel is open and the value has been changed from False to True, initialize the model.
+        if new_hallucination_clean_enabled is None:
+            init_model = hallucination_clean_enabled
         else:
-            init_model = False
+            init_model = (not hallucination_clean_enabled) and new_hallucination_clean_enabled
+
         # Initialize spaCy model in a separate thread to avoid blocking UI
         def set_spacy_model(is_init_model: bool):
             from services.whisper_hallucination_cleaner import hallucination_cleaner
