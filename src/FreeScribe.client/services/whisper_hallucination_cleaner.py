@@ -90,7 +90,7 @@ class WhisperHallucinationCleaner:
     
     :param similarity_threshold: The minimum similarity ratio (0-1) between a sentence
                                and a hallucination to consider it a match
-    :param spacy_model_path: path of the spaCy model to use
+    :param spacy_model_path: Path of the spaCy model to use
     :param hallucinations: List of hallucination phrases to check against
     :param nlp: Optional pre-configured spaCy model
     :param logger: Logger instance for debugging
@@ -112,7 +112,7 @@ class WhisperHallucinationCleaner:
         """Initialize the cleaner with configurable dependencies.
         
         :param similarity_threshold: The minimum similarity ratio (0-1)
-        :param spacy_model_path: path of the spaCy model to use
+        :param spacy_model_path: Path of the spaCy model to use
         :param hallucinations: List of hallucination phrases to check against
         :param nlp: Optional pre-configured spaCy model
         :param logger: Logger instance for debugging
@@ -131,7 +131,7 @@ class WhisperHallucinationCleaner:
         This method should be called when the hallucination cleaning feature is enabled
         in settings. It downloads and loads the model if necessary.
         
-        :returns: Error message if initialization fails, None if successful
+        :return: Error message if initialization fails, None if successful
         :rtype: Optional[str]
         """
         try:
@@ -161,7 +161,7 @@ class WhisperHallucinationCleaner:
     def nlp(self) -> Language:
         """Lazy load the spacy model.
         
-        :returns: The loaded spaCy model
+        :return: The loaded spaCy model
         :rtype: spacy.language.Language
         :raises RuntimeError: If the spaCy model fails to download
         """
@@ -174,7 +174,7 @@ class WhisperHallucinationCleaner:
     def hallucination_docs(self) -> List[Doc]:
         """Lazy load the hallucination docs.
         
-        :returns: List of processed spaCy docs for each hallucination
+        :return: List of processed spaCy docs for each hallucination
         :rtype: list[spacy.tokens.Doc]
         """
         if self._hallucination_docs is None:
@@ -185,7 +185,13 @@ class WhisperHallucinationCleaner:
         return self._hallucination_docs
     
     def _normalize_text(self, text: str) -> str:
-        """Normalize text by removing punctuation and extra whitespace."""
+        """Normalize text by removing punctuation and extra whitespace.
+        
+        :param text: The text to normalize
+        :type text: str
+        :return: Normalized text with punctuation removed and whitespace normalized
+        :rtype: str
+        """
         # Remove punctuation and normalize whitespace
         text = text.strip().lower()
         # remove all punctuation
@@ -195,7 +201,13 @@ class WhisperHallucinationCleaner:
         return text
     
     def _is_similar_to_hallucination(self, sentence: str) -> bool:
-        """Check if a sentence is similar to any known hallucination using vector similarity."""
+        """Check if a sentence is similar to any known hallucination using vector similarity.
+        
+        :param sentence: The sentence to check for hallucination similarity
+        :type sentence: str
+        :return: True if the sentence is similar to a known hallucination, False otherwise
+        :rtype: bool
+        """
         if not sentence:
             return False
 
@@ -221,7 +233,13 @@ class WhisperHallucinationCleaner:
         return result
     
     def _split_into_sentences(self, text: str) -> List[str]:
-        """Split text into sentences using spacy."""
+        """Split text into sentences using spacy.
+        
+        :param text: The text to split into sentences
+        :type text: str
+        :return: List of sentences
+        :rtype: List[str]
+        """
         if not text:
             return []
             
@@ -231,7 +249,13 @@ class WhisperHallucinationCleaner:
         return [sent.text.strip() for sent in doc.sents]
     
     def clean_text(self, text: str) -> str:
-        """Clean the text by removing sentences similar to known hallucinations."""
+        """Clean the text by removing sentences similar to known hallucinations.
+        
+        :param text: The text to clean
+        :type text: str
+        :return: Cleaned text with hallucination sentences removed
+        :rtype: str
+        """
         if not text:
             return text
             
