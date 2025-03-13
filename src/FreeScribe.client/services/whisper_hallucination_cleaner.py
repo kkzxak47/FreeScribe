@@ -83,7 +83,7 @@ SIMILARITY_THRESHOLD = 0.95
 SPACY_MODEL_NAME = "en_core_web_md"
 
 
-def download_spacy_model():
+def download_spacy_model(max_retries: int = 3, retry_delay: int = 2):
     """Download the spacy model with retries.
     
     Attempts to download the spaCy model if not already installed.
@@ -95,9 +95,6 @@ def download_spacy_model():
     
     :raises: No exceptions are raised, failures are logged and False is returned
     """
-    max_retries = 3
-    retry_delay = 2  # seconds
-    
     default_logger.info(f"Checking/downloading spacy model {SPACY_MODEL_NAME}...")
     for attempt in range(max_retries):
         try:
