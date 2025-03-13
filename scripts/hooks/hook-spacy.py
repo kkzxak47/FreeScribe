@@ -15,23 +15,4 @@ datas += model_data + model_dist_info
 # Add specific hidden imports for the model
 hiddenimports += [
     'en_core_web_md',
-    'en_core_web_md.language',
-    'en_core_web_md.language.lex_attrs',
-    'en_core_web_md.language.syntax_iterators',
-    'en_core_web_md.language.tag_map',
-    'en_core_web_md.language.tokenizer_exceptions',
-    'en_core_web_md.language.wordnet',
-    'en_core_web_md.language.lemmatizer',
-    'en_core_web_md.language.stop_words',
-    'en_core_web_md.language.punctuation',
-    'en_core_web_md.language.char_classes',
-    'en_core_web_md.language.lex_attrs',
-    'en_core_web_md.language.syntax_iterators',
-    'en_core_web_md.language.tag_map',
-    'en_core_web_md.language.tokenizer_exceptions',
-    'en_core_web_md.language.wordnet',
-    'en_core_web_md.language.lemmatizer',
-    'en_core_web_md.language.stop_words',
-    'en_core_web_md.language.punctuation',
-    'en_core_web_md.language.char_classes',
 ] 
