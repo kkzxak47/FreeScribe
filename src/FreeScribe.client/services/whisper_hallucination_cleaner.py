@@ -15,15 +15,10 @@ Example:
 from typing import List, Optional
 import string
 import spacy
-# import spacy.cli
-import time
 import logging
 from spacy.language import Language
 from spacy.tokens import Doc
-# from utils.file_utils import get_resource_path
-import subprocess
 import os
-import sys
 # Create a punctuation string without apostrophe
 punct_without_apostrophe = string.punctuation.replace("'", "")
 
@@ -83,70 +78,7 @@ COMMON_HALUCINATIONS = [
 # Calculate max length based on tokens instead of characters for more accurate comparison
 MAX_SENTENCE_LENGTH = max(len(hallucination.split()) for hallucination in COMMON_HALUCINATIONS)
 SIMILARITY_THRESHOLD = 0.95
-SPACY_MODEL_NAME = "en_core_web_md"
-
-
-def download_spacy_model(max_retries: int = 3, retry_delay: int = 2):
-    """Download the spacy model with retries.
-    
-    Attempts to download the spaCy model if not already installed.
-    Will retry up to 3 times with a 2-second delay between attempts.
-    Uses spacy.cli.download for direct model installation.
-    
-    :returns: True if model was downloaded successfully, False otherwise
-    :rtype: bool
-    
-    :raises: No exceptions are raised, failures are logged and False is returned
-    """
-    default_logger.info(f"Checking/downloading spacy model {SPACY_MODEL_NAME}...")
-    for attempt in range(max_retries):
-        try:
-            # Check if model is already installed
-            if spacy.util.is_package(SPACY_MODEL_NAME):
-                default_logger.info("Spacy model already installed")
-                return True
-            
-            default_logger.info(f"Downloading spacy model (attempt {attempt + 1}/{max_retries})...")
-            
-            # Use a clean subprocess to run spacy download command, pip install will spawn another process
-            # env = {"PATH": os.environ.get("PATH", ""), "SYSTEMROOT": os.environ.get("SYSTEMROOT", "")}
-            proc = subprocess.Popen(
-                [sys.executable, "-m", "spacy", "download", SPACY_MODEL_NAME],
-                env=os.environ,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
-                text=True,
-            )
-            stdout, stderr = proc.communicate()
-            default_logger.info(f"Download output: {stdout}")
-            default_logger.error(f"Download error: {stderr}")
-            proc.wait()
-            if proc.returncode != 0:
-                default_logger.error(f"Error (return code {proc.returncode}):")
-                if stderr:
-                    default_logger.error(f"stderr:\n{stderr}")
-            if stdout:
-                default_logger.info(f"stdout:\n{stdout}")
-            
-            # Verify the download was successful
-            if spacy.util.is_package(SPACY_MODEL_NAME):
-                default_logger.info("Spacy model downloaded successfully")
-                return True
-            else:
-                default_logger.error("Model download appeared to succeed but model not found")
-                if attempt < max_retries - 1:
-                    default_logger.info(f"Retrying in {retry_delay} seconds...")
-                    time.sleep(retry_delay)
-                    
-        except Exception as e:
-            default_logger.exception(f"Unexpected error downloading spacy model: {str(e)}")
-            
-            if attempt < max_retries - 1:
-                default_logger.info(f"Retrying in {retry_delay} seconds...")
-                time.sleep(retry_delay)
-    
-    default_logger.error("Failed to download spacy model after all retries")
-    return False
+SPACY_MODEL_PATH = os.path.join(spacy.util.get_package_path("en_core_web_md"), "en_core_web_md-3.7.1")
 
 
 class WhisperHallucinationCleaner:
@@ -157,12 +89,12 @@ class WhisperHallucinationCleaner:
     
     :param similarity_threshold: The minimum similarity ratio (0-1) between a sentence
                                and a hallucination to consider it a match
-    :param spacy_model_name: Name of the spaCy model to use
+    :param spacy_model_path: path of the spaCy model to use
     :param hallucinations: List of hallucination phrases to check against
     :param nlp: Optional pre-configured spaCy model
     :param logger: Logger instance for debugging
     :type similarity_threshold: float
-    :type spacy_model_name: str
+    :type spacy_model_path: str
     :type hallucinations: List[str]
     :type nlp: Optional[Language]
     :type logger: logging.Logger
@@ -171,7 +103,7 @@ class WhisperHallucinationCleaner:
     def __init__(
         self,
         similarity_threshold: float = SIMILARITY_THRESHOLD,
-        spacy_model_name: str = SPACY_MODEL_NAME,
+        spacy_model_path: str = SPACY_MODEL_PATH,
         hallucinations: List[str] = COMMON_HALUCINATIONS,
         nlp: Optional[Language] = None,
         logger: logging.Logger = default_logger
@@ -179,14 +111,14 @@ class WhisperHallucinationCleaner:
         """Initialize the cleaner with configurable dependencies.
         
         :param similarity_threshold: The minimum similarity ratio (0-1)
-        :param spacy_model_name: Name of the spaCy model to use
+        :param spacy_model_path: path of the spaCy model to use
         :param hallucinations: List of hallucination phrases to check against
         :param nlp: Optional pre-configured spaCy model
         :param logger: Logger instance for debugging
         """
         self.logger = logger
         self.similarity_threshold = similarity_threshold
-        self.spacy_model_name = spacy_model_name
+        self.spacy_model_path = spacy_model_path
         self._trans_table = str.maketrans(punct_without_apostrophe, ' ' * len(punct_without_apostrophe))
         self.hallucinations = {self._normalize_text(h) for h in hallucinations}
         self._nlp = nlp
@@ -204,12 +136,10 @@ class WhisperHallucinationCleaner:
         try:
             if self._nlp is not None:
                 return None
-                
-            if not download_spacy_model():
-                return "Failed to download spaCy model. Please check your internet connection and try again."
-            
-            # Try to load the model
-            self._nlp = spacy.load(self.spacy_model_name)
+            try:
+                self._nlp = spacy.load(self.spacy_model_path)
+            except IOError as e:
+                return f"Failed to load spaCy model. {e}"
             # Pre-process hallucination docs
             self._hallucination_docs = [
                 self._nlp(h) for h in sorted(COMMON_HALUCINATIONS)

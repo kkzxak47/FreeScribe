@@ -74,7 +74,6 @@ else:
 LOG_FORMAT = '[%(asctime)s] | %(levelname)s | %(name)s | %(threadName)s | [%(filename)s:%(lineno)d in %(funcName)s] | %(message)s'
 logging.basicConfig(
     level=LOG_LEVEL,
-    # format='%(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(message)s',
     format=LOG_FORMAT,
     handlers=[logging.StreamHandler()],
 )

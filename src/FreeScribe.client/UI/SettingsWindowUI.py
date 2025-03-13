@@ -32,7 +32,7 @@ from UI.SettingsWindow import SettingsWindow
 from UI.SettingsConstant import SettingsKeys, Architectures, FeatureToggle
 from UI.Widgets.PopupBox import PopupBox
 from UI.LoadingWindow import LoadingWindow
-
+logger = logging.getLogger(__name__)
 
 LONG_ENTRY_WIDTH = 30
 SHORT_ENTRY_WIDTH = 20
@@ -926,16 +926,17 @@ class SettingsWindowUI:
         hallucination_clean_enabled = self.settings.editable_settings.get(SettingsKeys.ENABLE_HALLUCINATION_CLEAN.value)
         setting_entry = self.settings.editable_settings_entries.get(SettingsKeys.ENABLE_HALLUCINATION_CLEAN.value)
         new_value = setting_entry.get() if setting_entry else None
+        logger.info(f"{hallucination_clean_enabled=}, {new_value=}")
 
         # Initialize model if:
         # 1. During app startup (new_value is None) and current setting is enabled
         # 2. Settings panel is open and value changed from False to True
         init_model = (hallucination_clean_enabled and new_value is None) or (not hallucination_clean_enabled and new_value)
-
+        unload_model = (not new_value) and (new_value is not None)
         # Launch the initialization in a separate thread
-        threading.Thread(target=self._initialize_spacy_model, args=(init_model,)).start()
+        threading.Thread(target=self._initialize_spacy_model, args=(init_model, unload_model)).start()
 
-    def _initialize_spacy_model(self, is_init_model: bool):
+    def _initialize_spacy_model(self, is_init_model: bool, is_unload_model: bool):
         """
         Initializes or unloads the spaCy model for hallucination cleaning.
         
@@ -960,8 +961,5 @@ class SettingsWindowUI:
                     f"Failed to initialize spaCy model for hallucination cleaning: {error}\n\n"
                     "Hallucination cleaning will be disabled."
                 )
-                # Reset the checkbox
-                if SettingsKeys.ENABLE_HALLUCINATION_CLEAN.value in self.settings.editable_settings_entries:
-                    self.settings.editable_settings_entries[SettingsKeys.ENABLE_HALLUCINATION_CLEAN.value].set(False)
-        else:
+        if is_unload_model:
             hallucination_cleaner.unload_model()
