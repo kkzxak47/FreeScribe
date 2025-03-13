@@ -83,8 +83,7 @@ def download_spacy_model():
     
     Attempts to download the spaCy model if not already installed.
     Will retry up to 3 times with a 2-second delay between attempts.
-    Uses subprocess.run to execute the download command for better error handling
-    and output capture.
+    Uses spacy.cli.download for direct model installation.
     
     :returns: True if model was downloaded successfully, False otherwise
     :rtype: bool
@@ -93,7 +92,6 @@ def download_spacy_model():
     """
     max_retries = 3
     retry_delay = 2  # seconds
-    python_executable = sys.executable
     
     logger.info(f"Checking/downloading spacy model {SPACY_MODEL_NAME}...")
     for attempt in range(max_retries):
@@ -105,20 +103,15 @@ def download_spacy_model():
             
             logger.info(f"Downloading spacy model (attempt {attempt + 1}/{max_retries})...")
             
-            # Use subprocess.run to execute the download command
-            result = subprocess.run(
-                [python_executable, "-m", "spacy", "download", SPACY_MODEL_NAME],
-                capture_output=True,
-                text=True,
-                check=False  # Don't raise exception on non-zero return code
-            )
+            # Use spacy.cli.download directly
+            spacy.cli.download(SPACY_MODEL_NAME)
             
-            # Check if the command was successful
-            if result.returncode == 0:
+            # Verify the download was successful
+            if spacy.util.is_package(SPACY_MODEL_NAME):
                 logger.info("Spacy model downloaded successfully")
                 return True
             else:
-                logger.error(f"Error downloading spacy model: {result.stderr}")
+                logger.error("Model download appeared to succeed but model not found")
                 if attempt < max_retries - 1:
                     logger.info(f"Retrying in {retry_delay} seconds...")
                     time.sleep(retry_delay)

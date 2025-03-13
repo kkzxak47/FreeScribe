@@ -1822,8 +1822,12 @@ def faster_whisper_transcribe(audio):
 
         # Only clean hallucinations if enabled in settings
         if app_settings.editable_settings[SettingsKeys.ENABLE_HALLUCINATION_CLEAN.value]:
-            result = hallucination_cleaner.clean_text(result)
-            logger.debug(f"Cleaned result: {result}")
+            try:
+                result = hallucination_cleaner.clean_text(result)
+                logger.debug(f"Cleaned result: {result}")
+            except Exception as e:
+                # ignore the error as it should not break the transcription
+                logger.exception(f"Error during hallucination cleaning: {str(e)}")
         return result
     except Exception as e:
         logger.exception(f"Error during transcription: {str(e)}")

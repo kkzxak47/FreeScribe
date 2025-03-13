@@ -351,32 +351,29 @@ def test_dissimilar_phrases(cleaner, phrase):
     """
     assert not cleaner._is_similar_to_hallucination(phrase)
 
-class MockCompletedProcess:
-    """Mock subprocess.CompletedProcess for testing."""
-    def __init__(self, returncode, stderr=""):
-        self.returncode = returncode
-        self.stderr = stderr
+class MockSpacyCLI:
+    """Mock spacy.cli for testing."""
+    def __init__(self, should_succeed=True):
+        self.should_succeed = should_succeed
+        self.called = False
 
-def mock_successful_run(*args, **kwargs):
-    """Mock successful subprocess run."""
-    return MockCompletedProcess(0)
-
-def mock_failed_run(*args, **kwargs):
-    """Mock failed subprocess run."""
-    return MockCompletedProcess(1, "Download failed")
+    def download(self, model_name):
+        self.called = True
+        if not self.should_succeed:
+            raise Exception("Download failed")
 
 @pytest.mark.parametrize("test_case", [
     {
         "name": "successful download",
-        "mock_run": mock_successful_run,
+        "should_succeed": True,
         "expected_calls": 1,
-        "should_succeed": True
+        "expected_result": True
     },
     {
         "name": "failed download",
-        "mock_run": mock_failed_run,
+        "should_succeed": False,
         "expected_calls": 3,
-        "should_succeed": False
+        "expected_result": False
     }
 ])
 def test_download_spacy_model(monkeypatch, test_case):
@@ -391,17 +388,15 @@ def test_download_spacy_model(monkeypatch, test_case):
     :param test_case: Dictionary containing test case data
     :type test_case: dict
     """
-    calls = []
-    
-    def mock_run_with_tracking(*args, **kwargs):
-        calls.append(args[0])
-        return test_case["mock_run"](*args, **kwargs)
+    mock_cli = MockSpacyCLI(should_succeed=test_case["should_succeed"])
     
     def mock_is_package(name):
-        return False
+        # Return True only after successful download
+        return mock_cli.called and test_case["should_succeed"]
     
     monkeypatch.setattr(spacy.util, "is_package", mock_is_package)
-    monkeypatch.setattr("subprocess.run", mock_run_with_tracking)
+    monkeypatch.setattr(spacy.cli, "download", mock_cli.download)
     
-    assert download_spacy_model() == test_case["should_succeed"]
-    assert len(calls) == test_case["expected_calls"] 
+    result = download_spacy_model()
+    assert result == test_case["expected_result"]
+    assert mock_cli.called 
