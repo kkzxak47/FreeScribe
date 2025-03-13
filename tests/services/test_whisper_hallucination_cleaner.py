@@ -1,5 +1,5 @@
 import pytest
-from services.whisper_hallucination_cleaner import WhisperHallucinationCleaner, COMMON_HALUCINATIONS, SIMILARITY_THRESHOLD, download_spacy_model, SPACY_MODEL_NAME
+from services.whisper_hallucination_cleaner import WhisperHallucinationCleaner, COMMON_HALUCINATIONS, SIMILARITY_THRESHOLD, download_spacy_model, SPACY_MODEL_NAME, HallucinationCleanerException
 import spacy
 import time
 
@@ -365,7 +365,7 @@ class MockSpacyCLI:
         self.attempt_count += 1
         self.attempt_times.append(time.time())
         if not self.should_succeed:
-            raise Exception("Download failed")
+            raise HallucinationCleanerException("Download failed")
 
 @pytest.fixture
 def successful_download_mock(monkeypatch):
@@ -586,7 +586,7 @@ def failed_init_mocks(monkeypatch):
         return False
     
     def mock_spacy_load(model_name):
-        raise Exception("Mock load failure")
+        raise HallucinationCleanerException("Mock load failure")
     
     monkeypatch.setattr("services.whisper_hallucination_cleaner.download_spacy_model", mock_download_spacy_model)
     monkeypatch.setattr(spacy, "load", mock_spacy_load)

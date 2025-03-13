@@ -24,6 +24,10 @@ punct_without_apostrophe = string.punctuation.replace("'", "")
 
 logger = logging.getLogger(__name__)
 
+class HallucinationCleanerException(Exception):
+    """Exception raised for errors in the hallucination cleaner."""
+    pass
+
 
 COMMON_HALUCINATIONS = [
     "thank you",
@@ -194,8 +198,7 @@ class WhisperHallucinationCleaner:
         :raises RuntimeError: If the spaCy model fails to download
         """
         if self._nlp is None:
-            error = self.initialize_model()
-            if error:
+            if error := self.initialize_model():
                 raise RuntimeError(error)
         return self._nlp
     
