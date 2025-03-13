@@ -62,23 +62,24 @@ from UI.ScrubWindow import ScrubWindow
 from Model import ModelStatus
 from services.whisper_hallucination_cleaner import hallucination_cleaner
 
+dual = DualOutput()
+sys.stdout = dual
+sys.stderr = dual
 
 if os.environ.get("FREESCRIBE_DEBUG"):
     LOG_LEVEL = logging.DEBUG
 else:
     LOG_LEVEL = logging.INFO
 
+LOG_FORMAT = '[%(asctime)s] | %(levelname)s | %(name)s | %(threadName)s | [%(filename)s:%(lineno)d in %(funcName)s] | %(message)s'
 logging.basicConfig(
     level=LOG_LEVEL,
-    format='%(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[logging.StreamHandler()]
+    # format='%(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(message)s',
+    format=LOG_FORMAT,
+    handlers=[logging.StreamHandler()],
 )
 
 logger = logging.getLogger(__name__)
-
-dual = DualOutput()
-sys.stdout = dual
-sys.stderr = dual
 
 APP_NAME = 'AI Medical Scribe'  # Application name
 APP_TASK_MANAGER_NAME = 'freescribe-client.exe'

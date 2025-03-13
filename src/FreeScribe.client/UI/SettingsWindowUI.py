@@ -961,6 +961,7 @@ class SettingsWindowUI:
                     "Hallucination cleaning will be disabled."
                 )
                 # Reset the checkbox
-                self.settings.editable_settings_entries[SettingsKeys.ENABLE_HALLUCINATION_CLEAN.value].set(False)
+                if SettingsKeys.ENABLE_HALLUCINATION_CLEAN.value in self.settings.editable_settings_entries:
+                    self.settings.editable_settings_entries[SettingsKeys.ENABLE_HALLUCINATION_CLEAN.value].set(False)
         else:
             hallucination_cleaner.unload_model()

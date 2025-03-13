@@ -15,14 +15,15 @@ Example:
 from typing import List, Optional
 import string
 import spacy
-import spacy.cli
+# import spacy.cli
 import time
 import logging
 from spacy.language import Language
 from spacy.tokens import Doc
-from utils.resource_utils import get_resource_path
-
-
+# from utils.file_utils import get_resource_path
+import subprocess
+import os
+import sys
 # Create a punctuation string without apostrophe
 punct_without_apostrophe = string.punctuation.replace("'", "")
 
@@ -100,8 +101,6 @@ def download_spacy_model(max_retries: int = 3, retry_delay: int = 2):
     default_logger.info(f"Checking/downloading spacy model {SPACY_MODEL_NAME}...")
     for attempt in range(max_retries):
         try:
-            model_path = get_resource_path(SPACY_MODEL_NAME)
-            spacy.util.set_data_path(model_path)
             # Check if model is already installed
             if spacy.util.is_package(SPACY_MODEL_NAME):
                 default_logger.info("Spacy model already installed")
@@ -109,8 +108,25 @@ def download_spacy_model(max_retries: int = 3, retry_delay: int = 2):
             
             default_logger.info(f"Downloading spacy model (attempt {attempt + 1}/{max_retries})...")
             
-            # Use spacy.cli.download directly
-            spacy.cli.download(SPACY_MODEL_NAME)
+            # Use a clean subprocess to run spacy download command, pip install will spawn another process
+            # env = {"PATH": os.environ.get("PATH", ""), "SYSTEMROOT": os.environ.get("SYSTEMROOT", "")}
+            proc = subprocess.Popen(
+                [sys.executable, "-m", "spacy", "download", SPACY_MODEL_NAME],
+                env=os.environ,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            stdout, stderr = proc.communicate()
+            default_logger.info(f"Download output: {stdout}")
+            default_logger.error(f"Download error: {stderr}")
+            proc.wait()
+            if proc.returncode != 0:
+                default_logger.error(f"Error (return code {proc.returncode}):")
+                if stderr:
+                    default_logger.error(f"stderr:\n{stderr}")
+            if stdout:
+                default_logger.info(f"stdout:\n{stdout}")
             
             # Verify the download was successful
             if spacy.util.is_package(SPACY_MODEL_NAME):
@@ -123,7 +139,8 @@ def download_spacy_model(max_retries: int = 3, retry_delay: int = 2):
                     time.sleep(retry_delay)
                     
         except Exception as e:
-            default_logger.error(f"Unexpected error downloading spacy model: {str(e)}")
+            default_logger.exception(f"Unexpected error downloading spacy model: {str(e)}")
+            
             if attempt < max_retries - 1:
                 default_logger.info(f"Retrying in {retry_delay} seconds...")
                 time.sleep(retry_delay)
