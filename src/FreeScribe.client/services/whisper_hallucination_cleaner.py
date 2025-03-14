@@ -142,7 +142,7 @@ class WhisperHallucinationCleaner:
                 return f"Failed to load spaCy model. {e}"
             # Pre-process hallucination docs
             self._hallucination_docs = [
-                self._nlp(h) for h in sorted(COMMON_HALUCINATIONS)
+                self._nlp(h) for h in sorted(self.hallucinations)
             ]
             return None
         except Exception as e:

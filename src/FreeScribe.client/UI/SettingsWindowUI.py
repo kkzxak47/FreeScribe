@@ -921,20 +921,38 @@ class SettingsWindowUI:
     def load_hallucination_cleaner(self):
         """
         Loads or unloads the hallucination cleaner based on settings.
+        
+        The logic handles two scenarios:
+        1. Application startup: new_value is None, use current setting
+        2. Settings change: new_value exists, compare with previous setting
         """
-        # Determine if the model should be initialized
-        hallucination_clean_enabled = self.settings.editable_settings.get(SettingsKeys.ENABLE_HALLUCINATION_CLEAN.value)
+        # Get current enabled state from settings
+        current_enabled = self.settings.editable_settings.get(SettingsKeys.ENABLE_HALLUCINATION_CLEAN.value)
+        
+        # Get new value from settings panel if it exists
         setting_entry = self.settings.editable_settings_entries.get(SettingsKeys.ENABLE_HALLUCINATION_CLEAN.value)
-        new_value = setting_entry.get() if setting_entry else None
-        logger.info(f"{hallucination_clean_enabled=}, {new_value=}")
+        new_enabled = setting_entry.get() if setting_entry else None
+        
+        logger.info(f"Hallucination cleaner - Current: {current_enabled}, New: {new_enabled}")
 
-        # Initialize model if:
-        # 1. During app startup (new_value is None) and current setting is enabled
-        # 2. Settings panel is open and value changed from False to True
-        init_model = (hallucination_clean_enabled and new_value is None) or (not hallucination_clean_enabled and new_value)
-        unload_model = (not new_value) and (new_value is not None)
-        # Launch the initialization in a separate thread
-        threading.Thread(target=self._initialize_spacy_model, args=(init_model, unload_model)).start()
+        # Determine if we should initialize the model
+        should_initialize = (
+            # Case 1: App startup - initialize if currently enabled
+            (new_enabled is None and current_enabled) or
+            # Case 2: Settings changed - initialize if newly enabled
+            (new_enabled is not None and new_enabled and not current_enabled)
+        )
+
+        # Determine if we should unload the model
+        should_unload = (
+            # Only unload if setting was explicitly changed to disabled
+            new_enabled is not None and not new_enabled
+        )
+
+        # Launch initialization/unloading in a separate thread
+        threading.Thread(target=self._initialize_spacy_model, 
+                       args=(should_initialize, should_unload),
+                       daemon=True).start()
 
     def _initialize_spacy_model(self, is_init_model: bool, is_unload_model: bool):
         """
