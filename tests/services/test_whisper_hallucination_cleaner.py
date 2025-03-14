@@ -6,7 +6,7 @@ from services.whisper_hallucination_cleaner import (
     WhisperHallucinationCleaner,
     COMMON_HALUCINATIONS,
     SIMILARITY_THRESHOLD,
-    SPACY_MODEL_PATH,
+    SPACY_MODEL_NAME,
     HallucinationCleanerException,
     default_logger,
 )
@@ -20,7 +20,7 @@ def spacy_model():
     :returns: A loaded spaCy model
     :rtype: spacy.language.Language
     """
-    return spacy.load(SPACY_MODEL_PATH)
+    return spacy.load(SPACY_MODEL_NAME)
 
 
 @pytest.fixture
@@ -656,17 +656,17 @@ def test_cleaner_with_custom_similarity_threshold():
 
 
 def test_cleaner_with_custom_model_path():
-    """Test cleaner with custom spaCy model path."""
-    model_path = "custom/model/path"
-    cleaner = WhisperHallucinationCleaner(spacy_model_path=model_path)
-    assert cleaner.spacy_model_path == model_path
+    """Test cleaner with custom spaCy model name."""
+    model_name = SPACY_MODEL_NAME
+    cleaner = WhisperHallucinationCleaner(spacy_model_name=model_name)
+    assert cleaner.spacy_model_name == model_name
 
 
 def test_cleaner_with_all_custom_dependencies(mock_nlp, mock_logger, custom_hallucinations):
     """Test cleaner with all dependencies customized."""
     cleaner = WhisperHallucinationCleaner(
         similarity_threshold=0.8,
-        spacy_model_path="custom_model",
+        spacy_model_name=SPACY_MODEL_NAME,
         hallucinations=custom_hallucinations,
         nlp=mock_nlp,
         logger=mock_logger
@@ -674,7 +674,7 @@ def test_cleaner_with_all_custom_dependencies(mock_nlp, mock_logger, custom_hall
     
     # Verify all customizations are applied
     assert cleaner.similarity_threshold == 0.8
-    assert cleaner.spacy_model_path == "custom_model"
+    assert cleaner.spacy_model_name == SPACY_MODEL_NAME
     assert len(cleaner.hallucinations) == len(custom_hallucinations)
     assert cleaner._nlp == mock_nlp
     assert cleaner.logger == mock_logger
@@ -686,6 +686,6 @@ def test_cleaner_with_default_dependencies():
     
     # Verify default values are used
     assert cleaner.similarity_threshold == 0.95  # Default from module
-    assert cleaner.spacy_model_path == SPACY_MODEL_PATH  # Default from module
+    assert cleaner.spacy_model_name == SPACY_MODEL_NAME  # Default from module
     assert cleaner._nlp is None  # Should be None initially
     assert cleaner.logger is not None  # Should have default logger 

@@ -79,7 +79,6 @@ COMMON_HALUCINATIONS = [
 MAX_SENTENCE_LENGTH = max(len(hallucination.split()) for hallucination in COMMON_HALUCINATIONS)
 SIMILARITY_THRESHOLD = 0.95
 SPACY_MODEL_NAME = "en_core_web_md"
-SPACY_MODEL_PATH = os.path.join(spacy.util.get_package_path(SPACY_MODEL_NAME), f"{SPACY_MODEL_NAME}-3.7.1")
 
 
 class WhisperHallucinationCleaner:
@@ -90,12 +89,12 @@ class WhisperHallucinationCleaner:
     
     :param similarity_threshold: The minimum similarity ratio (0-1) between a sentence
                                and a hallucination to consider it a match
-    :param spacy_model_path: Path of the spaCy model to use
+    :param spacy_model_name: Name of the spaCy model to use
     :param hallucinations: List of hallucination phrases to check against
     :param nlp: Optional pre-configured spaCy model
     :param logger: Logger instance for debugging
     :type similarity_threshold: float
-    :type spacy_model_path: str
+    :type spacy_model_name: str
     :type hallucinations: List[str]
     :type nlp: Optional[Language]
     :type logger: logging.Logger
@@ -104,7 +103,7 @@ class WhisperHallucinationCleaner:
     def __init__(
         self,
         similarity_threshold: float = SIMILARITY_THRESHOLD,
-        spacy_model_path: str = SPACY_MODEL_PATH,
+        spacy_model_name: str = SPACY_MODEL_NAME,
         hallucinations: List[str] = COMMON_HALUCINATIONS,
         nlp: Optional[Language] = None,
         logger: logging.Logger = default_logger
@@ -112,14 +111,14 @@ class WhisperHallucinationCleaner:
         """Initialize the cleaner with configurable dependencies.
         
         :param similarity_threshold: The minimum similarity ratio (0-1)
-        :param spacy_model_path: Path of the spaCy model to use
+        :param spacy_model_name: Name of the spaCy model to use
         :param hallucinations: List of hallucination phrases to check against
         :param nlp: Optional pre-configured spaCy model
         :param logger: Logger instance for debugging
         """
         self.logger = logger
         self.similarity_threshold = similarity_threshold
-        self.spacy_model_path = spacy_model_path
+        self.spacy_model_name = spacy_model_name
         self._trans_table = str.maketrans(punct_without_apostrophe, ' ' * len(punct_without_apostrophe))
         self.hallucinations = {self._normalize_text(h) for h in hallucinations}
         self._nlp = nlp
@@ -138,7 +137,7 @@ class WhisperHallucinationCleaner:
             if self._nlp is not None:
                 return None
             try:
-                self._nlp = spacy.load(self.spacy_model_path)
+                self._nlp = spacy.load(self.spacy_model_name)
             except IOError as e:
                 return f"Failed to load spaCy model. {e}"
             # Pre-process hallucination docs
