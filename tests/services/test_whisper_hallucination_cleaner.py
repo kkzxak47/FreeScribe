@@ -688,4 +688,73 @@ def test_cleaner_with_default_dependencies():
     assert cleaner.similarity_threshold == 0.95  # Default from module
     assert cleaner.spacy_model_name == SPACY_MODEL_NAME  # Default from module
     assert cleaner._nlp is None  # Should be None initially
-    assert cleaner.logger is not None  # Should have default logger 
+    assert cleaner.logger is not None  # Should have default logger
+
+
+@pytest.fixture
+def mock_settings():
+    """Create a mock settings object with hallucination cleaning setting."""
+    class MockSettings:
+        def __init__(self):
+            self.editable_settings = {}
+            self.editable_settings_entries = {}
+            
+    return MockSettings()
+
+
+@pytest.fixture
+def mock_settings_entry():
+    """Create a mock settings entry that can be get/set."""
+    class MockEntry:
+        def __init__(self, value=True):
+            self._value = value
+            
+        def get(self):
+            return self._value
+            
+        def set(self, value):
+            self._value = value
+            
+    return MockEntry()
+
+
+def test_unload_model_when_hallucination_cleaning_disabled(initialized_cleaner, mock_settings, mock_settings_entry):
+    """Test that unload_model is called when hallucination cleaning is disabled.
+    
+    :param initialized_cleaner: Initialized cleaner fixture
+    :param mock_settings: Mock settings object
+    :param mock_settings_entry: Mock settings entry object
+    """
+    from UI.SettingsWindowUI import SettingsKeys
+    
+    # Setup mock settings
+    mock_settings.editable_settings[SettingsKeys.ENABLE_HALLUCINATION_CLEAN.value] = True
+    mock_settings.editable_settings_entries[SettingsKeys.ENABLE_HALLUCINATION_CLEAN.value] = mock_settings_entry
+    
+    # Verify cleaner is initialized
+    assert initialized_cleaner._nlp is not None
+    assert initialized_cleaner._hallucination_docs is not None
+    
+    # Simulate disabling hallucination cleaning
+    mock_settings_entry._value = False
+    
+    # Create mock UI and call load_hallucination_cleaner
+    class MockUI:
+        def __init__(self, settings, cleaner):
+            self.settings = settings
+            self.cleaner = cleaner
+            
+        def load_hallucination_cleaner(self):
+            current_enabled = self.settings.editable_settings.get(SettingsKeys.ENABLE_HALLUCINATION_CLEAN.value)
+            setting_entry = self.settings.editable_settings_entries.get(SettingsKeys.ENABLE_HALLUCINATION_CLEAN.value)
+            new_enabled = setting_entry.get() if setting_entry else None
+            
+            if new_enabled is not None and not new_enabled:
+                self.cleaner.unload_model()
+    
+    ui = MockUI(mock_settings, initialized_cleaner)
+    ui.load_hallucination_cleaner()
+    
+    # Verify model was unloaded
+    assert initialized_cleaner._nlp is None
+    assert initialized_cleaner._hallucination_docs is None 
