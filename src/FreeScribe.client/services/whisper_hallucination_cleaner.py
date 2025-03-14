@@ -133,18 +133,18 @@ class WhisperHallucinationCleaner:
         :return: Error message if initialization fails, None if successful
         :rtype: Optional[str]
         """
+        if self._nlp is not None:
+            return None
+            
         try:
-            if self._nlp is not None:
-                return None
-            try:
-                self._nlp = spacy.load(self.spacy_model_name)
-            except IOError as e:
-                return f"Failed to load spaCy model. {e}"
+            self._nlp = spacy.load(self.spacy_model_name)
             # Pre-process hallucination docs
             self._hallucination_docs = [
                 self._nlp(h) for h in sorted(self.hallucinations)
             ]
             return None
+        except IOError as e:
+            return f"Failed to load spaCy model. {e}"
         except Exception as e:
             error_msg = f"Failed to initialize spaCy model: {str(e)}"
             self.logger.error(error_msg)
