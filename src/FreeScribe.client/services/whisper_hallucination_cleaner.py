@@ -130,7 +130,7 @@ class WhisperHallucinationCleaner:
         This method should be called when the hallucination cleaning feature is enabled
         in settings. It downloads and loads the model if necessary.
         
-        :return: Error message if initialization fails, None if successful
+        :returns: Error message if initialization fails, None if successful
         :rtype: Optional[str]
         """
         if self._nlp is not None:
@@ -160,7 +160,7 @@ class WhisperHallucinationCleaner:
     def nlp(self) -> Language:
         """Lazy load the spacy model.
         
-        :return: The loaded spaCy model
+        :returns: The loaded spaCy model
         :rtype: spacy.language.Language
         :raises RuntimeError: If the spaCy model fails to download
         """
@@ -173,7 +173,7 @@ class WhisperHallucinationCleaner:
     def hallucination_docs(self) -> List[Doc]:
         """Lazy load the hallucination docs.
         
-        :return: List of processed spaCy docs for each hallucination
+        :returns: List of processed spaCy docs for each hallucination
         :rtype: list[spacy.tokens.Doc]
         """
         if self._hallucination_docs is None:
@@ -188,7 +188,7 @@ class WhisperHallucinationCleaner:
         
         :param text: The text to normalize
         :type text: str
-        :return: Normalized text with punctuation removed and whitespace normalized
+        :returns: Normalized text with punctuation removed and whitespace normalized
         :rtype: str
         """
         # Remove punctuation and normalize whitespace
@@ -204,7 +204,7 @@ class WhisperHallucinationCleaner:
         
         :param sentence: The sentence to check for hallucination similarity
         :type sentence: str
-        :return: True if the sentence is similar to a known hallucination, False otherwise
+        :returns: True if the sentence is similar to a known hallucination, False otherwise
         :rtype: bool
         """
         if not sentence:
@@ -236,7 +236,7 @@ class WhisperHallucinationCleaner:
         
         :param text: The text to split into sentences
         :type text: str
-        :return: List of sentences
+        :returns: List of sentences
         :rtype: List[str]
         """
         if not text:
@@ -252,8 +252,15 @@ class WhisperHallucinationCleaner:
         
         :param text: The text to clean
         :type text: str
-        :return: Cleaned text with hallucination sentences removed
+        :returns: Cleaned text with hallucination sentences removed
         :rtype: str
+
+        Example:
+            >>> cleaner = WhisperHallucinationCleaner()
+            >>> text = "This is a real transcription. Thanks for watching!"
+            >>> cleaned = cleaner.clean_text(text)
+            >>> print(cleaned)
+            'This is a real transcription.'
         """
         if not text:
             return text
