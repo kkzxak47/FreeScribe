@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Optional
 from pydantic import BaseModel
 
 
@@ -14,7 +14,8 @@ class ActionResult(BaseModel):
     success: bool
     message: str
     data: Optional[Dict[str, Any]] = None
-    
+
+
 class BaseAction(ABC):
     """
     Base class for all action plugins.

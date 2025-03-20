@@ -3,7 +3,7 @@ Base classes for the intent actions system.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import List
 from pydantic import BaseModel
 
 class Intent(BaseModel):
@@ -17,7 +17,6 @@ class Intent(BaseModel):
     name: str
     confidence: float
     metadata: dict = {}
-
 
 
 class BaseIntentRecognizer(ABC):
@@ -44,4 +43,3 @@ class BaseIntentRecognizer(ABC):
         Initialize the recognizer with necessary resources.
         """
         pass
-
