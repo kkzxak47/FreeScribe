@@ -1,5 +1,9 @@
+"""
+Base classes for the intent actions system.
+"""
+
 from abc import ABC, abstractmethod
-from typing import List
+from typing import Any, Dict, List, Optional
 from pydantic import BaseModel
 
 class Intent(BaseModel):
@@ -14,6 +18,8 @@ class Intent(BaseModel):
     confidence: float
     metadata: dict = {}
 
+
+
 class BaseIntentRecognizer(ABC):
     """
     Abstract base class for intent recognizers.
@@ -23,7 +29,7 @@ class BaseIntentRecognizer(ABC):
     """
     
     @abstractmethod
-    async def recognize_intent(self, text: str) -> List[Intent]:
+    def recognize_intent(self, text: str) -> List[Intent]:
         """
         Recognize intents from the given text.
         
@@ -33,8 +39,9 @@ class BaseIntentRecognizer(ABC):
         pass
     
     @abstractmethod
-    async def initialize(self) -> None:
+    def initialize(self) -> None:
         """
         Initialize the recognizer with necessary resources.
         """
-        pass 
+        pass
+

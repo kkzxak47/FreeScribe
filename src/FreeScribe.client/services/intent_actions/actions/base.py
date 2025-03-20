@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 from pydantic import BaseModel
+
 
 class ActionResult(BaseModel):
     """
@@ -13,7 +14,7 @@ class ActionResult(BaseModel):
     success: bool
     message: str
     data: Optional[Dict[str, Any]] = None
-
+    
 class BaseAction(ABC):
     """
     Base class for all action plugins.
@@ -47,7 +48,7 @@ class BaseAction(ABC):
         pass
     
     @abstractmethod
-    async def can_handle_intent(self, intent_name: str, metadata: Dict[str, Any]) -> bool:
+    def can_handle_intent(self, intent_name: str, metadata: Dict[str, Any]) -> bool:
         """
         Check if this action can handle the given intent.
         
@@ -58,7 +59,7 @@ class BaseAction(ABC):
         pass
     
     @abstractmethod
-    async def execute(self, intent_name: str, metadata: Dict[str, Any]) -> ActionResult:
+    def execute(self, intent_name: str, metadata: Dict[str, Any]) -> ActionResult:
         """
         Execute the action based on the intent.
         
@@ -69,7 +70,7 @@ class BaseAction(ABC):
         pass
     
     @abstractmethod
-    async def get_ui_data(self) -> Dict[str, Any]:
+    def get_ui_data(self) -> Dict[str, Any]:
         """
         Get data needed to render the action in the UI.
         
