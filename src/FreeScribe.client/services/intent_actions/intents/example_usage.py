@@ -32,18 +32,18 @@ def main():
         
         # Process each text
         for text in texts:
-            logger.info(f"\nProcessing text: {text}")
+            print(f"\nProcessing text: {text}")
             intents = recognizer.recognize_intent(text)
             
             # Print results
             for intent in intents:
-                logger.info(f"Recognized intent: {intent.name}")
-                logger.info(f"Confidence: {intent.confidence:.2f}")
-                logger.info(f"Parameters: {intent.metadata['parameters']}")
-                logger.info("-" * 50)
+                print(f"Recognized intent: {intent.name}")
+                print(f"Confidence: {intent.confidence:.2f}")
+                print(f"Parameters: {intent.metadata['parameters']}")
+                print("-" * 50)
     
     except Exception as e:
-        logger.error(f"Error in example: {e}")
+        logger.exception(f"Error in example: {e}")
 
 if __name__ == "__main__":
     main() 
