@@ -141,6 +141,8 @@ class SettingsWindow():
             SettingsKeys.Enable_AI_Conversation_Validation.value : False,  # Default to disabled
             # Best of N (Experimental), by default we only generate 1 completion of note, if this is set to a number greater than 1, we will generate N completions and pick the best one.
             SettingsKeys.BEST_OF.value: 1,
+            # Google Maps API settings
+            SettingsKeys.GOOGLE_MAPS_API_KEY.value: "",  # Will be set by user
         }
 
     def __init__(self):

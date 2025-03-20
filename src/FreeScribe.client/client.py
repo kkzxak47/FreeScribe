@@ -494,6 +494,8 @@ def realtime_text():
     local_cancel_flag = False 
     if not is_realtimeactive:
         is_realtimeactive = True
+        # this is the text that will be used to process intents
+        intent_text = ""
 
         while True:
             #  break if canceled
@@ -519,6 +521,7 @@ def realtime_text():
 
                     if not local_cancel_flag and not is_audio_processing_realtime_canceled.is_set():
                         update_gui(result)
+                        intent_text = result
                 else:
                     print("Remote Real Time Whisper")
                     buffer = io.BytesIO()
@@ -558,6 +561,7 @@ def realtime_text():
                             text = response.json()['text']
                             if not local_cancel_flag and not is_audio_processing_realtime_canceled.is_set():
                                 update_gui(text)
+                                intent_text = text
                         else:
                             update_gui(f"Error (HTTP Status {response.status_code}): {response.text}")
                     except Exception as e:
@@ -565,6 +569,8 @@ def realtime_text():
                     finally:
                         #close buffer. we dont need it anymore
                         buffer.close()
+                # Process intents
+                window.get_text_intents(intent_text)
             audio_queue.task_done()
     else:
         is_realtimeactive = False
