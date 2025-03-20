@@ -7,13 +7,16 @@ in the FreeScribe medical transcription system.
 
 from .intents import (
     Intent,
-    ActionResult,
     BaseIntentRecognizer,
-    BaseAction,
     LLMIntentRecognizer,
     MedicalIntentResult
 )
-from .actions import PrintMapAction
+from .actions import (
+    PrintMapAction,
+    BaseAction,
+    ActionResult
+)
+
 
 __all__ = [
     'Intent',
