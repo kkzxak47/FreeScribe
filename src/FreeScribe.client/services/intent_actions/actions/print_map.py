@@ -186,11 +186,10 @@ class PrintMapAction(BaseAction):
             )
             
         except Exception as e:
-            logger.exception(f"Error executing map action: {str(e)}")
-            
+            logger.error(f"Error executing map action: {str(e)}")
             return ActionResult(
                 success=False,
-                message="An error occurred while processing your request.",
+                message="Failed to generate map image.",
                 data={"error": str(e)}
             )
 
