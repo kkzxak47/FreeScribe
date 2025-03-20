@@ -6,7 +6,9 @@ import logging
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 from .intents import SpacyIntentRecognizer, Intent
-from .actions import BaseAction, PrintMapAction
+from .actions.print_map import PrintMapAction
+from .actions.show_directions import ShowDirectionsAction
+from .actions.base import BaseAction
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +35,7 @@ class IntentActionManager:
         
         # Register actions
         self._register_action(PrintMapAction(maps_directory, google_maps_api_key))
+        self._register_action(ShowDirectionsAction())
         
     def _register_action(self, action: BaseAction) -> None:
         """
@@ -50,20 +53,27 @@ class IntentActionManager:
         :param text: Transcribed text to process
         :return: List of action results with UI data
         """
+        logger.debug(f"Processing text: {text}")
         results = []
         
         # Recognize intents
         intents = self.recognizer.recognize_intent(text)
+        logger.debug(f"Intents: {intents}")
         
         # Process each intent
         for intent in intents:
             # Find matching action
             action = self._find_action_for_intent(intent)
             if not action:
+                logger.debug(f"No action found for intent: {intent}")
                 continue
                 
+            logger.debug(f"Action found for intent: {action}")
+            
             # Execute action
             result = action.execute(intent.name, intent.metadata)
+            logger.debug(f"Result: {result}")
+            
             if result.success:
                 # Add UI data
                 ui_data = action.get_ui_data()
@@ -85,6 +95,9 @@ class IntentActionManager:
         :return: Matching action handler or None
         """
         for action in self.actions.values():
+            logger.debug(f"Checking if {action.action_id} can handle {intent.name}")
             if action.can_handle_intent(intent.name, intent.metadata):
+                logger.debug(f"Found matching action: {action.action_id}")
                 return action
+        logger.debug(f"No action found for intent: {intent.name}")
         return None 

@@ -9,6 +9,9 @@ from services.intent_actions.manager import IntentActionManager
 from utils.file_utils import get_file_path
 from UI.DebugWindow import DebugPrintWindow
 from pathlib import Path
+import logging
+
+logger = logging.getLogger(__name__)
 
 DOCKER_CONTAINER_CHECK_INTERVAL = 10000  # Interval in milliseconds to check the Docker container status
 DOCKER_DESKTOP_CHECK_INTERVAL = 10000  # Interval in milliseconds to check the Docker Desktop status
@@ -414,11 +417,13 @@ class MainWindowUI:
             return
         # Process text through intent manager
         results = self.intent_manager.process_text(text)
-        
+        logger.debug(f"Results: {results}")
+
         if results:
+            logger.debug(f"Showing action window")
             # Show action window and add results
             self.action_window.show()
-            self.action_window.clear()
+            # self.action_window.clear()
             self.action_window.add_results(results)
             
     def close_action_window(self) -> None:

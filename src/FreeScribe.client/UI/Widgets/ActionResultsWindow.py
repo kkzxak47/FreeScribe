@@ -23,15 +23,30 @@ class ActionResultsWindow:
         
         :param parent: Parent window
         """
-        self.window = tk.Toplevel(parent)
+        self.parent = parent
+        self.window = None
+        self.canvas = None
+        self.scrollable_frame = None
+        self.images = []  # Store image references to prevent garbage collection
+        self._create_window()
+        
+    def _create_window(self) -> None:
+        """Create the window and its widgets."""
+        if self.window is not None:
+            try:
+                self.window.destroy()
+            except tk.TclError:
+                pass
+                
+        self.window = tk.Toplevel(self.parent)
         self.window.title("Action Results")
         self.window.geometry("400x600")
         self.window.resizable(True, True)
         
         # Position window to the right of parent
-        parent_x = parent.winfo_x()
-        parent_y = parent.winfo_y()
-        self.window.geometry(f"+{parent_x + parent.winfo_width()}+{parent_y}")
+        parent_x = self.parent.winfo_x()
+        parent_y = self.parent.winfo_y()
+        self.window.geometry(f"+{parent_x + self.parent.winfo_width()}+{parent_y}")
         
         # Create scrollable frame
         self.canvas = tk.Canvas(self.window)
@@ -50,8 +65,11 @@ class ActionResultsWindow:
         self.canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
         
-        # Store image references to prevent garbage collection
-        self.images = []
+        # Handle window close
+        self.window.protocol("WM_DELETE_WINDOW", self.hide)
+        
+        # Initially hide the window
+        self.window.withdraw()
         
     def add_result(self, result: Dict[str, Any]) -> None:
         """
@@ -73,9 +91,19 @@ class ActionResultsWindow:
         title = ttk.Label(header, text=result["display_name"], style="CardTitle.TLabel")
         title.pack(side="left", padx=5)
         
-        # Add message
-        message = ttk.Label(card, text=result["message"], wraplength=350)
+        # Add message with click handler if clickable
+        message = ttk.Label(
+            card, 
+            text=result["message"], 
+            wraplength=350,
+            cursor="hand2" if result["data"].get("clickable") else "arrow",
+            foreground="blue" if result["data"].get("clickable") else "black"
+        )
         message.pack(fill="x", padx=10, pady=5)
+        
+        # Add click handler if URL is available
+        if result["data"].get("clickable") and result["data"].get("click_url"):
+            message.bind("<Button-1>", lambda e: webbrowser.open(result["data"]["click_url"]))
         
         # Add additional info if available
         if "additional_info" in result["data"]:
@@ -135,15 +163,26 @@ class ActionResultsWindow:
             
     def clear(self) -> None:
         """Clear all results from the window."""
-        for widget in self.scrollable_frame.winfo_children():
-            widget.destroy()
+        if self.scrollable_frame:
+            for widget in self.scrollable_frame.winfo_children():
+                widget.destroy()
         self.images.clear()
         
     def show(self) -> None:
         """Show the window."""
-        self.window.deiconify()
-        self.window.lift()
+        try:
+            self.window.deiconify()
+            self.window.lift()
+        except (tk.TclError, AttributeError):
+            # If window was destroyed, recreate it
+            self._create_window()
+            self.window.deiconify()
+            self.window.lift()
         
     def hide(self) -> None:
         """Hide the window."""
-        self.window.withdraw() 
+        if self.window:
+            try:
+                self.window.withdraw()
+            except tk.TclError:
+                pass 

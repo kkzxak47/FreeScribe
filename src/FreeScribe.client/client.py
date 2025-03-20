@@ -59,6 +59,9 @@ from UI.Widgets.TimestampListbox import TimestampListbox
 from UI.ScrubWindow import ScrubWindow
 from Model import ModelStatus
 
+dual = DualOutput()
+sys.stdout = dual
+sys.stderr = dual
 
 if os.environ.get("FREESCRIBE_DEBUG"):
     LOG_LEVEL = logging.DEBUG
@@ -67,12 +70,11 @@ else:
 
 logging.basicConfig(
     level=LOG_LEVEL,
-    format='%(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(message)s'
+    format='%(asctime)s - %(threadName)s:%(lineno)d:%(funcName)s:%(filename)s - %(name)s - %(levelname)s - %(message)s'
 )
 
-dual = DualOutput()
-sys.stdout = dual
-sys.stderr = dual
+logger = logging.getLogger(__name__)
+
 
 APP_NAME = 'AI Medical Scribe'  # Application name
 APP_TASK_MANAGER_NAME = 'freescribe-client.exe'
@@ -570,7 +572,11 @@ def realtime_text():
                         #close buffer. we dont need it anymore
                         buffer.close()
                 # Process intents
-                window.get_text_intents(intent_text)
+                try:
+                    logger.debug(f"Processing intents for text: {intent_text}")
+                    window.get_text_intents(intent_text)
+                except Exception as e:
+                    logger.exception(f"Error processing intents: {e}")
             audio_queue.task_done()
     else:
         is_realtimeactive = False

@@ -72,7 +72,7 @@ class PrintMapAction(BaseAction):
 
     def can_handle_intent(self, intent_name: str, metadata: Dict[str, Any]) -> bool:
         """Check if this action can handle the given intent."""
-        if intent_name not in ["show_map", "get_directions", "find_location"]:
+        if intent_name not in ["show_map", "show_directions", "find_location"]:
             return False
             
         # Check if we have location information for this intent
@@ -151,7 +151,7 @@ class PrintMapAction(BaseAction):
             # Generate response based on intent type
             if intent_name == "show_map":
                 message = f"Here's a map of the {location_name} area"
-            elif intent_name == "get_directions":
+            elif intent_name == "show_directions":
                 # Get directions
                 directions_result = self.gmaps.directions(
                     origin="current location",  # In a real app, this would be the user's location
