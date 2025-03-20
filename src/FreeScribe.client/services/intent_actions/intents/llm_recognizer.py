@@ -40,17 +40,17 @@ class LLMIntentRecognizer(BaseIntentRecognizer):
     Uses PydanticAI to structure the LLM output into actionable intents.
     """
     
-    def __init__(self, model_endpoint: str, api_key: Optional[str] = None):
+    def __init__(self, model_endpoint: str = "http://localhost:11434", api_key: Optional[str] = None):
         """
         Initialize the LLM recognizer.
         
-        :param model_endpoint: URL of the self-hosted LLM API
-        :param api_key: Optional API key for authentication
+        :param model_endpoint: URL of the self-hosted Ollama API (default: http://localhost:11434)
+        :param api_key: Optional API key for authentication (not used for Ollama)
         """
         self.model_endpoint = model_endpoint
         self.api_key = api_key
         self.agent = Agent(
-            "gemma-2-2b-it-Q8_0",
+            "gemma-2-2b-it-Q8_0",  # Using Gemma 2B model
             result_type=MedicalIntentResult,
             system_prompt="""You are a medical intent recognition system.
             Analyze the conversation between physician and patient to identify key intents,
