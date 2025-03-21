@@ -7,8 +7,6 @@ from pathlib import Path
 from typing import List, Dict, Any, Optional
 from .intents import SpacyIntentRecognizer, Intent
 from .actions import BaseAction, PrintMapAction, ShowDirectionsAction
-from UI.SettingsConstant import SettingsKeys
-from UI.SettingsWindow import SettingsWindow
 
 
 logger = logging.getLogger(__name__)

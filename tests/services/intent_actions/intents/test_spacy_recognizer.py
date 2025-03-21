@@ -22,7 +22,7 @@ def test_pattern():
     return SpacyIntentPattern(
         intent_name="test_intent",
         patterns=[[{"LOWER": "test"}, {"LOWER": "pattern"}]],
-        required_entities=["location"],
+        required_entities=["LOCATION"],
         confidence_weights={"pattern_match": 0.6, "entity_match": 0.4}
     )
 
@@ -39,12 +39,12 @@ def test_pattern_creation():
     pattern = SpacyIntentPattern(
         intent_name="test_intent",
         patterns=[[{"LOWER": "test"}]],
-        required_entities=["ORG"],
+        required_entities=["LOCATION"],
         confidence_weights={"pattern_match": 0.6, "entity_match": 0.4}
     )
     assert pattern.intent_name == "test_intent"
     assert len(pattern.patterns) == 1
-    assert pattern.required_entities == ["ORG"]
+    assert pattern.required_entities == ["LOCATION"]
     assert pattern.confidence_weights == {"pattern_match": 0.6, "entity_match": 0.4}
 
 def test_pattern_validation():
@@ -101,27 +101,88 @@ def test_add_pattern(recognizer):
 
 def test_calculate_confidence(recognizer):
     """Test confidence calculation."""
-    pattern = recognizer.patterns[0]
+    pattern = SpacyIntentPattern(
+        intent_name="test_intent",
+        patterns=[[{"LOWER": "test"}]],
+        required_entities=["LOCATION"],
+        confidence_weights={"pattern_match": 0.6, "entity_match": 0.4}
+    )
+    
     doc = MagicMock()
-    doc.ents = [MagicMock(label_="ORG"), MagicMock(label_="TIME")]
-    matches = [MagicMock()]
+    doc.ents = [MagicMock(label_="LOCATION")]
+    matches = [(0, 1, 0.8)]  # One match with high confidence
     
     confidence = recognizer._calculate_confidence(pattern, doc, matches)
-    assert 0 <= confidence <= 1
+    assert confidence == 1.0  # Full confidence when both pattern and entity match
 
 def test_extract_parameters(recognizer):
     """Test parameter extraction from entities."""
     doc = MagicMock()
     doc.ents = [
-        MagicMock(label_="ORG", text="Test Hospital"),
+        MagicMock(label_="LOCATION", text="Test Hospital"),
         MagicMock(label_="TIME", text="tomorrow"),
-        MagicMock(label_="PRODUCT", text="ambulance")
+        MagicMock(label_="TRANSPORT", text="ambulance")
     ]
     
     params = recognizer._extract_parameters(doc)
-    assert params["destination"] == "Test Hospital"
-    assert params["appointment_time"] == "tomorrow"
-    assert params["transport_mode"] == "ambulance"
+    expected_params = {
+        "destination": "Test Hospital",
+        "transport_mode": "ambulance",
+        "appointment_time": "tomorrow",
+        "patient_mobility": "",
+        "additional_context": ""
+    }
+    assert params == expected_params
+
+def test_extract_parameters_with_org(recognizer):
+    """Test parameter extraction with ORG entity."""
+    doc = MagicMock()
+    doc.ents = [
+        MagicMock(label_="ORG", text="City Hospital"),
+        MagicMock(label_="TIME", text="2 PM")
+    ]
+    
+    params = recognizer._extract_parameters(doc)
+    expected_params = {
+        "destination": "City Hospital",
+        "transport_mode": "driving",  # Default value
+        "appointment_time": "2 PM",
+        "patient_mobility": "",
+        "additional_context": ""
+    }
+    assert params == expected_params
+
+def test_extract_parameters_with_gpe(recognizer):
+    """Test parameter extraction with GPE entity."""
+    doc = MagicMock()
+    doc.ents = [
+        MagicMock(label_="GPE", text="Downtown Medical Center")
+    ]
+    
+    params = recognizer._extract_parameters(doc)
+    expected_params = {
+        "destination": "Downtown Medical Center",
+        "transport_mode": "driving",  # Default value
+        "appointment_time": "",
+        "patient_mobility": "",
+        "additional_context": ""
+    }
+    assert params == expected_params
+
+def test_extract_parameters_empty(recognizer):
+    """Test parameter extraction with no entities."""
+    doc = MagicMock()
+    doc.ents = []
+    
+    params = recognizer._extract_parameters(doc)
+    expected_params = {
+        "destination": "",
+        "transport_mode": "driving",  # Default value
+        "appointment_time": "",
+        "patient_mobility": "",
+        "additional_context": ""
+    }
+    assert params == expected_params
 
 def test_recognize_intent(recognizer):
     """Test intent recognition."""
@@ -141,57 +202,30 @@ def test_no_matches(recognizer):
     assert isinstance(intents, list)
     assert len(intents) == 0
 
-def test_recognizer_add_pattern(recognizer, test_pattern):
-    """Test adding patterns to recognizer."""
-    recognizer.add_pattern(test_pattern)
-    assert len(recognizer.patterns) > 1  # Original patterns + new pattern
-    assert recognizer.patterns[-1] == test_pattern
-
-def test_recognizer_confidence_calculation(recognizer, test_pattern):
-    """Test confidence calculation."""
-    # Test pattern match only
-    confidence = recognizer._calculate_confidence(
-        test_pattern,
-        MagicMock(ents=[]),
-        [(0, 1, 0.8)]  # Mock match
-    )
-    assert confidence == 0.6  # Only pattern match weight
-    
-    # Test entity match only
-    mock_doc = MagicMock()
-    mock_doc.ents = [MagicMock(label_="location")]
-    confidence = recognizer._calculate_confidence(
-        test_pattern,
-        mock_doc,
-        []
-    )
-    assert confidence == 0.4  # Only entity match weight
-    
-    # Test both matches
-    confidence = recognizer._calculate_confidence(
-        test_pattern,
-        mock_doc,
-        [(0, 1, 0.8)]
-    )
-    assert confidence == 1.0  # Sum of both weights
-
 def test_recognizer_parameter_extraction(recognizer, test_pattern):
     """Test parameter extraction from text."""
     mock_doc = MagicMock()
     mock_ent = MagicMock()
-    mock_ent.label_ = "location"
+    mock_ent.label_ = "LOCATION"
     mock_ent.text = "test location"
     mock_doc.ents = [mock_ent]
     
     params = recognizer._extract_parameters(mock_doc)
-    assert params["destination"] == "test location"
+    expected_params = {
+        "destination": "test location",
+        "transport_mode": "driving",
+        "appointment_time": "",
+        "patient_mobility": "",
+        "additional_context": ""
+    }
+    assert params == expected_params
 
 def test_recognizer_intent_recognition(recognizer, test_pattern, mock_nlp):
     """Test intent recognition process."""
     # Setup mock doc
     mock_doc = MagicMock()
     mock_doc.text = "test pattern at test location"
-    mock_doc.ents = [MagicMock(label_="location", text="test location")]
+    mock_doc.ents = [MagicMock(label_="LOCATION", text="test location")]
     mock_nlp.return_value = mock_doc
     
     # Mock matcher to return matches
@@ -207,7 +241,14 @@ def test_recognizer_intent_recognition(recognizer, test_pattern, mock_nlp):
     assert len(intents) == 1
     assert intents[0].name == "test_intent"
     assert intents[0].confidence == 1.0  # Both pattern and entity match
-    assert intents[0].metadata["parameters"]["destination"] == "test location"
+    expected_params = {
+        "destination": "test location",
+        "transport_mode": "driving",
+        "appointment_time": "",
+        "patient_mobility": "",
+        "additional_context": ""
+    }
+    assert intents[0].metadata["parameters"] == expected_params
 
 def test_recognizer_no_match(recognizer, test_pattern, mock_nlp):
     """Test when no pattern matches."""

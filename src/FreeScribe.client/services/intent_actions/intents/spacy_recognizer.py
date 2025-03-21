@@ -177,64 +177,22 @@ class SpacyIntentRecognizer(BaseIntentRecognizer):
         return 0.0
     
     def _extract_parameters(self, doc) -> Dict[str, str]:
-        """
-        Extract relevant parameters from the recognized entities.
-        
-        :param doc: SpaCy Doc object
-        :type doc: spacy.tokens.Doc
-        :return: Dictionary of extracted parameters
-        :rtype: Dict[str, str]
-        """
+        """Extract parameters from recognized entities."""
         params = {
             "destination": "",
-            "transport_mode": "driving",
-            "patient_mobility": "",
+            "transport_mode": "driving",  # Default to driving
             "appointment_time": "",
+            "patient_mobility": "",
             "additional_context": ""
         }
         
-        # Log entities for debugging
-        logger.debug("Found entities:")
         for ent in doc.ents:
-            logger.debug(f"- {ent.text} ({ent.label_})")
-        
-        # First try to find destination in entities
-        for ent in doc.ents:
-            if ent.label_ in ["ORG", "GPE", "FAC", "LOC"]:
+            if ent.label_ in ["LOCATION", "ORG", "GPE", "FAC"]:  # Support multiple location-like entities
                 params["destination"] = ent.text
-                logger.debug(f"Found destination in entities: {ent.text} ({ent.label_})")
-                break
             elif ent.label_ == "TIME":
                 params["appointment_time"] = ent.text
-                logger.debug(f"Found time: {ent.text}")
-        
-        # If no destination found in entities, try to extract it from the text
-        if not params["destination"]:
-            logger.debug("No destination found in entities, trying text extraction")
-            # Look for text after "to", "at", "in"
-            for token in doc:
-                if token.lower_ in ["to", "at", "in"] and token.i + 1 < len(doc):
-                    # Get all tokens until the next preposition, punctuation, or specific words
-                    dest_tokens = []
-                    for t in doc[token.i + 1:]:
-                        if (t.pos_ == "ADP" or t.is_punct or 
-                            t.lower_ in ["for", "at", "on", "by"]):
-                            break
-                        dest_tokens.append(t.text)
-                    if dest_tokens:
-                        params["destination"] = " ".join(dest_tokens)
-                        logger.debug(f"Extracted destination from text: {params['destination']}")
-                        break
-        
-        # Extract time if not found in entities
-        if not params["appointment_time"]:
-            for token in doc:
-                if token.like_num and token.i + 1 < len(doc):
-                    next_token = doc[token.i + 1]
-                    if next_token.text.upper() in ["AM", "PM"]:
-                        params["appointment_time"] = f"{token.text} {next_token.text.upper()}"
-                        logger.debug(f"Extracted time from text: {params['appointment_time']}")
-                        break
+            elif ent.label_ == "TRANSPORT":  # Use TRANSPORT label for transport mode
+                params["transport_mode"] = ent.text.lower()  # Normalize to lowercase
         
         return params
     
