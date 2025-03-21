@@ -5,6 +5,7 @@ This module demonstrates how to initialize and use the Intent Action Manager
 to process text, recognize intents, and execute corresponding actions.
 """
 
+import os
 import logging
 from pathlib import Path
 from services.intent_actions.manager import IntentActionManager
@@ -32,7 +33,7 @@ def main():
         logger.info(f"Created maps directory at: {maps_dir.absolute()}")
         
         # Replace with your actual API key or get from settings
-        google_maps_api_key = "AIzaSyAzEyz4VR-_Fs-rPiyaacPGlFfQQWrlM2U"
+        google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
         
         # Create the manager instance
         manager = IntentActionManager(maps_dir, google_maps_api_key)
