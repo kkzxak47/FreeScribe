@@ -56,7 +56,7 @@ def main():
             logger.info(f"\nProcessing text: {text}")
             
             # Get intents directly from recognizer for debugging
-            intents = manager.recognizer.recognize_intent(text)
+            intents = manager.intent_recognizer.recognize_intent(text)
             logger.info(f"Recognized intents: {intents}")
             
             # Process text through manager
