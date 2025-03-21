@@ -36,6 +36,8 @@ class ActionResultsWindow:
         # Track window state
         self.is_visible = False
         self.last_parent_geometry = None
+        self.min_width = 400
+        self.min_height = 300
         
         self._create_window()
         
@@ -53,13 +55,21 @@ class ActionResultsWindow:
         self.window = tk.Toplevel(self.parent)
         self.window.title("Action Results")
         self.window.geometry("400x600")
+        self.window.minsize(self.min_width, self.min_height)
         self.window.resizable(True, True)
         
-        # Remove window decorations to make it look more integrated
-        self.window.overrideredirect(True)
+        # Remove window decorations but keep resize border
+        self.window.overrideredirect(False)
+        
+        # Set window attributes to keep it below other windows
+        self.window.attributes('-topmost', False)
+        
+        # Create main container frame
+        main_container = ttk.Frame(self.window)
+        main_container.pack(fill="both", expand=True)
         
         # Create title bar with close button
-        title_bar = ttk.Frame(self.window)
+        title_bar = ttk.Frame(main_container)
         title_bar.pack(fill="x", padx=0, pady=0)
         
         # Add title
@@ -72,10 +82,10 @@ class ActionResultsWindow:
         close_button.bind("<Button-1>", lambda e: self.hide())
         
         # Add separator below title bar
-        ttk.Separator(self.window, orient="horizontal").pack(fill="x")
+        ttk.Separator(main_container, orient="horizontal").pack(fill="x")
         
         # Create main content area
-        content_frame = ttk.Frame(self.window)
+        content_frame = ttk.Frame(main_container)
         content_frame.pack(fill="both", expand=True)
         
         # Create scrollable frame
@@ -98,7 +108,7 @@ class ActionResultsWindow:
         scrollbar.pack(side="right", fill="y")
         
         # Add Clear All button at the bottom
-        bottom_frame = ttk.Frame(self.window)
+        bottom_frame = ttk.Frame(main_container)
         bottom_frame.pack(fill="x", side="bottom", pady=5)
         
         clear_all_button = ttk.Button(
@@ -122,6 +132,15 @@ class ActionResultsWindow:
         # Bind mouse wheel events
         self._bind_mouse_wheel_events()
         
+        # Configure canvas to resize with window
+        self.window.bind("<Configure>", self._on_window_configure)
+        
+    def _on_window_configure(self, event: tk.Event) -> None:
+        """Handle window resize events."""
+        if event.widget == self.window:
+            # Update canvas width to match window width
+            self.canvas.configure(width=event.width - 20)  # Account for scrollbar and padding
+            
     def _bind_mouse_wheel_events(self) -> None:
         """Bind mouse wheel events to the canvas."""
         def _bind_to_mousewheel(event):
@@ -157,14 +176,17 @@ class ActionResultsWindow:
             parent_x = self.parent.winfo_x()
             parent_y = self.parent.winfo_y()
             parent_width = self.parent.winfo_width()
-            parent_height = self.parent.winfo_height()
             
             # Calculate position for results window - add 15px gap
             window_x = parent_x + parent_width + 15
             window_y = parent_y
             
-            # Set window height to match parent
-            self.window.geometry(f"400x{parent_height}+{window_x}+{window_y}")
+            # Get current window size
+            window_width = self.window.winfo_width()
+            window_height = self.window.winfo_height()
+            
+            # Set window position while preserving size
+            self.window.geometry(f"{window_width}x{window_height}+{window_x}+{window_y}")
             
         except (tk.TclError, AttributeError) as e:
             logger.error(f"Error updating window position: {e}")
@@ -182,9 +204,6 @@ class ActionResultsWindow:
             self.last_parent_geometry = current_geometry
             self._update_window_position()
             
-        # Ensure our window stays on top
-        self.window.lift()
-        
     def _open_file(self, file_path: str) -> None:
         """Open a file with the default application."""
         try:
@@ -396,14 +415,14 @@ class ActionResultsWindow:
             self.is_visible = True
             self._update_window_position()
             self.window.deiconify()
-            self.window.lift()
+            # Don't lift the window automatically
         except (tk.TclError, AttributeError):
             # If window was destroyed, recreate it
             self._create_window()
             self.is_visible = True
             self._update_window_position()
             self.window.deiconify()
-            self.window.lift()
+            # Don't lift the window automatically
         
     def hide(self) -> None:
         """Hide the window."""
