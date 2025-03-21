@@ -298,6 +298,11 @@ class ActionResultsWindow:
         # Add separator
         ttk.Separator(self.scrollable_frame).pack(fill="x", padx=10, pady=10)
         
+        # Update the scroll region and scroll to the bottom
+        self.scrollable_frame.update_idletasks()
+        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        self.canvas.yview_moveto(1.0)  # Scroll to bottom
+        
     def add_results(self, results: List[Dict[str, Any]]) -> None:
         """
         Add multiple action results to the window.
