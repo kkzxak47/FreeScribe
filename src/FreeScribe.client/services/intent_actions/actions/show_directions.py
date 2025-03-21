@@ -78,8 +78,10 @@ class ShowDirectionsAction(BaseAction):
             
             return ActionResult(
                 success=True,
-                message=f"{transport_icon} Click here for directions to {destination}",
+                message=f"{transport_icon} Directions to {destination}",
                 data={
+                    "title": f"Directions to {destination}",
+                    "type": "directions",
                     "url": url,
                     "destination": destination,
                     "transport_mode": transport_mode,

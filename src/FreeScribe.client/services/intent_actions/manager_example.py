@@ -12,12 +12,9 @@ from services.intent_actions.manager import IntentActionManager
 # Configure logging
 logging.basicConfig(
     level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(lineno)s:%(funcName)s:%(filename)s | %(message)s'
+    format='%(asctime)s - %(name)s - %(levelname)s - %(lineno)s:%(funcName)s:%(filename)s | %(message)s '
 )
 logger = logging.getLogger(__name__)
-
-# Also enable debug for the intent recognizer
-logging.getLogger('services.intent_actions.intents.spacy_recognizer').setLevel(logging.DEBUG)
 
 def main():
     """
@@ -44,6 +41,7 @@ def main():
         # Example texts to process
         example_texts = [
             "I need to get to Grand River Hospital for my appointment at 2PM",
+            "Where is Grand River Hospital?",
             # "I need directions to the radiology department",
             # "Can you show me how to get to the emergency room?",
             # "Where is the main entrance of the hospital?",
@@ -55,6 +53,12 @@ def main():
         # Process each example text
         for text in example_texts:
             logger.info(f"\nProcessing text: {text}")
+            
+            # Get intents directly from recognizer for debugging
+            intents = manager.recognizer.recognize_intent(text)
+            logger.info(f"Recognized intents: {intents}")
+            
+            # Process text through manager
             results = manager.process_text(text)
             
             # Display results

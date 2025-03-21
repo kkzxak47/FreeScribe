@@ -692,6 +692,9 @@ class SettingsWindowUI:
         # save architecture
         self.settings.editable_settings[SettingsKeys.LLM_ARCHITECTURE.value] = self.architecture_dropdown.get()
 
+        # Save Google Maps API key
+        self.settings.editable_settings[SettingsKeys.GOOGLE_MAPS_API_KEY.value] = self.widgets[SettingsKeys.GOOGLE_MAPS_API_KEY.value].get()
+
         self.settings.save_settings(
             self.openai_api_key_entry.get(),
             self.aiscribe_text.get("1.0", "end-1c"), # end-1c removes the trailing newline

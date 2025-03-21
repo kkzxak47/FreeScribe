@@ -102,31 +102,26 @@ class SpacyIntentRecognizer(BaseIntentRecognizer):
             SpacyIntentPattern(
                 intent_name="show_directions",
                 patterns=[
-                    [{"LOWER": "need"}, {"LOWER": "directions"}, {"LOWER": "to"}],
+                    [{"LOWER": "go"}, {"LOWER": "to"}],
                     [{"LOWER": "need"}, {"LOWER": "to"}, {"LOWER": "get"}, {"LOWER": "to"}],
-                    [{"LOWER": "show"}, {"LOWER": "me"}, {"LOWER": "how"}, {"LOWER": "to"}, {"LOWER": "get"}],
-                    [{"LOWER": "where"}, {"LOWER": "is"}],
-                    [{"LOWER": "show"}, {"LOWER": "me"}, {"LOWER": "the"}, {"LOWER": "way"}],
-                    [{"LOWER": "need"}, {"LOWER": "to"}, {"LOWER": "find"}],
-                    [{"LOWER": "get"}, {"LOWER": "to"}],
+                    [{"LOWER": "need"}, {"LOWER": "to"}, {"LOWER": "go"}, {"LOWER": "to"}],
                     [{"LOWER": "directions"}, {"LOWER": "to"}],
-                    [{"LOWER": "find"}, {"LOWER": "the"}],
-                    [{"LOWER": "locate"}, {"LOWER": "the"}],
+                    [{"LOWER": "how"}, {"LOWER": "to"}, {"LOWER": "get"}, {"LOWER": "to"}],
+                    [{"LOWER": "where"}, {"LOWER": "is"}],
+                    [{"LOWER": "find"}],
+                    [{"LOWER": "show"}, {"LOWER": "me"}, {"LOWER": "to"}],
                 ],
-                required_entities=[],  # Remove strict entity requirements
+                required_entities=[],  # Remove entity requirements since they're too restrictive
                 confidence_weights={"pattern_match": 1.0, "entity_match": 0.0}  # Only use pattern matching
             ),
             SpacyIntentPattern(
                 intent_name="schedule_appointment",
                 patterns=[
-                    [{"LOWER": "schedule"}, {"LOWER": "appointment"}],
-                    [{"LOWER": "book"}, {"LOWER": "appointment"}],
+                    [{"LEMMA": "schedule"}, {"LOWER": "appointment"}],
+                    [{"LEMMA": "book"}, {"LOWER": "appointment"}],
                     [{"LOWER": "need"}, {"LOWER": "to"}, {"LOWER": "see"}],
-                    [{"LOWER": "appointment"}, {"LOWER": "with"}],
-                    [{"LOWER": "see"}, {"LOWER": "doctor"}],
                 ],
-                required_entities=["TIME", "PERSON"],
-                confidence_weights={"pattern_match": 0.7, "entity_match": 0.3}
+                required_entities=["TIME", "ORG"]
             )
         ]
     
@@ -173,22 +168,13 @@ class SpacyIntentRecognizer(BaseIntentRecognizer):
         :return: Confidence score between 0 and 1
         :rtype: float
         """
-        # Calculate pattern match score - if we have any match, that's good enough
-        pattern_score = 1.0 if matches else 0.0
-        
-        # Calculate entity match score
-        found_entities = set(ent.label_ for ent in doc.ents)
-        required_entities = set(pattern.required_entities)
-        entity_score = len(found_entities.intersection(required_entities)) / len(required_entities) if required_entities else 1.0
-        
-        # Weighted average
-        weights = pattern.confidence_weights
-        confidence = (
-            weights["pattern_match"] * pattern_score +
-            weights["entity_match"] * entity_score
-        )
-        
-        return min(confidence, 1.0)
+        # If we have any matches, return high confidence
+        if matches:
+            logger.debug(f"Found matches for pattern {pattern.intent_name}, returning high confidence")
+            return 1.0
+            
+        logger.debug(f"No matches found for pattern {pattern.intent_name}")
+        return 0.0
     
     def _extract_parameters(self, doc) -> Dict[str, str]:
         """
@@ -207,15 +193,48 @@ class SpacyIntentRecognizer(BaseIntentRecognizer):
             "additional_context": ""
         }
         
+        # Log entities for debugging
+        logger.debug("Found entities:")
         for ent in doc.ents:
-            if ent.label_ == "ORG":
+            logger.debug(f"- {ent.text} ({ent.label_})")
+        
+        # First try to find destination in entities
+        for ent in doc.ents:
+            if ent.label_ in ["ORG", "GPE", "FAC", "LOC"]:
                 params["destination"] = ent.text
+                logger.debug(f"Found destination in entities: {ent.text} ({ent.label_})")
+                break
             elif ent.label_ == "TIME":
                 params["appointment_time"] = ent.text
-            elif ent.label_ == "PRODUCT" and any(vehicle in ent.text.lower() for vehicle in ["ambulance", "wheelchair", "taxi"]):
-                params["transport_mode"] = ent.text.lower()
-            elif ent.label_ == "location":  # Handle location entity type
-                params["destination"] = ent.text
+                logger.debug(f"Found time: {ent.text}")
+        
+        # If no destination found in entities, try to extract it from the text
+        if not params["destination"]:
+            logger.debug("No destination found in entities, trying text extraction")
+            # Look for text after "to", "at", "in"
+            for token in doc:
+                if token.lower_ in ["to", "at", "in"] and token.i + 1 < len(doc):
+                    # Get all tokens until the next preposition, punctuation, or specific words
+                    dest_tokens = []
+                    for t in doc[token.i + 1:]:
+                        if (t.pos_ == "ADP" or t.is_punct or 
+                            t.lower_ in ["for", "at", "on", "by"]):
+                            break
+                        dest_tokens.append(t.text)
+                    if dest_tokens:
+                        params["destination"] = " ".join(dest_tokens)
+                        logger.debug(f"Extracted destination from text: {params['destination']}")
+                        break
+        
+        # Extract time if not found in entities
+        if not params["appointment_time"]:
+            for token in doc:
+                if token.like_num and token.i + 1 < len(doc):
+                    next_token = doc[token.i + 1]
+                    if next_token.text.upper() in ["AM", "PM"]:
+                        params["appointment_time"] = f"{token.text} {next_token.text.upper()}"
+                        logger.debug(f"Extracted time from text: {params['appointment_time']}")
+                        break
         
         return params
     
@@ -229,58 +248,37 @@ class SpacyIntentRecognizer(BaseIntentRecognizer):
         :rtype: List[Intent]
         """
         try:
-            doc = self.nlp(text.lower())  # Convert to lowercase for better matching
+            doc = self.nlp(text)
             recognized_intents = []
             
-            logger.debug(f"Processing text: '{text}'")
-            logger.debug(f"Tokens: {[token.text for token in doc]}")
-            
-            # Get all matches first
-            all_matches = self.matcher(doc)
-            logger.debug(f"All matches: {all_matches}")
+            logger.debug(f"Processing text: {text}")
             
             for pattern in self.patterns:
-                logger.debug(f"Checking pattern: {pattern.intent_name}")
-                # Filter matches for this pattern
-                pattern_matches = [m for m in all_matches if self.nlp.vocab.strings[m[0]] == pattern.intent_name]
-                logger.debug(f"Pattern matches: {pattern_matches}")
+                # Get matches for this specific pattern
+                matches = self.matcher(doc)
+                matches = [m for m in matches if self.matcher.vocab.strings[m[0]] == pattern.intent_name]
                 
-                if pattern_matches:  # Only calculate confidence if we have matches
-                    confidence = self._calculate_confidence(pattern, doc, pattern_matches)
-                    logger.debug(f"Confidence: {confidence}")
+                logger.debug(f"Found {len(matches)} matches for pattern {pattern.intent_name}")
+                
+                confidence = self._calculate_confidence(pattern, doc, matches)
+                logger.debug(f"Calculated confidence: {confidence}")
+                
+                if confidence > 0.1:  # Lower confidence threshold since we're using simpler patterns
+                    params = self._extract_parameters(doc)
+                    logger.debug(f"Extracted parameters: {params}")
                     
-                    if confidence > 0.5:  # Require higher confidence since we're using simpler pattern matching
-                        # Extract location from the text after the matched pattern
-                        params = self._extract_parameters(doc)
-                        logger.debug(f"Initial params: {params}")
-                        
-                        # If no specific destination was found, use the text after the pattern
-                        if not params["destination"] and pattern_matches:
-                            match = pattern_matches[0]  # Use first match
-                            end_idx = match[2]  # End of the matched pattern
-                            if end_idx < len(doc):
-                                # Take the rest of the text after the pattern as destination
-                                # Clean up the destination text by removing common words
-                                destination_text = doc[end_idx:].text.strip()
-                                destination_text = destination_text.lower()
-                                # Remove common words and punctuation
-                                for word in ["to", "the", "?"]:
-                                    destination_text = destination_text.replace(word, "").strip()
-                                params["destination"] = destination_text
-                                logger.debug(f"Updated destination: {params['destination']}")
-                        
-                        intent = Intent(
-                            name=pattern.intent_name,
-                            confidence=confidence,
-                            metadata={
-                                "description": f"Recognized {pattern.intent_name} intent",
-                                "required_action": pattern.intent_name,
-                                "urgency_level": 2,  # Default urgency
-                                "parameters": params
-                            }
-                        )
-                        recognized_intents.append(intent)
-                        logger.debug(f"Added intent: {intent}")
+                    intent = Intent(
+                        name=pattern.intent_name,
+                        confidence=confidence,
+                        metadata={
+                            "description": f"Recognized {pattern.intent_name} intent",
+                            "required_action": pattern.intent_name,
+                            "urgency_level": 2,  # Default urgency
+                            "parameters": params
+                        }
+                    )
+                    recognized_intents.append(intent)
+                    logger.debug(f"Added intent: {intent}")
             
             return recognized_intents
             

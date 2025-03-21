@@ -8,14 +8,16 @@ from pathlib import Path
 import googlemaps
 from datetime import datetime
 import os
+import requests
 from .base import BaseAction, ActionResult
+from UI.SettingsConstant import SettingsKeys
 
 logger = logging.getLogger(__name__)
 
 class PrintMapAction(BaseAction):
     """Action to display maps and directions using Google Maps."""
     
-    def __init__(self, maps_directory: Path, google_maps_api_key: str):
+    def __init__(self, maps_directory: Path, google_maps_api_key: str = None):
         """
         Initialize the map action with a directory for storing maps.
         
@@ -25,8 +27,15 @@ class PrintMapAction(BaseAction):
         self.maps_directory = maps_directory
         self.maps_directory.mkdir(parents=True, exist_ok=True)
         
+        # Try to get API key from settings first
+        if not google_maps_api_key:
+            from UI.SettingsWindow import SettingsWindow
+            settings = SettingsWindow()
+            google_maps_api_key = settings.editable_settings.get(SettingsKeys.GOOGLE_MAPS_API_KEY.value)
+            
         if not google_maps_api_key:
             google_maps_api_key = os.getenv("GOOGLE_MAPS_API_KEY")
+            
         # Initialize Google Maps client
         self.gmaps = googlemaps.Client(key=google_maps_api_key)
         
@@ -75,117 +84,122 @@ class PrintMapAction(BaseAction):
         if intent_name not in ["show_map", "show_directions", "find_location"]:
             return False
             
-        # Check if we have location information for this intent
-        if "destination" in metadata:
-            dest = metadata["destination"].lower()
-            return any(loc in dest for loc in self.locations.keys())
-            
-        return False
+        # Check if we have a destination parameter
+        params = metadata.get("parameters", {})
+        destination = params.get("destination", "")
+        return bool(destination)
 
     def execute(self, intent_name: str, metadata: Dict[str, Any]) -> ActionResult:
         """Execute the action for the given intent."""
-        dest = metadata["destination"].lower()
-        location = None
+        params = metadata.get("parameters", {})
+        destination = params.get("destination", "")
         
-        # Find matching location
-        for loc_name, loc_data in self.locations.items():
-            if loc_name in dest:
-                location = loc_data
-                location_name = loc_name
-                break
-                
-        if not location:
+        if not destination:
             return ActionResult(
                 success=False,
-                message="Sorry, I don't have information about that location.",
+                message="No destination specified.",
                 data={}
             )
             
         try:
             # Search Google Maps for the location
-            search_query = f"{location_name} hospital"
-            if search_query not in self._location_cache:
-                places_result = self.gmaps.places(search_query)
-                if not places_result.get('results'):
-                    return ActionResult(
-                        success=False,
-                        message=f"Could not find {location_name} on Google Maps.",
-                        data={}
-                    )
-                self._location_cache[search_query] = places_result['results'][0]
-            
-            place = self._location_cache[search_query]
-            
-            # Generate static map
-            map_filename = f"{location_name}_map.png"
-            map_path = self.maps_directory / map_filename
-            
-            # Create static map URL manually
-            lat = place['geometry']['location']['lat']
-            lng = place['geometry']['location']['lng']
-            static_map_url = (
-                f"https://maps.googleapis.com/maps/api/staticmap?"
-                f"center={lat},{lng}&"
-                f"zoom=15&"
-                f"size=640x640&"
-                f"markers=color:red%7C{lat},{lng}&"
-                f"key={self.gmaps.key}"
-            )
-            
-            # Download and save the map
-            import requests
-            try:
-                response = requests.get(static_map_url)
-                response.raise_for_status()  # Raise an exception for bad status codes
-                with open(map_path, 'wb') as f:
-                    f.write(response.content)
-                logger.info(f"Successfully saved map to {map_path}")
-            except requests.exceptions.RequestException as e:
-                logger.error(f"Failed to download map: {str(e)}")
+            search_query = destination
+            places_result = self.gmaps.places(search_query)
+            if not places_result.get('results'):
                 return ActionResult(
                     success=False,
-                    message="Failed to generate map image.",
-                    data={"error": str(e)}
+                    message=f"Could not find {destination} on Google Maps.",
+                    data={}
                 )
             
-            # Generate response based on intent type
-            if intent_name == "show_map":
-                message = f"Here's a map of the {location_name} area"
-            elif intent_name == "show_directions":
-                # Get directions
-                directions_result = self.gmaps.directions(
-                    origin="current location",  # In a real app, this would be the user's location
-                    destination=place['formatted_address'],
-                    mode="driving",
-                    departure_time=datetime.now()
+            place = places_result['results'][0]
+            
+            # Generate static map
+            map_filename = f"{destination.lower().replace(' ', '_')}_map.png"
+            map_path = self.maps_directory / map_filename
+            
+            # Create static map URL based on intent
+            lat = place['geometry']['location']['lat']
+            lng = place['geometry']['location']['lng']
+            
+            if intent_name == "show_directions":
+                # For directions, just show the destination marker since we don't know current location
+                static_map_url = (
+                    f"https://maps.googleapis.com/maps/api/staticmap?"
+                    f"center={lat},{lng}&"
+                    f"zoom=15&"
+                    f"size=640x640&"
+                    f"markers=color:red%7Clabel:D%7C{lat},{lng}&"
+                    f"key={self.gmaps.key}"
                 )
                 
-                if directions_result:
-                    route = directions_result[0]
-                    duration = route['legs'][0]['duration']['text']
-                    distance = route['legs'][0]['distance']['text']
-                    steps = [step['html_instructions'] for step in route['legs'][0]['steps']]
-                    
-                    message = f"Here are directions to {location_name}: {duration} ({distance})"
-                else:
-                    message = f"Here are directions to {location_name}: {location['directions']}"
-            else:  # find_location
-                message = f"The {location_name} is located on floor {location['floor']} in the {location['wing']} wing"
-            
-            return ActionResult(
-                success=True,
-                message=message,
-                data={
-                    "title": f"{location_name.title()} Information",
-                    "additional_info": {
-                        "floor": f"Floor {location['floor']}",
-                        "wing": f"{location['wing']} Wing",
-                        "key_landmarks": location["landmarks"],
-                        "google_maps_url": f"https://www.google.com/maps/place/?q=place_id:{place['place_id']}",
-                        "map_image_path": str(map_path)
+                # Download and save the map
+                try:
+                    response = requests.get(static_map_url)
+                    response.raise_for_status()
+                    with open(map_path, 'wb') as f:
+                        f.write(response.content)
+                    logger.info(f"Successfully saved map to {map_path}")
+                except requests.exceptions.RequestException as e:
+                    logger.error(f"Failed to download map: {str(e)}")
+                    return ActionResult(
+                        success=False,
+                        message="Failed to generate map image.",
+                        data={"error": str(e)}
+                    )
+                
+                return ActionResult(
+                    success=True,
+                    message=f"Route to {destination}",
+                    data={
+                        "title": f"Route to {destination}",
+                        "type": "map",
+                        "clickable": True,
+                        "click_url": str(map_path),
+                        "additional_info": {
+                            "map_image_path": str(map_path)
+                        }
                     }
-                }
-            )
+                )
+            else:  # show_map or find_location
+                # Create static map URL centered on location
+                static_map_url = (
+                    f"https://maps.googleapis.com/maps/api/staticmap?"
+                    f"center={lat},{lng}&"
+                    f"zoom=16&"
+                    f"size=640x640&"
+                    f"markers=color:red%7C{lat},{lng}&"
+                    f"key={self.gmaps.key}"
+                )
+                
+                # Download and save the map
+                try:
+                    response = requests.get(static_map_url)
+                    response.raise_for_status()
+                    with open(map_path, 'wb') as f:
+                        f.write(response.content)
+                    logger.info(f"Successfully saved map to {map_path}")
+                except requests.exceptions.RequestException as e:
+                    logger.error(f"Failed to download map: {str(e)}")
+                    return ActionResult(
+                        success=False,
+                        message="Failed to generate map image.",
+                        data={"error": str(e)}
+                    )
+                
+                return ActionResult(
+                    success=True,
+                    message=f"Click the map to view {destination}",
+                    data={
+                        "title": f"{destination} Map",
+                        "type": "map",
+                        "clickable": True,
+                        "click_url": str(map_path),
+                        "additional_info": {
+                            "map_image_path": str(map_path)
+                        }
+                    }
+                )
             
         except Exception as e:
             logger.error(f"Error executing map action: {str(e)}")
