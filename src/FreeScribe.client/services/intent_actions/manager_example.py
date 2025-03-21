@@ -43,12 +43,12 @@ def main():
         example_texts = [
             "I need to get to Grand River Hospital for my appointment at 2PM",
             "Where is Grand River Hospital?",
-            # "I need directions to the radiology department",
-            # "Can you show me how to get to the emergency room?",
-            # "Where is the main entrance of the hospital?",
-            # "I need to find the cardiology wing",
-            # "Show me the way to the cafeteria",
-            # "This is a normal sentence without any intent"  # Control case
+            "I need directions to the St. Mary’s General Hospital",
+            "Can you show me how to get to Grand River Hospital Emergency Room?",
+            "Where is the main entrance of the hospital?",
+            "I need to find St. Mary's Regional Cardiac Care Centre",
+            "Show me the way to the cafeteria",
+            "This is a normal sentence without any intent"  # Control case
         ]
         
         # Process each example text
