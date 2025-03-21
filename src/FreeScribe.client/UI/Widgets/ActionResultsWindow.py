@@ -74,9 +74,13 @@ class ActionResultsWindow:
         # Add separator below title bar
         ttk.Separator(self.window, orient="horizontal").pack(fill="x")
         
+        # Create main content area
+        content_frame = ttk.Frame(self.window)
+        content_frame.pack(fill="both", expand=True)
+        
         # Create scrollable frame
-        self.canvas = tk.Canvas(self.window)
-        scrollbar = ttk.Scrollbar(self.window, orient="vertical", command=self.canvas.yview)
+        self.canvas = tk.Canvas(content_frame)
+        scrollbar = ttk.Scrollbar(content_frame, orient="vertical", command=self.canvas.yview)
         self.scrollable_frame = ttk.Frame(self.canvas)
         
         # Configure scrolling
@@ -85,39 +89,26 @@ class ActionResultsWindow:
             lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
         )
         
-        # Bind mouse wheel events
-        def _bind_to_mousewheel(event):
-            """Bind mouse wheel events when mouse enters a widget."""
-            if event.widget == self.canvas:
-                return  # Canvas already bound
-            self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
-            self.canvas.bind_all("<Button-4>", self._on_mousewheel)
-            self.canvas.bind_all("<Button-5>", self._on_mousewheel)
-            
-        def _unbind_from_mousewheel(event):
-            """Unbind mouse wheel events when mouse leaves a widget."""
-            if event.widget == self.canvas:
-                return  # Keep canvas bound
-            self.canvas.unbind_all("<MouseWheel>")
-            self.canvas.unbind_all("<Button-4>")
-            self.canvas.unbind_all("<Button-5>")
-        
-        # Bind mouse wheel to canvas permanently
-        self.canvas.bind("<MouseWheel>", self._on_mousewheel)
-        self.canvas.bind("<Button-4>", self._on_mousewheel)
-        self.canvas.bind("<Button-5>", self._on_mousewheel)
-        
-        # Bind enter/leave events to all widgets
-        self.scrollable_frame.bind("<Enter>", _bind_to_mousewheel)
-        self.scrollable_frame.bind("<Leave>", _unbind_from_mousewheel)
-        
         # Create the window in the canvas
         self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
         self.canvas.configure(yscrollcommand=scrollbar.set)
         
-        # Pack widgets
+        # Pack canvas and scrollbar
         self.canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
+        
+        # Add Clear All button at the bottom
+        bottom_frame = ttk.Frame(self.window)
+        bottom_frame.pack(fill="x", side="bottom", pady=5)
+        
+        clear_all_button = ttk.Button(
+            bottom_frame,
+            text="Clear All",
+            style="Danger.TButton",
+            cursor="hand2",
+            command=self.clear
+        )
+        clear_all_button.pack(pady=5)
         
         # Handle window close
         self.window.protocol("WM_DELETE_WINDOW", self.hide)
@@ -127,6 +118,34 @@ class ActionResultsWindow:
         
         # Update window position
         self._update_window_position()
+        
+        # Bind mouse wheel events
+        self._bind_mouse_wheel_events()
+        
+    def _bind_mouse_wheel_events(self) -> None:
+        """Bind mouse wheel events to the canvas."""
+        def _bind_to_mousewheel(event):
+            if event.widget == self.canvas:
+                return
+            self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
+            self.canvas.bind_all("<Button-4>", self._on_mousewheel)
+            self.canvas.bind_all("<Button-5>", self._on_mousewheel)
+            
+        def _unbind_from_mousewheel(event):
+            if event.widget == self.canvas:
+                return
+            self.canvas.unbind_all("<MouseWheel>")
+            self.canvas.unbind_all("<Button-4>")
+            self.canvas.unbind_all("<Button-5>")
+        
+        # Bind mouse wheel to canvas permanently
+        self.canvas.bind("<MouseWheel>", self._on_mousewheel)
+        self.canvas.bind("<Button-4>", self._on_mousewheel)
+        self.canvas.bind("<Button-5>", self._on_mousewheel)
+        
+        # Bind enter/leave events to scrollable frame
+        self.scrollable_frame.bind("<Enter>", _bind_to_mousewheel)
+        self.scrollable_frame.bind("<Leave>", _unbind_from_mousewheel)
         
     def _update_window_position(self) -> None:
         """Update the window position to stay on the right side of parent."""
@@ -140,8 +159,8 @@ class ActionResultsWindow:
             parent_width = self.parent.winfo_width()
             parent_height = self.parent.winfo_height()
             
-            # Calculate position for results window - add 5px gap
-            window_x = parent_x + parent_width + 5
+            # Calculate position for results window - add 15px gap
+            window_x = parent_x + parent_width + 15
             window_y = parent_y
             
             # Set window height to match parent
@@ -191,15 +210,29 @@ class ActionResultsWindow:
         card.bind("<Enter>", lambda e: self.scrollable_frame.event_generate("<Enter>"))
         card.bind("<Leave>", lambda e: self.scrollable_frame.event_generate("<Leave>"))
         
-        # Add header
+        # Add header with delete button
         header = ttk.Frame(card)
         header.pack(fill="x", padx=5, pady=5)
         
-        icon = ttk.Label(header, text=result["ui"]["icon"])
+        # Left side: icon and title
+        left_frame = ttk.Frame(header)
+        left_frame.pack(side="left", fill="x", expand=True)
+        
+        icon = ttk.Label(left_frame, text=result["ui"]["icon"])
         icon.pack(side="left", padx=5)
         
-        title = ttk.Label(header, text=result["display_name"], style="CardTitle.TLabel")
+        title = ttk.Label(left_frame, text=result["display_name"], style="CardTitle.TLabel")
         title.pack(side="left", padx=5)
+        
+        # Right side: delete button
+        delete_button = ttk.Label(
+            header,
+            text="🗑️",
+            cursor="hand2",
+            foreground="red"
+        )
+        delete_button.pack(side="right", padx=5)
+        delete_button.bind("<Button-1>", lambda e: self._delete_card(card))
         
         # Add message
         message = ttk.Label(
@@ -312,12 +345,50 @@ class ActionResultsWindow:
         for result in results:
             self.add_result(result)
             
+    def _delete_card(self, card: ttk.Frame) -> None:
+        """
+        Delete a specific card from the window.
+        
+        :param card: The card frame to delete
+        """
+        try:
+            # Get all children of scrollable_frame
+            children = self.scrollable_frame.winfo_children()
+            # Find the index of current card
+            card_index = children.index(card)
+            
+            # If there's a next widget and it's a separator, delete it
+            if card_index + 1 < len(children) and isinstance(children[card_index + 1], ttk.Separator):
+                children[card_index + 1].destroy()
+            # If it's not the first card and the previous widget is a separator, delete the previous separator
+            elif card_index > 0 and isinstance(children[card_index - 1], ttk.Separator):
+                children[card_index - 1].destroy()
+                
+            # Destroy the card
+            card.destroy()
+            
+            # Update the scroll region
+            self.scrollable_frame.update_idletasks()
+            self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+            
+        except Exception as e:
+            logger.error(f"Error deleting card: {str(e)}")
+            # If anything goes wrong, just try to destroy the card
+            try:
+                card.destroy()
+            except:
+                pass
+        
     def clear(self) -> None:
         """Clear all results from the window."""
         if self.scrollable_frame:
             for widget in self.scrollable_frame.winfo_children():
                 widget.destroy()
         self.images.clear()
+        
+        # Update the scroll region
+        self.scrollable_frame.update_idletasks()
+        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
         
     def show(self) -> None:
         """Show the window."""
