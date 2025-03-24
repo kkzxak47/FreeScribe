@@ -977,6 +977,14 @@ def send_audio_to_server():
                 if not is_audio_processing_whole_canceled.is_set():
                     # Update the UI with the transcribed text
                     transcribed_text = response.json()['text']
+                    # Only clean hallucinations if enabled in settings, remote
+                    if app_settings.editable_settings[SettingsKeys.ENABLE_HALLUCINATION_CLEAN.value]:
+                        try:
+                            transcribed_text = hallucination_cleaner.clean_text(transcribed_text)
+                            logger.debug(f"remote Cleaned result: {transcribed_text}")
+                        except Exception as e:
+                            # ignore the error as it should not break the transcription
+                            logger.exception(f"remote Error during hallucination cleaning: {str(e)}")
                     user_input.scrolled_text.configure(state='normal')
                     user_input.scrolled_text.delete("1.0", tk.END)
                     user_input.scrolled_text.insert(tk.END, transcribed_text)
