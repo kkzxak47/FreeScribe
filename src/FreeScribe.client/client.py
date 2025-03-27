@@ -882,6 +882,13 @@ def send_audio_to_server():
 
         # Display a message indicating that audio to text processing is in progress
         user_input.scrolled_text.insert(tk.END, "Audio to Text Processing...Please Wait")
+
+        # Clear the response display widget and set its color to black
+        response_display.scrolled_text.configure(state='normal')
+        response_display.scrolled_text.delete("1.0", tk.END)
+        response_display.scrolled_text.configure(fg='black')
+        response_display.scrolled_text.configure(state='disabled')
+
         try:
             # Determine the file to send for transcription
             file_to_send = uploaded_file_path or get_resource_path('recording.wav')
