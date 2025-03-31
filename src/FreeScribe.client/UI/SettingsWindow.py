@@ -139,6 +139,7 @@ class SettingsWindow():
             SettingsKeys.Enable_Word_Count_Validation.value : True,  # Default to enabled
             SettingsKeys.Enable_AI_Conversation_Validation.value : False,  # Default to disabled
             SettingsKeys.ENABLE_HALLUCINATION_CLEAN.value : False,
+            SettingsKeys.ENABLE_FILE_LOGGER.value: False,
         }
 
     def __init__(self):
@@ -223,6 +224,10 @@ class SettingsWindow():
         self.adv_general_settings = [
             # "Enable Scribe Template", # Uncomment if you want to implement the feature right now removed as it doesn't have a real structured implementation
             SettingsKeys.AUDIO_PROCESSING_TIMEOUT_LENGTH.value,
+        ]
+
+        self.developer_settings = [
+            SettingsKeys.ENABLE_FILE_LOGGER.value,
         ]
 
         self.editable_settings = SettingsWindow.DEFAULT_SETTINGS_TABLE
