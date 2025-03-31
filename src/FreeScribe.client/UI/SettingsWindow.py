@@ -589,7 +589,7 @@ class SettingsWindow():
         except (ValueError, TypeError) as e:
             logging.error(str(e))
             logging.exception("Failed to determine reload/unload model")
-        logging.debug(f"load_or_unload_model {unload_flag=}, {reload_flag=}")
+        logging.info(f"load_or_unload_model {unload_flag=}, {reload_flag=}")
         return unload_flag, reload_flag
 
     def _create_settings_and_aiscribe_if_not_exist(self):

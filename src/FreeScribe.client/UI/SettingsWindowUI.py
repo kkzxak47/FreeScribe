@@ -790,17 +790,17 @@ class SettingsWindowUI:
 
     def __intialize_file_logger(self):
         # if un changed, do nothing
-        logger.debug("Checking file logging setting...")
+        logger.info("Checking file logging setting...")
         if self.settings.editable_settings_entries[SettingsKeys.ENABLE_FILE_LOGGER.value].get() == self.settings.editable_settings[SettingsKeys.ENABLE_FILE_LOGGER.value]:
-            logger.debug("File logging setting unchanged.")
+            logger.info("File logging setting unchanged.")
             return
 
         if self.settings.editable_settings_entries[SettingsKeys.ENABLE_FILE_LOGGER.value].get() == 1:
             utils.log_config.add_file_handler(utils.log_config.logger, utils.log_config.formatter)
-            logger.debug("File logging enabled.")
+            logger.info("File logging enabled.")
         else:
             utils.log_config.remove_file_handler(utils.log_config.logger)
-            logger.debug("File logging disabled.")
+            logger.info("File logging disabled.")
 
     def reset_to_default(self, show_confirmation=True):
         """
