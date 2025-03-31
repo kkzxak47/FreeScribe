@@ -3,6 +3,8 @@ import io
 import sys
 import logging
 from collections import deque
+import utils.file_utils
+
 
 MAX_BUFFER_SIZE = 2500
 
@@ -128,6 +130,28 @@ def addLoggingLevel(levelName, levelNum, methodName=None):
     setattr(logging.getLoggerClass(), methodName, logForLevel)
     setattr(logging, methodName, logToRoot)
 
+def add_file_handler(log, format:logging.Formatter, file_name:str = "freescribe.log", level:int = logging.DEBUG):
+    """Add a file handler to the logger.
+    
+    This function creates a file handler for logging and sets its level and formatter.
+    The log file is named 'freescribe.log' and is located in the current working directory.
+    """
+    log_file = utils.file_utils.get_resource_path(file_name)
+    file_handler = logging.FileHandler(log_file)
+    file_handler.setLevel(LOG_LEVEL)
+    file_handler.setFormatter(format)
+    log.addHandler(file_handler)
+
+def remove_file_handler(log, file_name:str = "freescribe.log"):
+    """Remove the file handler from the logger.
+    
+    This function removes the file handler associated with the specified log file name.
+    """
+    log_file = utils.file_utils.get_resource_path(file_name)
+    for handler in log.handlers:
+        if isinstance(handler, logging.FileHandler) and handler.baseFilename == log_file:
+            log.removeHandler(handler)
+            break
 
 # Define custom level
 DIAGNOSE_LEVEL = 99
