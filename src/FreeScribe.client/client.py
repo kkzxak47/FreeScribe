@@ -60,7 +60,7 @@ from UI.Widgets.PopupBox import PopupBox
 from UI.Widgets.TimestampListbox import TimestampListbox
 from UI.ScrubWindow import ScrubWindow
 from Model import ModelStatus
-from services.whisper_hallucination_cleaner import hallucination_cleaner, load_hallucination_cleaner
+from services.whisper_hallucination_cleaner import hallucination_cleaner, load_hallucination_cleaner_model
 
 dual = DualOutput()
 sys.stdout = dual
@@ -2011,7 +2011,7 @@ if app_settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value]:
 
 if app_settings.editable_settings[SettingsKeys.ENABLE_HALLUCINATION_CLEAN.value]:
     root.after(100, lambda: (
-        load_hallucination_cleaner(app_settings)))
+        load_hallucination_cleaner_model(root, app_settings)))
 
 # wait for both whisper and llm to be loaded before unlocking the settings button
 def await_models(timeout_length=60):

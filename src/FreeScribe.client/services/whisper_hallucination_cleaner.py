@@ -279,7 +279,7 @@ class WhisperHallucinationCleaner:
         return result
 
 
-def load_hallucination_cleaner(settings):
+def load_hallucination_cleaner_model(root, settings) -> None:
     """
     Loads or unloads the hallucination cleaner based on settings.
 
@@ -312,7 +312,7 @@ def load_hallucination_cleaner(settings):
 
     # Launch initialization/unloading in a separate thread
     threading.Thread(target=_initialize_spacy_model,
-                     args=(should_initialize, should_unload),
+                     args=(root, should_initialize, should_unload),
                      daemon=True).start()
 
 

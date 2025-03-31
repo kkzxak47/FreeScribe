@@ -24,7 +24,7 @@ import tkinter as tk
 from tkinter import ttk
 import threading
 from Model import ModelManager
-from services.whisper_hallucination_cleaner import load_hallucination_cleaner
+from services.whisper_hallucination_cleaner import load_hallucination_cleaner_model
 from utils.file_utils import get_file_path
 from utils.utils import get_application_version
 from UI.MarkdownWindow import MarkdownWindow
@@ -663,7 +663,7 @@ class SettingsWindowUI:
         # delay update, or the update thread might be reading old settings value
         update_whisper_model_flag = self.settings.update_whisper_model()
 
-        load_hallucination_cleaner(self.settings)
+        load_hallucination_cleaner_model(self.main_window.root, self.settings)
 
         if FeatureToggle.PRE_PROCESSING is True:
             self.settings.editable_settings["Pre-Processing"] = self.preprocess_text.get("1.0", "end-1c") # end-1c removes the trailing newline
