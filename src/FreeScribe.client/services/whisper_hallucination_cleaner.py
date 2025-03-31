@@ -11,7 +11,8 @@ Example:
     >>> print(cleaned)
     'This is a real transcription.'
 """
-
+import threading
+from tkinter import messagebox
 from typing import List, Optional
 import string
 import spacy
@@ -19,6 +20,10 @@ import logging
 from spacy.language import Language
 from spacy.tokens import Doc
 import os
+
+from UI.LoadingWindow import LoadingWindow
+from UI.SettingsConstant import SettingsKeys
+
 # Create a punctuation string without apostrophe
 punct_without_apostrophe = string.punctuation.replace("'", "")
 
@@ -272,6 +277,72 @@ class WhisperHallucinationCleaner:
         result = ' '.join(s.strip() for s in cleaned_sentences)
         self.logger.debug(f"Cleaned text: {result}")
         return result
+
+
+def load_hallucination_cleaner(settings):
+    """
+    Loads or unloads the hallucination cleaner based on settings.
+
+    The logic handles two scenarios:
+    1. Application startup: new_value is None, use current setting
+    2. Settings change: new_value exists, compare with previous setting
+    """
+    # Get current enabled state from settings
+    current_enabled = settings.editable_settings.get(SettingsKeys.ENABLE_HALLUCINATION_CLEAN.value)
+
+    # Get new value from settings panel if it exists
+    setting_entry = settings.editable_settings_entries.get(SettingsKeys.ENABLE_HALLUCINATION_CLEAN.value)
+    new_enabled = setting_entry.get() if setting_entry else None
+
+    default_logger.info(f"Hallucination cleaner - Current: {current_enabled}, New: {new_enabled}")
+
+    # Determine if we should initialize the model
+    should_initialize = (
+        # Case 1: App startup - initialize if currently enabled
+        (new_enabled is None and current_enabled) or
+        # Case 2: Settings changed - initialize if newly enabled
+        (new_enabled is not None and new_enabled and not current_enabled)
+    )
+
+    # Determine if we should unload the model
+    should_unload = (
+        # Only unload if setting was explicitly changed to disabled
+        new_enabled is not None and not new_enabled
+    )
+
+    # Launch initialization/unloading in a separate thread
+    threading.Thread(target=_initialize_spacy_model,
+                     args=(should_initialize, should_unload),
+                     daemon=True).start()
+
+
+def _initialize_spacy_model(root, is_init_model: bool, is_unload_model: bool):
+    """
+    Initializes or unloads the spaCy model for hallucination cleaning.
+
+    Args:
+        is_init_model (bool): True to initialize the model
+        is_unload_model (bool): True to unload the model
+    """
+    if is_init_model:
+        loading_window = LoadingWindow(
+            root,
+            "Loading SpaCy Model",
+            "Setting up spaCy model for hallucination cleaning. Please wait...",
+            note_text="Note: This may take a few minutes on first run."
+        )
+        error = hallucination_cleaner.initialize_model()
+        loading_window.destroy()
+
+        if error:
+            messagebox.showerror(
+                "SpaCy Model Error",
+                f"Failed to initialize spaCy model for hallucination cleaning: {error}\n\n"
+                "Hallucination cleaning will be disabled."
+            )
+    if is_unload_model:
+        hallucination_cleaner.unload_model()
+
 
 # Initialize the hallucination cleaner with default settings
 hallucination_cleaner = WhisperHallucinationCleaner()

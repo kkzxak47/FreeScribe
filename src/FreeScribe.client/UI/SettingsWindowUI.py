@@ -19,19 +19,19 @@ Classes:
     SettingsWindowUI: Manages the settings window UI.
 """
 
-import json
 import logging
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk
 import threading
-from Model import Model, ModelManager
+from Model import ModelManager
+from services.whisper_hallucination_cleaner import load_hallucination_cleaner
 from utils.file_utils import get_file_path
 from utils.utils import get_application_version
 from UI.MarkdownWindow import MarkdownWindow
 from UI.SettingsWindow import SettingsWindow
 from UI.SettingsConstant import SettingsKeys, Architectures, FeatureToggle
 from UI.Widgets.PopupBox import PopupBox
-from UI.LoadingWindow import LoadingWindow
+
 logger = logging.getLogger(__name__)
 
 LONG_ENTRY_WIDTH = 30
@@ -663,7 +663,7 @@ class SettingsWindowUI:
         # delay update, or the update thread might be reading old settings value
         update_whisper_model_flag = self.settings.update_whisper_model()
 
-        self.load_hallucination_cleaner()
+        load_hallucination_cleaner(self.settings)
 
         if FeatureToggle.PRE_PROCESSING is True:
             self.settings.editable_settings["Pre-Processing"] = self.preprocess_text.get("1.0", "end-1c") # end-1c removes the trailing newline
@@ -901,6 +901,7 @@ class SettingsWindowUI:
         canvas.bind('<Leave>', lambda e: canvas.unbind_all("<MouseWheel>"))
 
         return scrollable_frame      
+
     def close_window(self):
         """
         Cleans up the settings window.
@@ -917,67 +918,3 @@ class SettingsWindowUI:
         self.settings_window.destroy()
 
         self.__focus_and_lift_root_window()
-
-    def load_hallucination_cleaner(self):
-        """
-        Loads or unloads the hallucination cleaner based on settings.
-        
-        The logic handles two scenarios:
-        1. Application startup: new_value is None, use current setting
-        2. Settings change: new_value exists, compare with previous setting
-        """
-        # Get current enabled state from settings
-        current_enabled = self.settings.editable_settings.get(SettingsKeys.ENABLE_HALLUCINATION_CLEAN.value)
-        
-        # Get new value from settings panel if it exists
-        setting_entry = self.settings.editable_settings_entries.get(SettingsKeys.ENABLE_HALLUCINATION_CLEAN.value)
-        new_enabled = setting_entry.get() if setting_entry else None
-        
-        logger.info(f"Hallucination cleaner - Current: {current_enabled}, New: {new_enabled}")
-
-        # Determine if we should initialize the model
-        should_initialize = (
-            # Case 1: App startup - initialize if currently enabled
-            (new_enabled is None and current_enabled) or
-            # Case 2: Settings changed - initialize if newly enabled
-            (new_enabled is not None and new_enabled and not current_enabled)
-        )
-
-        # Determine if we should unload the model
-        should_unload = (
-            # Only unload if setting was explicitly changed to disabled
-            new_enabled is not None and not new_enabled
-        )
-
-        # Launch initialization/unloading in a separate thread
-        threading.Thread(target=self._initialize_spacy_model, 
-                       args=(should_initialize, should_unload),
-                       daemon=True).start()
-
-    def _initialize_spacy_model(self, is_init_model: bool, is_unload_model: bool):
-        """
-        Initializes or unloads the spaCy model for hallucination cleaning.
-        
-        Args:
-            is_init_model (bool): True to initialize the model, False to unload it
-        """
-        from services.whisper_hallucination_cleaner import hallucination_cleaner
-        
-        if is_init_model:
-            loading_window = LoadingWindow(
-                self.root,
-                "Loading SpaCy Model",
-                "Setting up spaCy model for hallucination cleaning. Please wait...",
-                note_text="Note: This may take a few minutes on first run."
-            )
-            error = hallucination_cleaner.initialize_model()
-            loading_window.destroy()
-            
-            if error:
-                messagebox.showerror(
-                    "SpaCy Model Error",
-                    f"Failed to initialize spaCy model for hallucination cleaning: {error}\n\n"
-                    "Hallucination cleaning will be disabled."
-                )
-        if is_unload_model:
-            hallucination_cleaner.unload_model()
