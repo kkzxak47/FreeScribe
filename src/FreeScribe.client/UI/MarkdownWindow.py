@@ -161,7 +161,7 @@ class MarkdownWindow:
 
     def _open_image_window(self):
         """Open a new window to display the help guide image."""
-        image_window = ImageWindow(self.parent, "Help Guide", get_file_path('assets', 'help.png'))
+        image_window = ImageWindow(self.parent, "Help Guide", get_file_path('assets', 'help.png'), width=1000, height=686)
         image_window.window.transient(self.window)  # Set ImageWindow as transient to MarkdownWindow
         image_window.window.grab_set()              # Ensure ImageWindow gets focus
         image_window.window.focus_force()           # Force focus on ImageWindow
