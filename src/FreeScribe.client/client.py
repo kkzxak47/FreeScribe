@@ -876,19 +876,15 @@ def send_audio_to_server():
     if app_settings.editable_settings[SettingsKeys.LOCAL_WHISPER.value] == True:
         # Inform the user that SettingsKeys.LOCAL_WHISPER.value is being used for transcription
         print(f"Using {SettingsKeys.LOCAL_WHISPER.value} for transcription.")
+
+        clear_all_text_fields()
+
         # Configure the user input widget to be editable and clear its content
         user_input.scrolled_text.configure(state='normal')
         user_input.scrolled_text.delete("1.0", tk.END)
 
         # Display a message indicating that audio to text processing is in progress
         user_input.scrolled_text.insert(tk.END, "Audio to Text Processing...Please Wait")
-
-        # Clear the response display widget and set its color to black
-        response_display.scrolled_text.configure(state='normal')
-        response_display.scrolled_text.delete("1.0", tk.END)
-        response_display.scrolled_text.configure(fg='black')
-        response_display.scrolled_text.configure(state='disabled')
-
         try:
             # Determine the file to send for transcription
             file_to_send = uploaded_file_path or get_resource_path('recording.wav')
