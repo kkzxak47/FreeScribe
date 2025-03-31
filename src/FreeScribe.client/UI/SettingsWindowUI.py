@@ -735,7 +735,7 @@ class SettingsWindowUI:
             self.settings.editable_settings_entries[SettingsKeys.LOCAL_LLM_CONTEXT_WINDOW.value].get(),
         )
         
-        self.__intialize_file_logger()
+        self.__initialize_file_logger()
 
         if self.get_selected_model() not in ["Loading models...", "Failed to load models"]:
             self.settings.editable_settings[SettingsKeys.LOCAL_LLM_MODEL.value] = self.get_selected_model()
@@ -788,7 +788,7 @@ class SettingsWindowUI:
         if close_window:
             self.close_window()
 
-    def __intialize_file_logger(self):
+    def __initialize_file_logger(self):
         # if un changed, do nothing
         logger.info("Checking file logging setting...")
         if self.settings.editable_settings_entries[SettingsKeys.ENABLE_FILE_LOGGER.value].get() == self.settings.editable_settings[SettingsKeys.ENABLE_FILE_LOGGER.value]:
