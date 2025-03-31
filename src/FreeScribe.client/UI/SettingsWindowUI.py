@@ -189,7 +189,7 @@ class SettingsWindowUI:
         left_row, right_row = self.create_editable_settings_col(left_frame, right_frame, 0, 0, self.settings.developer_settings)
 
         # add custom handler for log file button, additional warning for PHI
-        def _on_file_loger_click(*args):
+        def _on_file_logger_click(*args):
             if self.settings.editable_settings_entries[SettingsKeys.ENABLE_FILE_LOGGER.value].get() == 1:
                 # Give a disclaimer for potential PHI leak
                 result = messagebox.askokcancel(
@@ -207,7 +207,7 @@ class SettingsWindowUI:
                     self.widgets[SettingsKeys.ENABLE_FILE_LOGGER.value].config(variable=self.settings.editable_settings_entries[SettingsKeys.ENABLE_FILE_LOGGER.value])  # Disable the checkbox
 
         # add a trace to the checkbox on change determine if we need to display disclaimer
-        self.settings.editable_settings_entries[SettingsKeys.ENABLE_FILE_LOGGER.value].trace_add("write", _on_file_loger_click)
+        self.settings.editable_settings_entries[SettingsKeys.ENABLE_FILE_LOGGER.value].trace_add("write", _on_file_logger_click)
         
 
     def _display_center_to_parent(self):
