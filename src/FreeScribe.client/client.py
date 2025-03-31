@@ -51,7 +51,6 @@ from utils.file_utils import get_file_path, get_resource_path
 from utils.OneInstance import OneInstance
 from utils.utils import get_application_version
 import utils.audio
-from UI.DebugWindow import DualOutput
 from UI.Widgets.MicrophoneTestFrame import MicrophoneTestFrame
 from utils.utils import window_has_running_instance, bring_to_front, close_mutex
 from utils.window_utils import remove_min_max, add_min_max
@@ -61,24 +60,7 @@ from UI.Widgets.TimestampListbox import TimestampListbox
 from UI.ScrubWindow import ScrubWindow
 from Model import ModelStatus
 from services.whisper_hallucination_cleaner import hallucination_cleaner
-
-
-if os.environ.get("FREESCRIBE_DEBUG"):
-    LOG_LEVEL = logging.DEBUG
-else:
-    LOG_LEVEL = logging.INFO
-
-logging.basicConfig(
-    level=LOG_LEVEL,
-    format='%(asctime)s - %(threadName)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[logging.StreamHandler()]
-)
-
-logger = logging.getLogger(__name__)
-
-dual = DualOutput()
-sys.stdout = dual
-sys.stderr = dual
+from utils.log_config import logger
 
 APP_NAME = 'AI Medical Scribe'  # Application name
 APP_TASK_MANAGER_NAME = 'freescribe-client.exe'
