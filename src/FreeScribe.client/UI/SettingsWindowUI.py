@@ -19,12 +19,12 @@ Classes:
     SettingsWindowUI: Manages the settings window UI.
 """
 
-import json
 import logging
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk
 import threading
-from Model import Model, ModelManager
+from Model import ModelManager
+from services.whisper_hallucination_cleaner import load_hallucination_cleaner_model
 from utils.file_utils import get_file_path
 from utils.utils import get_application_version
 from UI.MarkdownWindow import MarkdownWindow
@@ -32,6 +32,7 @@ from UI.SettingsWindow import SettingsWindow
 from UI.SettingsConstant import SettingsKeys, Architectures, FeatureToggle
 from UI.Widgets.PopupBox import PopupBox
 
+logger = logging.getLogger(__name__)
 
 LONG_ENTRY_WIDTH = 30
 SHORT_ENTRY_WIDTH = 20
@@ -662,6 +663,8 @@ class SettingsWindowUI:
         # delay update, or the update thread might be reading old settings value
         update_whisper_model_flag = self.settings.update_whisper_model()
 
+        load_hallucination_cleaner_model(self.main_window.root, self.settings)
+
         if FeatureToggle.PRE_PROCESSING is True:
             self.settings.editable_settings["Pre-Processing"] = self.preprocess_text.get("1.0", "end-1c") # end-1c removes the trailing newline
         
@@ -898,6 +901,7 @@ class SettingsWindowUI:
         canvas.bind('<Leave>', lambda e: canvas.unbind_all("<MouseWheel>"))
 
         return scrollable_frame      
+
     def close_window(self):
         """
         Cleans up the settings window.
