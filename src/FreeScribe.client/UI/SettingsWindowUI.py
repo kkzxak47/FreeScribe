@@ -182,20 +182,19 @@ class SettingsWindowUI:
         Settings alternate between left and right columns for even distribution.
         """
 
-        left_frame = tk.Frame(self.whisper_settings_frame, borderwidth=2, relief="solid", bg="red")
+        left_frame = tk.Frame(self.whisper_settings_frame)
         left_frame.grid(row=0, column=0, padx=10, pady=5, sticky="nsew")
 
-        right_frame = tk.Frame(self.whisper_settings_frame, borderwidth=2, relief="solid", bg="red")
+        right_frame = tk.Frame(self.whisper_settings_frame)
         right_frame.grid(row=0, column=1, padx=10, pady=5, sticky="nsew")
 
         self.whisper_settings_frame.columnconfigure(0, weight=1)
         self.whisper_settings_frame.columnconfigure(1, weight=1)
 
-        left_frame.columnconfigure(0, weight=1)  # Give weight to the label column
-        left_frame.columnconfigure(1, weight=3)  # Give more weight to the dropdown column
-
-        right_frame.columnconfigure(0, weight=1)  # Give weight to the label column
-        right_frame.columnconfigure(1, weight=3)  # Give more weight to the dropdown column
+        left_frame.columnconfigure(0, weight=3)  # Give weight to the label column
+        left_frame.columnconfigure(1, weight=9)  # Give more weight to the dropdown column
+        right_frame.columnconfigure(0, weight=3)  # Give weight to the label column
+        right_frame.columnconfigure(1, weight=9)  # Give more weight to the dropdown column
 
         left_row = 0
         right_row = 0
@@ -282,11 +281,11 @@ class SettingsWindowUI:
         self.llm_settings_frame.columnconfigure(0, weight=1)
         self.llm_settings_frame.columnconfigure(1, weight=1)
 
-        left_frame.columnconfigure(0, weight=1)  # Give weight to the label column
-        left_frame.columnconfigure(1, weight=3)  # Give more weight to the dropdown column
+        left_frame.columnconfigure(0, weight=3)  # Give weight to the label column
+        left_frame.columnconfigure(1, weight=9)  # Give more weight to the dropdown column
 
-        right_frame.columnconfigure(0, weight=1)  # Give weight to the label column
-        right_frame.columnconfigure(1, weight=3)  # Give more weight to the dropdown column
+        right_frame.columnconfigure(0, weight=3)  # Give weight to the label column
+        right_frame.columnconfigure(1, weight=9)  # Give more weight to the dropdown column
 
         left_row = 0
         right_row = 0
