@@ -88,8 +88,8 @@ class IntentActionManager:
         :param intent: Intent to find handlers for
         :return: List of matching action handlers
         """
-        matching_actions = []
-        for action in self.actions:
-            if action.can_handle_intent(intent.name, intent.metadata):
-                matching_actions.append(action)
-        return matching_actions 
+        return [
+            action
+            for action in self.actions
+            if action.can_handle_intent(intent.name, intent.metadata)
+        ]
