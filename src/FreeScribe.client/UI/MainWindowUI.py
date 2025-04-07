@@ -420,7 +420,7 @@ class MainWindowUI:
         logger.debug(f"Results: {results}")
 
         if results:
-            logger.debug(f"Showing action window")
+            logger.debug("Showing action window")
             # Show action window and add results
             self.action_window.show()
             # self.action_window.clear()
