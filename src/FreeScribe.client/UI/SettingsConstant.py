@@ -26,6 +26,7 @@ class SettingsKeys(Enum):
     Enable_Word_Count_Validation = "Enable Word Count Validation"
     Enable_AI_Conversation_Validation = "Enable AI Conversation Validation"
     FACTUAL_CONSISTENCY_VERIFICATION = "Factual Consistency Verification (Experimental)"
+    BEST_OF = "best_of"
 
 
 class Architectures(Enum):
