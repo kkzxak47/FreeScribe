@@ -98,18 +98,27 @@ class PrintMapAction(BaseAction):
             return ActionResult(
                 success=False,
                 message="No destination specified.",
-                data={}
+                data={"type": "error"},
             )
             
         try:
             # Search Google Maps for the location
             search_query = destination
-            places_result = self.gmaps.places(search_query)
+            try:
+                places_result = self.gmaps.places(search_query)
+            except Exception as e:
+                logger.error(f"Google Maps API error: {str(e)}")
+                return ActionResult(
+                    success=False,
+                    message=f"Error accessing Google Maps API: {str(e)}",
+                    data={"type": "error", "error": str(e)},
+                )
+
             if not places_result.get('results'):
                 return ActionResult(
                     success=False,
                     message=f"Could not find {destination} on Google Maps.",
-                    data={}
+                    data={"type": "error"},
                 )
             
             place = places_result['results'][0]
@@ -144,8 +153,8 @@ class PrintMapAction(BaseAction):
                     logger.error(f"Failed to download map: {str(e)}")
                     return ActionResult(
                         success=False,
-                        message="Failed to generate map image.",
-                        data={"error": str(e)}
+                        message=f"Failed to generate map image: {str(e)}",
+                        data={"type": "error", "error": str(e)},
                     )
                 
                 return ActionResult(
@@ -183,8 +192,8 @@ class PrintMapAction(BaseAction):
                     logger.error(f"Failed to download map: {str(e)}")
                     return ActionResult(
                         success=False,
-                        message="Failed to generate map image.",
-                        data={"error": str(e)}
+                        message=f"Failed to generate map image: {str(e)}",
+                        data={"type": "error", "error": str(e)},
                     )
                 
                 return ActionResult(
@@ -205,8 +214,8 @@ class PrintMapAction(BaseAction):
             logger.error(f"Error executing map action: {str(e)}")
             return ActionResult(
                 success=False,
-                message="Failed to generate map image.",
-                data={"error": str(e)}
+                message=f"Unexpected error: {str(e)}",
+                data={"type": "error", "error": str(e)},
             )
 
     def get_ui_data(self) -> Dict[str, Any]:

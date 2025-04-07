@@ -140,11 +140,74 @@ def test_execute_map_download_error(print_map_action, mock_gmaps, mock_requests,
     
     assert isinstance(result, ActionResult)
     assert result.success is False
-    assert "Failed to generate map image" in result.message
+    assert "Failed to download map" in result.message
+    assert result.data["type"] == "error"
     assert "error" in result.data
 
 def test_get_ui_data(print_map_action):
     """Test UI data configuration."""
     ui_data = print_map_action.get_ui_data()
     assert ui_data["icon"] == "🗺️"
-    assert ui_data["color"] == "#4CAF50" 
+    assert ui_data["color"] == "#4CAF50"
+
+
+def test_execute_show_map_invalid_api_key(print_map_action, mock_gmaps):
+    """Test map action handling when an invalid API key is used."""
+    mock_gmaps.places.side_effect = Exception("Invalid API key")
+
+    result = print_map_action.execute(
+        "show_map", {"parameters": {"destination": "radiology"}}
+    )
+
+    assert isinstance(result, ActionResult)
+    assert result.success is False
+    assert "Invalid API key" in result.message
+    assert result.data["type"] == "error"
+    assert "error" in result.data
+
+
+def test_execute_show_map_network_error(
+    print_map_action, mock_gmaps, mock_requests, sample_place_result
+):
+    """Test map action handling when a network error occurs during map download."""
+    mock_gmaps.places.return_value = sample_place_result
+    mock_requests.return_value.raise_for_status.side_effect = Exception("Network Error")
+
+    result = print_map_action.execute(
+        "show_map", {"parameters": {"destination": "radiology"}}
+    )
+
+    assert isinstance(result, ActionResult)
+    assert result.success is False
+    assert "Network Error" in result.message
+    assert result.data["type"] == "error"
+    assert "error" in result.data
+
+
+def test_execute_show_map_unexpected_response(print_map_action, mock_gmaps):
+    """Test map action handling when the Google Maps API returns unexpected results."""
+    mock_gmaps.places.return_value = {}
+
+    result = print_map_action.execute(
+        "show_map", {"parameters": {"destination": "radiology"}}
+    )
+
+    assert isinstance(result, ActionResult)
+    assert result.success is False
+    assert "Could not find" in result.message
+    assert result.data["type"] == "error"
+
+
+def test_execute_show_map_general_exception(print_map_action, mock_gmaps):
+    """Test map action handling when an unexpected exception occurs."""
+    mock_gmaps.places.side_effect = Exception("Unexpected error occurred")
+
+    result = print_map_action.execute(
+        "show_map", {"parameters": {"destination": "radiology"}}
+    )
+
+    assert isinstance(result, ActionResult)
+    assert result.success is False
+    assert "Unexpected error" in result.message
+    assert result.data["type"] == "error"
+    assert "error" in result.data
