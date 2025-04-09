@@ -24,7 +24,6 @@ from tkinter import messagebox
 import requests
 from typing import List, Any, Optional
 
-
 from UI.SettingsConstant import SettingsKeys, Architectures, FeatureToggle, DEFAULT_CONTEXT_WINDOW_SIZE
 from utils.file_utils import get_resource_path, get_file_path
 from utils.utils import get_application_version
@@ -115,7 +114,7 @@ class SettingsWindow():
             SettingsKeys.WHISPER_MODEL.value: "medium",
             "Current Mic": "None",
             SettingsKeys.WHISPER_REAL_TIME.value: True,
-            "Real Time Audio Length": 10,
+            "Real Time Audio Length": 3,
             "Real Time Silence Length": 1,
             "Silence cut-off": 0.035,
             "LLM Container Name": "ollama",
@@ -140,6 +139,7 @@ class SettingsWindow():
             SettingsKeys.WHISPER_LANGUAGE_CODE.value: "None (Auto Detect)",
             SettingsKeys.Enable_Word_Count_Validation.value : True,  # Default to enabled
             SettingsKeys.Enable_AI_Conversation_Validation.value : False,  # Default to disabled
+            SettingsKeys.ENABLE_HALLUCINATION_CLEAN.value : False,
             SettingsKeys.FACTUAL_CONSISTENCY_VERIFICATION.value: False,
             # Best of N (Experimental), by default we only generate 1 completion of note, if this is set to a number greater than 1, we will generate N completions and pick the best one.
             SettingsKeys.BEST_OF.value: 1,
@@ -229,6 +229,7 @@ class SettingsWindow():
             # SettingsKeys.SILERO_SPEECH_THRESHOLD.value, 
             SettingsKeys.USE_TRANSLATE_TASK.value,
             SettingsKeys.WHISPER_LANGUAGE_CODE.value,
+            SettingsKeys.ENABLE_HALLUCINATION_CLEAN.value,
         ]
 
 
