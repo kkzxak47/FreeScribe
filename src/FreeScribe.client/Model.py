@@ -110,8 +110,83 @@ class Model:
     ) -> str:
         """
         This method retains the original implementation of the generate_response method by setting best_of to 1
+
+        :param prompt: Input text prompt
+        :type prompt: str
+        :param max_tokens: Maximum number of tokens to generate
+        :type max_tokens: int or None
+        :param temperature: Sampling temperature (higher = more random)
+        :type temperature: float
+        :param top_p: Top-p sampling threshold
+        :type top_p: float
+        :param repeat_penalty: Penalty for repeating tokens
+        :type repeat_penalty: float
+        :return: Generated text response
+        :rtype: str
         """
         return self.generate_best_of_response(prompt, max_tokens, temperature, top_p, repeat_penalty=repeat_penalty)
+
+    def _build_messages(self, prompt: str) -> list:
+        """
+        Build message structure for chat completion.
+
+        :param prompt: Input text prompt
+        :type prompt: str
+        :return: List of message dictionaries in the format expected by the model
+        :rtype: list
+        """
+        return [
+            {"role": "user", "content": prompt}
+        ]
+
+    def _generate(self, messages: list, max_tokens: int, temperature: float,
+                 top_p: float, repeat_penalty: float, best_of: int) -> str:
+        """
+        Generate a response using either single or batched inference.
+
+        :param messages: List of message dictionaries
+        :type messages: list
+        :param max_tokens: Maximum number of tokens to generate
+        :type max_tokens: int
+        :param temperature: Sampling temperature
+        :type temperature: float
+        :param top_p: Top-p sampling threshold
+        :type top_p: float
+        :param repeat_penalty: Penalty for repeating tokens
+        :type repeat_penalty: float
+        :param best_of: Number of responses to generate
+        :type best_of: int
+        :return: Generated text response
+        :rtype: str
+        """
+        if best_of == 1:
+            # Single response generation
+            response = self.model.create_chat_completion(
+                messages,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                top_p=top_p,
+                repeat_penalty=repeat_penalty,
+            )
+            return response["choices"][0]["message"]["content"]
+        else:
+            # Multiple response generation with batched LLM
+            logger.debug(f"{self.model=}")
+            batched_llm = BatchedLLM(
+                model_or_path=self.model.model if self.model else self.config["model_path"],
+                n_ctx=self.config["context_size"],
+                n_threads=self.config["n_threads"],
+            )
+            # Extract prompt from messages
+            prompt = messages[0]["content"]
+            sequences, stats, logprobs = batched_llm.generate(
+                prompt=prompt,
+                n_predict=self.config["context_size"] // best_of,
+                n_parallel=best_of
+            )
+            result = self._select_best_result(sequences, logprobs)
+            batched_llm.cleanup()
+            return result
 
     def generate_best_of_response(
         self,
@@ -126,53 +201,43 @@ class Model:
         """
         Generates a response using GPU-accelerated inference.
 
-        Args:
-            prompt: Input text prompt
-            max_tokens: Maximum number of tokens to generate
-            temperature: Sampling temperature (higher = more random)
-            top_p: Top-p sampling threshold
-            repeat_penalty: Penalty for repeating tokens
-
-        Returns:
-            Generated text response
+        :param prompt: Input text prompt
+        :type prompt: str
+        :param max_tokens: Maximum number of tokens to generate
+        :type max_tokens: int
+        :param temperature: Sampling temperature (higher = more random)
+        :type temperature: float
+        :param top_p: Top-p sampling threshold
+        :type top_p: float
+        :param repeat_penalty: Penalty for repeating tokens
+        :type repeat_penalty: float
+        :param best_of: Number of responses to generate and select the best from
+        :type best_of: int or None
+        :return: Generated text response
+        :rtype: str
         """
         try:
+            # Validate and normalize best_of parameter
             _best_of = best_of or self.config.get("best_of") or 1
             if not isinstance(_best_of, int) or _best_of < 1:
                 logger.warning(f"invalid best_of value: {_best_of}")
                 # if best_of is invalid, treat it as 1
                 _best_of = 1
-            # Message template for chat completion
-            messages = [
-                {"role": "user",
-                "content": prompt}
-            ]
-            logger.debug(f"best_of: {_best_of} {type(_best_of)=}")
-            if _best_of == 1:
-                response = self.model.create_chat_completion(
-                    messages,
-                    max_tokens=max_tokens,
-                    temperature=temperature,
-                    top_p=top_p,
-                    repeat_penalty=repeat_penalty,
-                )
-                result = response["choices"][0]["message"]["content"]
-            else:
-                logger.debug(f"{self.model=}")
-                batched_llm = BatchedLLM(
-                    model_or_path=self.model.model if self.model else self.config["model_path"],
-                    n_ctx=self.config["context_size"],
-                    n_threads=self.config["n_threads"],
-                )
-                sequences, stats, logprobs = batched_llm.generate(
-                    prompt=prompt,
-                    n_predict=self.config["context_size"] // _best_of,
-                    n_parallel=_best_of
-                )
-                result = self._select_best_result(sequences, logprobs)
-                batched_llm.cleanup()
 
-            # reset the model tokens
+            logger.debug(f"best_of: {_best_of} {type(_best_of)=}")
+
+            # Build messages and generate response
+            messages = self._build_messages(prompt)
+            result = self._generate(
+                messages=messages,
+                max_tokens=max_tokens,
+                temperature=temperature,
+                top_p=top_p,
+                repeat_penalty=repeat_penalty,
+                best_of=_best_of
+            )
+
+            # Reset model tokens
             self.model.reset()
             return result
 
