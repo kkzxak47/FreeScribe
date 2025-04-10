@@ -15,12 +15,15 @@ Key features:
 
 
 import ctypes
+import logging
 import multiprocessing
 import time
 from typing import List, Optional, Dict, Any, Tuple, Union
 import numpy as np
 
 import llama_cpp
+
+logger = logging.getLogger(__name__)
 
 
 class BatchedLLM:
@@ -154,7 +157,7 @@ class BatchedLLM:
         # This might be different from what was requested if the model
         # has specific requirements or if n_ctx was None
         self.n_ctx = llama_cpp.llama_n_ctx(self.ctx)
-        print(f"{self.n_ctx=}")  # Print for debugging/information
+        logger.debug(f"{self.n_ctx=}")  # Print for debugging/information
 
         # Initialize other attributes that will be set up later
         # These will be created during the generate method
@@ -620,7 +623,7 @@ class BatchedLLM:
                     continue
 
                 # Debug output
-                print(f"Sampling token {n_cur} for sequence {i}")
+                logger.debug(f"Sampling token {n_cur} for sequence {i}")
 
                 # Sample the next token for this sequence
                 # This uses the sampler chain we set up earlier
