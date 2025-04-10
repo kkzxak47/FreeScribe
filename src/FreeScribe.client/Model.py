@@ -28,7 +28,7 @@ class Model:
     This class provides an interface to initialize a language model with specific configurations
     for GPU acceleration, generate responses based on a text prompt, and retrieve GPU settings.
     The class is configured to support multi-GPU setups and custom configurations for batch size,
-    context window, and sampling settings. 
+    context window, and sampling settings.
 
     Attributes:
         model: Instance of the Llama model configured with specified GPU and context parameters.
@@ -59,7 +59,7 @@ class Model:
     ):
         """
         Initializes the GGUF model with GPU acceleration.
-        
+
         Args:
             model_path: Path to the model file
             context_size: Size of the context window
@@ -74,7 +74,7 @@ class Model:
         try:
             # Set environment variables for GPU
             os.environ["CUDA_VISIBLE_DEVICES"] = str(main_gpu)
-            
+
             # Initialize model with GPU settings
             self.model = Llama(
                 model_path=model_path,
@@ -86,7 +86,7 @@ class Model:
                 tensor_split=tensor_split,
                 chat_format=chat_template,
             )
-        
+
             # Store configuration
             self.config = {
                 "gpu_layers": gpu_layers,
@@ -100,7 +100,7 @@ class Model:
         except Exception as e:
             self.model = None
             raise e
-    
+
     def generate_response(
         self,
         prompt: str,
@@ -125,14 +125,14 @@ class Model:
     ) -> str:
         """
         Generates a response using GPU-accelerated inference.
-        
+
         Args:
             prompt: Input text prompt
             max_tokens: Maximum number of tokens to generate
             temperature: Sampling temperature (higher = more random)
             top_p: Top-p sampling threshold
             repeat_penalty: Penalty for repeating tokens
-            
+
         Returns:
             Generated text response
         """
@@ -144,10 +144,10 @@ class Model:
                 _best_of = 1
             # Message template for chat completion
             messages = [
-                {"role": "user", 
+                {"role": "user",
                 "content": prompt}
             ]
-            if best_of == 1:
+            if _best_of == 1:
                 response = self.model.create_chat_completion(
                     messages,
                     max_tokens=max_tokens,
@@ -173,7 +173,7 @@ class Model:
             # reset the model tokens
             self.model.reset()
             return result
-            
+
         except Exception as e:
             print(f"GPU inference error ({e.__class__.__name__}): {str(e)}")
             return f"({e.__class__.__name__}): {str(e)}"
@@ -195,7 +195,7 @@ class Model:
         """
         self.model.close()
         self.model = None
-    
+
     def __del__(self):
         """Cleanup GPU memory on deletion"""
         if self.model is not None:
@@ -208,10 +208,11 @@ class Model:
         result = ""
         for i, seq in enumerate(sequences):
             logger.debug(f"\nSequence {i + 1}:")
-            logger.debug(f"Text: {result}")
+            logger.debug(f"Text: {seq}")
             avg_logprob = np.mean(logprobs[i])
             logger.debug(f"Average logprob: {avg_logprob:.6f}")
             if avg_logprob > best_logprob:
+                best_logprob = avg_logprob
                 result = seq
         return result
 
@@ -244,7 +245,7 @@ class ModelManager:
 
         Raises:
             ValueError: If the specified model file cannot be loaded
-        
+
         Note:
             The method uses threading to avoid blocking the UI while loading the model.
             GPU layers are set to -1 for CUDA architecture and 0 for CPU.
@@ -267,7 +268,7 @@ class ModelManager:
         def load_model():
             """
             Internal function to handle the actual model loading process.
-            
+
             Determines the model file based on settings and initializes the Llama instance
             with appropriate parameters.
             """
@@ -329,8 +330,8 @@ class ModelManager:
         :type root_window: tkinter.Tk
         :return: The created thread instance
         :rtype: threading.Thread
-        
-        This method creates and starts a new thread that runs the model's start 
+
+        This method creates and starts a new thread that runs the model's start
         function with the provided settings and root window reference. The model
         is accessed through ModelManager's local_model attribute.
         """
@@ -351,4 +352,3 @@ class ModelManager:
             ModelManager.local_model.model.close()
             del ModelManager.local_model
             ModelManager.local_model = None
-            
