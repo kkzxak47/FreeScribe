@@ -66,7 +66,7 @@ def score_sequence(sequence: str, criteria: Dict[str, float]) -> float:
     if "relevance" in criteria and "keywords" in criteria:
         keywords = criteria["keywords"]
         if isinstance(keywords, list):
-            keyword_matches = sum(1 for keyword in keywords if keyword.lower() in sequence.lower())
+            keyword_matches = sum(bool(keyword.lower() in sequence.lower()) for keyword in keywords)
             relevance_score = min(1.0, keyword_matches / len(keywords))
             score += relevance_score * criteria["relevance"]
     
