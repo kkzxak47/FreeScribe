@@ -41,7 +41,7 @@ class Model:
     Note:
         The best_of parameter allows generating multiple responses and selecting the best one
         based on the sum of token log probabilities. When best_of > 1, the model will generate
-        multiple responses and return the one with the highest cumulative log probability.
+        multiple responses and return the one with the highest mean log probability.
     """
     def __init__(
         self,
