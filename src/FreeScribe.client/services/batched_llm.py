@@ -59,7 +59,7 @@ class BatchedLLM:
             # Initialize the model
             model_params = llama_cpp.llama_model_default_params()
 
-            self.model = llama_cpp.llama_load_model_from_file(model_or_path.encode("utf-8"), model_params)
+            self.model = llama_cpp.llama_model_load_from_file(model_or_path.encode("utf-8"), model_params)
 
             if self.model is None:
                 raise RuntimeError(f"Unable to load model from {model_or_path}")
@@ -75,8 +75,8 @@ class BatchedLLM:
         if n_ctx is not None:
             self.ctx_params.n_ctx = n_ctx
         self.ctx_params.n_threads = n_threads
-        self.ctx_params.n_ctx_per_seq = 8192
-        self.ctx_params.n_ctx = 8192
+        self.ctx_params.n_ctx_per_seq = n_ctx
+        self.ctx_params.n_ctx = n_ctx
 
         self.ctx = llama_cpp.llama_init_from_model(self.model, self.ctx_params)
 

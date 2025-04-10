@@ -95,6 +95,7 @@ class Model:
                 "n_batch": n_batch,
                 "best_of": best_of,
                 "model_path": model_path,
+                "n_threads": n_threads,
             }
         except Exception as e:
             self.model = None
@@ -157,7 +158,9 @@ class Model:
                 result = response["choices"][0]["message"]["content"]
             else:
                 batched_llm = BatchedLLM(
-                    model_or_path=self.model._model.model if self.model else self.config["model_path"],
+                    model_or_path=self.model.model if self.model else self.config["model_path"],
+                    n_ctx=self.config["context_size"],
+                    n_threads=self.config["n_threads"],
                 )
                 sequences, stats, logprobs = batched_llm.generate(
                     prompt=prompt,
