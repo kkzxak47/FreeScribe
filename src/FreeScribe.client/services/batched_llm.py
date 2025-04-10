@@ -477,6 +477,157 @@ class BatchedLLM:
 
         return self.smpl
 
+    def _prepare_prompt_and_batch(self, prompt: str, n_predict: int, n_parallel: int) -> Tuple[List[int], int]:
+        """
+        Prepare the prompt by tokenizing it and initializing the batch.
+
+        This helper method handles the initial setup for generation:
+        1. Tokenizes the prompt
+        2. Checks if the required KV cache size fits in the context
+        3. Creates and initializes the batch with prompt tokens
+
+        :param prompt: The prompt to start generation with
+        :type prompt: str
+        :param n_predict: Maximum number of tokens to predict
+        :type n_predict: int
+        :param n_parallel: Number of parallel sequences to generate
+        :type n_parallel: int
+        :return: A tuple containing the tokenized prompt and batch size
+        :rtype: Tuple[List[int], int]
+        :raises RuntimeError: If the required KV cache size exceeds context size
+        """
+        # Tokenize the prompt
+        tokens_list = self.tokenize(prompt)
+
+        # Calculate required KV cache size
+        n_kv_req = len(tokens_list) + (n_predict - len(tokens_list)) * n_parallel
+
+        # Check if the required KV cache size fits in the context
+        if n_kv_req > self.n_ctx:
+            raise RuntimeError(
+                f"Required KV cache size ({n_kv_req}) exceeds context size ({self.n_ctx}). "
+                "Either reduce n_parallel or increase n_ctx."
+            )
+
+        # Create a batch for token processing
+        batch_size = max(len(tokens_list), n_parallel)
+        self.batch = llama_cpp.llama_batch_init(batch_size, 0, n_parallel)
+
+        # Add the prompt tokens to the batch
+        for i, token_id in enumerate(tokens_list):
+            self.batch_add(self.batch, token_id, i, [0], False)
+
+        return tokens_list, batch_size
+
+    def _handle_encoder_decoder(self):
+        """
+        Handle special processing for encoder-decoder models.
+
+        This helper method processes encoder-decoder models differently:
+        1. Encodes the prompt tokens
+        2. Clears the batch
+        3. Adds the decoder start token
+
+        :raises RuntimeError: If encoding fails
+        """
+        if not llama_cpp.llama_model_has_encoder(self.model):
+            return
+
+        # Encode the prompt tokens
+        if llama_cpp.llama_encode(self.ctx, self.batch) != 0:
+            raise RuntimeError("Failed to encode")
+
+        # Get the decoder start token
+        decoder_start_token_id = llama_cpp.llama_model_decoder_start_token(self.model)
+        if decoder_start_token_id == llama_cpp.LLAMA_TOKEN_NULL:
+            decoder_start_token_id = llama_cpp.llama_vocab_bos(self.vocab)
+
+        # Clear the batch and add the decoder start token
+        self.batch_clear(self.batch)
+        self.batch_add(self.batch, decoder_start_token_id, 0, [0], False)
+
+    def _sample_token(self, seq_index: int, i_batch: List[int], n_cur: int) -> Tuple[int, float]:
+        """
+        Sample the next token for a given sequence.
+
+        This helper method handles the token sampling process:
+        1. Samples a new token using the sampler chain
+        2. Calculates log probabilities for the token
+
+        :param seq_index: The index of the sequence to sample for
+        :type seq_index: int
+        :param i_batch: List of batch indices for each sequence
+        :type i_batch: List[int]
+        :param n_cur: Current position in the sequence
+        :type n_cur: int
+        :return: A tuple containing the new token ID and its log probability
+        :rtype: Tuple[int, float]
+        """
+        # Sample the next token for this sequence
+        new_token_id = llama_cpp.llama_sampler_sample(self.smpl, self.ctx, i_batch[seq_index])
+
+        # Get the logits for the current token
+        logits = llama_cpp.llama_get_logits_ith(self.ctx, i_batch[seq_index])
+        n_vocab = llama_cpp.llama_vocab_n_tokens(self.vocab)
+
+        # Convert the logits to a numpy array for easier processing
+        logits_array = np.array(
+            [logits[j] for j in range(n_vocab)],
+            dtype=np.float32
+        )
+
+        # Convert logits to log probabilities
+        logprobs_array = self.logits_to_logprobs(logits_array)
+
+        # Return the token and its log probability
+        return new_token_id, logprobs_array[new_token_id]
+
+    def _finalize_results(self, prompt: str, streams: List[str], n_parallel: int,
+                          n_decode: int, t_main_start: float, t_main_end: float) -> Tuple[List[str], Dict[str, Any]]:
+        """
+        Finalize the generation results and prepare statistics.
+
+        This helper method handles the final processing of results:
+        1. Combines the prompt with each generated sequence
+        2. Calculates and prepares statistics
+        3. Cleans up resources
+
+        :param prompt: The original prompt
+        :type prompt: str
+        :param streams: List of generated text for each sequence
+        :type streams: List[str]
+        :param n_parallel: Number of parallel sequences
+        :type n_parallel: int
+        :param n_decode: Number of tokens decoded
+        :type n_decode: int
+        :param t_main_start: Start time of generation
+        :type t_main_start: float
+        :param t_main_end: End time of generation
+        :type t_main_end: float
+        :return: A tuple containing the results and statistics
+        :rtype: Tuple[List[str], Dict[str, Any]]
+        """
+        # Combine the prompt with each generated sequence
+        results = []
+        for i in range(n_parallel):
+            results.append(prompt + streams[i])
+
+        # Calculate and prepare statistics
+        stats = {
+            "n_decode": n_decode,  # Total number of tokens decoded
+            "time_s": t_main_end - t_main_start,  # Total time in seconds
+            "tokens_per_second": n_decode / (t_main_end - t_main_start) if t_main_end > t_main_start else 0,  # Throughput
+        }
+
+        # Clean up resources
+        llama_cpp.llama_batch_free(self.batch)
+        self.batch = None
+
+        llama_cpp.llama_sampler_free(self.smpl)
+        self.smpl = None
+
+        return results, stats
+
     def generate(
         self,
         prompt: str,
@@ -532,75 +683,33 @@ class BatchedLLM:
         :rtype: Tuple[List[str], Dict[str, Any], Optional[List[List[float]]]]
         :raises RuntimeError: If generation fails due to context size or other issues
         """
-        # Step 1: Tokenize the prompt
-        # Convert the text prompt to token IDs that the model can process
-        tokens_list = self.tokenize(prompt)
+        # Step 1: Prepare the prompt and batch
+        tokens_list, _ = self._prepare_prompt_and_batch(prompt, n_predict, n_parallel)
 
-        # Step 2: Calculate required KV cache size
-        # This is the total number of tokens that will be processed across all sequences
-        # It includes the prompt tokens (processed once) and the generated tokens (processed for each sequence)
-        n_kv_req = len(tokens_list) + (n_predict - len(tokens_list)) * n_parallel
-
-        # Check if the required KV cache size fits in the context
-        # If not, we need to either reduce n_parallel or increase n_ctx
-        if n_kv_req > self.n_ctx:
-            raise RuntimeError(
-                f"Required KV cache size ({n_kv_req}) exceeds context size ({self.n_ctx}). "
-                "Either reduce n_parallel or increase n_ctx."
-            )
-
-        # Step 3: Set up the sampler chain for token generation
-        # This configures how tokens will be sampled during generation
+        # Step 2: Set up the sampler chain for token generation
         self.setup_sampler(top_k, top_p, temp, seed, min_keep)
 
-        # Step 4: Create a batch for token processing
-        # The batch size needs to be at least as large as the prompt or the number of parallel sequences
-        batch_size = max(len(tokens_list), n_parallel)
-        self.batch = llama_cpp.llama_batch_init(batch_size, 0, n_parallel)
-
-        # Add the prompt tokens to the batch
-        # All prompt tokens are associated with sequence 0 initially
-        for i, token_id in enumerate(tokens_list):
-            self.batch_add(self.batch, token_id, i, [0], False)
-
-        # Handle encoder-decoder models (if applicable)
-        # This is a special case for models that have separate encoder and decoder components
-        if llama_cpp.llama_model_has_encoder(self.model):
-            # Encode the prompt tokens
-            if llama_cpp.llama_encode(self.ctx, self.batch) != 0:
-                raise RuntimeError("Failed to encode")
-
-            # Get the decoder start token
-            decoder_start_token_id = llama_cpp.llama_model_decoder_start_token(self.model)
-            if decoder_start_token_id == llama_cpp.LLAMA_TOKEN_NULL:
-                decoder_start_token_id = llama_cpp.llama_vocab_bos(self.vocab)
-
-            # Clear the batch and add the decoder start token
-            self.batch_clear(self.batch)
-            self.batch_add(self.batch, decoder_start_token_id, 0, [0], False)
+        # Step 3: Handle encoder-decoder models (if applicable)
+        self._handle_encoder_decoder()
 
         # Compute logits for the last token of the prompt
-        # This is needed for sampling the first generated token
         self.batch.logits[self.batch.n_tokens - 1] = True
 
         # Process the batch (forward pass through the model)
         if llama_cpp.llama_decode(self.ctx, self.batch) != 0:
             raise RuntimeError("llama_decode() failed")
 
-        # Step 5: Copy the KV cache to all parallel sequences
-        # This is a key optimization that allows us to reuse the prompt processing
-        # across all parallel sequences without having to recompute it
+        # Step 4: Copy the KV cache to all parallel sequences
         for i in range(1, n_parallel):
             llama_cpp.llama_kv_cache_seq_cp(self.ctx, 0, i, -1, -1)
 
-        # Step 6: Main generation loop
+        # Step 5: Main generation loop
 
         # Initialize storage for generated text and token log probabilities
         streams = [""] * n_parallel  # Text generated for each sequence
         token_logprobs = [[] for _ in range(n_parallel)]  # Log probs for each token in each sequence
 
         # Track the batch index of the last token for each sequence
-        # This is used to determine which token to use for sampling the next token
         i_batch = [self.batch.n_tokens - 1] * n_parallel
 
         # Initialize counters for the current position and number of decoded tokens
@@ -611,7 +720,6 @@ class BatchedLLM:
         t_main_start = time.time()
 
         # Main generation loop
-        # Continue until we've generated the requested number of tokens or all sequences are finished
         while n_cur <= n_predict:
             # Clear the batch for the next round of tokens
             self.batch_clear(self.batch)
@@ -625,33 +733,13 @@ class BatchedLLM:
                 # Debug output
                 logger.debug(f"Sampling token {n_cur} for sequence {i}")
 
-                # Sample the next token for this sequence
-                # This uses the sampler chain we set up earlier
-                new_token_id = llama_cpp.llama_sampler_sample(self.smpl, self.ctx, i_batch[i])
-
-                # Get the logits for the current token
-                # These are the raw model outputs that represent token probabilities
-                logits = llama_cpp.llama_get_logits_ith(self.ctx, i_batch[i])
-                n_vocab = llama_cpp.llama_vocab_n_tokens(self.vocab)
-
-                # Convert the logits to a numpy array for easier processing
-                logits_array = np.array(
-                    [logits[j] for j in range(n_vocab)],
-                    dtype=np.float32
-                )
-
-                # Convert logits to log probabilities
-                # This is needed for calculating the probability of the sampled token
-                logprobs_array = self.logits_to_logprobs(logits_array)
-
-                # Store the log probability of the sampled token
-                # This can be useful for ranking or filtering generated sequences
-                token_logprobs[i].append(logprobs_array[new_token_id])
+                # Sample the next token and get its log probability
+                new_token_id, token_logprob = self._sample_token(i, i_batch, n_cur)
+                token_logprobs[i].append(token_logprob)
 
                 # Check if we should end generation for this sequence
-                # This happens if we encounter an end-of-generation token or reach the maximum length
                 if llama_cpp.llama_vocab_is_eog(self.vocab, new_token_id) or n_cur == n_predict:
-                    # Mark this sequence as finished by setting its batch index to -1
+                    # Mark this sequence as finished
                     i_batch[i] = -1
                     continue
 
@@ -659,11 +747,9 @@ class BatchedLLM:
                 streams[i] += self.token_to_piece(new_token_id)
 
                 # Update the batch index for this sequence
-                # This will be used in the next iteration to sample the next token
                 i_batch[i] = self.batch.n_tokens
 
                 # Add the token to the batch for processing
-                # Note that we compute logits for this token (True) since we'll need them for sampling
                 self.batch_add(self.batch, new_token_id, n_cur, [i], True)
 
                 # Increment the decode counter for statistics
@@ -683,27 +769,10 @@ class BatchedLLM:
         # End timing for performance measurement
         t_main_end = time.time()
 
-        # Step 7: Prepare the results
-
-        # Combine the prompt with each generated sequence
-        results = []
-        for i in range(n_parallel):
-            results.append(prompt + streams[i])
-
-        # Calculate and prepare statistics
-        stats = {
-            "n_decode": n_decode,  # Total number of tokens decoded
-            "time_s": t_main_end - t_main_start,  # Total time in seconds
-            "tokens_per_second": n_decode / (t_main_end - t_main_start) if t_main_end > t_main_start else 0,  # Throughput
-        }
-
-        # Clean up resources
-        # Free the batch and sampler to prevent memory leaks
-        llama_cpp.llama_batch_free(self.batch)
-        self.batch = None
-
-        llama_cpp.llama_sampler_free(self.smpl)
-        self.smpl = None
+        # Step 6: Finalize results and prepare statistics
+        results, stats = self._finalize_results(
+            prompt, streams, n_parallel, n_decode, t_main_start, t_main_end
+        )
 
         # Return the generated sequences, statistics, and token log probabilities
         return results, stats, token_logprobs

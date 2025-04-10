@@ -27,7 +27,7 @@ from services.batched_llm import BatchedLLM
 
 def main():
     # Configuration
-    model_path = "path/to/your/model.gguf"  # Replace with your model path
+    model_path = "../models/gemma-2-2b-it-Q8_0.gguf"  # Replace with your model path
     
     # Check if the model file exists
     if not os.path.exists(model_path):
