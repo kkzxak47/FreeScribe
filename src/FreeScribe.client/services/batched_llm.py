@@ -75,7 +75,7 @@ class BatchedLLM:
         if n_ctx is not None:
             self.ctx_params.n_ctx = n_ctx
         self.ctx_params.n_threads = n_threads
-        self.ctx_params.n_ctx_per_seq = n_ctx
+        # self.ctx_params.n_ctx_per_seq = n_ctx
         self.ctx_params.n_ctx = n_ctx
 
         self.ctx = llama_cpp.llama_init_from_model(self.model, self.ctx_params)
