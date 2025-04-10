@@ -9,8 +9,7 @@ import pytest
 import ctypes
 import time
 import numpy as np
-from unittest.mock import patch, MagicMock, ANY
-from typing import List, Dict, Any, Tuple, Optional
+from unittest.mock import patch, MagicMock
 
 # Import the class to test
 from services.batched_llm import BatchedLLM
