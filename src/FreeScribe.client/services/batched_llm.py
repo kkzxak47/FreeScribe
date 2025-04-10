@@ -237,8 +237,8 @@ class BatchedLLM:
         self,
         top_k: int = 40,
         top_p: float = 0.95,
-        temp: float = 0.8,
-        seed: int = 42,
+        temp: float = 0.1,
+        seed: int = 1337,
         min_keep: int = 1
     ):
         """
