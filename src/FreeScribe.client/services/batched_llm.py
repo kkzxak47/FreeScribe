@@ -615,7 +615,7 @@ class BatchedLLM:
         :rtype: Tuple[List[str], Dict[str, Any]]
         """
         # Return the prompt + generated text for each sequence
-        results = [prompt + streams[i] for i in range(n_parallel)]
+        results = [streams[i] for i in range(n_parallel)]
 
         # Calculate and prepare statistics
         stats = {
