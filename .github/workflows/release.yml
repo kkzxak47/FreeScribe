@@ -7,8 +7,7 @@ on:
       - "v*.*.*.alpha"
       - "v*.*.*-RC*"
 
-permissions:
-  contents: write
+permissions: write-all
 
 jobs:
   build-windows:
