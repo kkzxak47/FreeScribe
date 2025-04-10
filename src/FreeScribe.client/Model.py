@@ -7,6 +7,8 @@ import tkinter.messagebox as messagebox
 from UI.SettingsConstant import SettingsKeys, DEFAULT_CONTEXT_WINDOW_SIZE
 from enum import Enum
 import logging
+from services.batched_llm import BatchedLLM
+import numpy as np
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -83,8 +85,6 @@ class Model:
                 seed=seed,
                 tensor_split=tensor_split,
                 chat_format=chat_template,
-                # if logits_all is set to False, only the logprob of the last token is returned
-                logits_all=best_of > 1,
             )
         
             # Store configuration
@@ -94,6 +94,7 @@ class Model:
                 "context_size": context_size,
                 "n_batch": n_batch,
                 "best_of": best_of,
+                "model_path": model_path,
             }
         except Exception as e:
             self.model = None
@@ -110,31 +111,6 @@ class Model:
         This method retains the original implementation of the generate_response method by setting best_of to 1
         """
         return self.generate_best_of_response(prompt, max_tokens, temperature, top_p, repeat_penalty=1.1, best_of=1)
-
-    def _select_best_response(self, responses: list, best_of: int) -> tuple[float, str]:
-        """
-        Selects the best response from a list of responses based on token log probabilities.
-        
-        Args:
-            responses: List of response dictionaries from the model
-            best_of: Number of responses to consider
-            
-        Returns:
-            Tuple containing (sum of log probabilities, selected response content)
-        """
-        if best_of <= 1:
-            return (0, responses[0]["choices"][0]["message"]["content"])
-            
-        result = []
-        for response in responses:
-            result.append((
-                sum(response["choices"][0]["logprobs"]["token_logprobs"]),
-                response["choices"][0]["message"]["content"]
-            ))
-        logger.debug(f"Result: {result}")
-        result.sort(key=lambda x: x[0])
-        logger.debug(f"Sorted Result: {result}")
-        return result[-1]
 
     def generate_best_of_response(
         self,
@@ -160,40 +136,40 @@ class Model:
             Generated text response
         """
         try:
-            # Generate response using the model
-
+            _best_of = best_of or self.config.get("best_of") or 1
+            if not isinstance(_best_of, int) or _best_of < 1:
+                logger.warning(f"invalid best_of value: {_best_of}")
+                # if best_of is invalid, treat it as 1
+                _best_of = 1
             # Message template for chat completion
             messages = [
                 {"role": "user", 
                 "content": prompt}
             ]
-
-            logprob_args = {}
-            _best_of = best_of or self.config.get("best_of") or 1
-            if _best_of > 1:
-                logprob_args = {
-                    "logprobs": True,
-                    "top_logprobs": 1,
-                }
-            
-            responses = []
-            for _ in range(_best_of):
+            if best_of == 1:
                 response = self.model.create_chat_completion(
                     messages,
                     max_tokens=max_tokens,
                     temperature=temperature,
                     top_p=top_p,
                     repeat_penalty=repeat_penalty,
-                    **logprob_args,
                 )
-                responses.append(response)
-            logger.debug(f"Responses: {responses}")
-            
-            response = self._select_best_response(responses, _best_of)
+                result = response["choices"][0]["message"]["content"]
+            else:
+                batched_llm = BatchedLLM(
+                    model_or_path=self.model._model.model if self.model else self.config["model_path"],
+                )
+                sequences, stats, logprobs = batched_llm.generate(
+                    prompt=prompt,
+                    n_predict=self.config["context_size"] // _best_of,
+                    n_parallel=_best_of
+                )
+                result = self._select_best_result(sequences, logprobs)
+                batched_llm.cleanup()
+
             # reset the model tokens
             self.model.reset()
-            logger.debug(f"Response: {response}")
-            return response[1]
+            return result
             
         except Exception as e:
             print(f"GPU inference error ({e.__class__.__name__}): {str(e)}")
@@ -222,6 +198,20 @@ class Model:
         if self.model is not None:
             self.model.close()
         self.model = None
+
+    @staticmethod
+    def _select_best_result(sequences, logprobs):
+        best_logprob = float('-inf')
+        result = ""
+        for i, seq in enumerate(sequences):
+            logger.debug(f"\nSequence {i + 1}:")
+            logger.debug(f"Text: {result}")
+            avg_logprob = np.mean(logprobs[i])
+            logger.debug(f"Average logprob: {avg_logprob:.6f}")
+            if avg_logprob > best_logprob:
+                result = seq
+        return result
+
 
 class ModelManager:
     """
