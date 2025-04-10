@@ -407,8 +407,8 @@ class TestBatchedLLM:
 
         # Verify the results
         assert len(results) == 2
-        assert results[0] == "Test prompt" + streams[0]
-        assert results[1] == "Test prompt" + streams[1]
+        assert results[0] == streams[0]
+        assert results[1] == streams[1]
 
         # Verify the stats
         assert stats["n_decode"] == 10
