@@ -1,11 +1,17 @@
 import tkinter as tk
 from tkinter import ttk
 import UI.MainWindow as mw
+from UI.ImageWindow import ImageWindow
 from UI.SettingsConstant import FeatureToggle
 from UI.SettingsWindowUI import SettingsWindowUI
 from UI.MarkdownWindow import MarkdownWindow
+from UI.Widgets.ActionResultsWindow import ActionResultsWindow
+from services.intent_actions.manager import IntentActionManager
 from utils.file_utils import get_file_path
 from UI.DebugWindow import DebugPrintWindow
+from pathlib import Path
+from utils.log_config import logger
+
 
 DOCKER_CONTAINER_CHECK_INTERVAL = 10000  # Interval in milliseconds to check the Docker container status
 DOCKER_DESKTOP_CHECK_INTERVAL = 10000  # Interval in milliseconds to check the Docker Desktop status
@@ -37,6 +43,16 @@ class MainWindowUI:
         self.debug_window_open = False  # Flag to indicate if the debug window is open
 
         self.warning_bar = None # Warning bar
+        
+        # Initialize intent action system
+        maps_dir = Path(get_file_path('assets', 'maps'))
+        maps_dir.mkdir(parents=True, exist_ok=True)
+        self.intent_manager = IntentActionManager(
+            maps_dir,
+            self.app_settings.editable_settings.get("Google Maps API Key", "")
+        )
+        self.action_window = ActionResultsWindow(self.root)
+        self.action_window.hide()  # Hide initially
 
         self.current_docker_status_check_id = None  # ID for the current Docker status check
         self.current_container_status_check_id = None  # ID for the current container status check
@@ -224,7 +240,7 @@ class MainWindowUI:
             self.root.after_cancel(self.current_container_status_check_id)
             self.current_container_status_check_id = None
 
-    def toggle_menu_bar(self, enable: bool):
+    def toggle_menu_bar(self, enable: bool, is_recording: bool = False):
         """
         Enable or disable the menu bar.
 
@@ -233,6 +249,8 @@ class MainWindowUI:
         """
         if enable:
             self._create_menu_bar()
+            if is_recording:
+                self.disable_settings_menu()
         else:
             self._destroy_menu_bar()
 
@@ -278,6 +296,7 @@ class MainWindowUI:
         # Add Help menu
         help_menu = tk.Menu(self.menu_bar, tearoff=0)
         self.menu_bar.add_cascade(label="Help", menu=help_menu)
+        help_menu.add_command(label="Help Guide", command=lambda: ImageWindow(self.root, "Help Guide", get_file_path('assets', 'help.png')))
         help_menu.add_command(label="Debug Window", command=lambda: DebugPrintWindow(self))
         help_menu.add_command(label="About", command=lambda: self._show_md_content(get_file_path('markdown','help','about.md'), 'About'))
 
@@ -363,18 +382,18 @@ class MainWindowUI:
         This method is intended to be run in a separate thread to periodically
         check the availability of the Docker client.
         """
-        print("Checking Docker availability in the background...")
+        logger.info("Checking Docker availability in the background...")
         if self.logic.container_manager.check_docker_availability():
             # Enable the Docker status bar UI elements if not enabled
             if not self.is_status_bar_enabled:
                 self.enable_docker_ui()
-            print("Docker client is available.")
+            logger.info("Docker client is available.")
         else:
             # Disable the Docker status bar UI elements if not disabled
             if self.is_status_bar_enabled:
                 self.disable_docker_ui()
 
-            print("Docker client is not available.")
+            logger.info("Docker client is not available.")
 
         self.current_docker_status_check_id = self.root.after(DOCKER_DESKTOP_CHECK_INTERVAL, self._background_availbility_docker_check)
 
@@ -389,6 +408,30 @@ class MainWindowUI:
             self.logic.container_manager.set_status_icon_color(llm_dot, self.logic.check_llm_containers())
             self.logic.container_manager.set_status_icon_color(whisper_dot, self.logic.check_whisper_containers())
             self.current_container_status_check_id = self.root.after(DOCKER_CONTAINER_CHECK_INTERVAL, self._background_check_container_status, llm_dot, whisper_dot)
+
+    def get_text_intents(self, text: str) -> None:
+        """
+        Process transcribed text for intents and execute actions.
+        
+        :param text: Transcribed text to process
+        """
+        text = text.strip()
+        if not text:
+            return
+        # Process text through intent manager
+        results = self.intent_manager.process_text(text)
+        logger.debug(f"Results: {results}")
+
+        if results:
+            logger.debug("Showing action window")
+            # Show action window and add results
+            self.action_window.show()
+            # self.action_window.clear()
+            self.action_window.add_results(results)
+            
+    def close_action_window(self) -> None:
+        """Close the action results window."""
+        self.action_window.hide()
 
 
 
