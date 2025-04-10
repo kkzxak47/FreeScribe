@@ -394,10 +394,10 @@ class BatchedLLM:
         # Convert the text to UTF-8 bytes for the C API
         text_bytes = text.encode("utf-8")
 
-        # Allocate a buffer for the tokens
-        # We allocate twice the size of the input text as a heuristic
-        # since tokenization can potentially expand the text in some cases
-        tokens_buf_size = len(text_bytes) * 2  # Allocate more space than needed
+        # Allocate a buffer for the tokens with a refined heuristic to reduce buffer overflow risks
+        MAX_TOKEN_BUF_SIZE = 10000  # Maximum allowed token buffer size
+        # Calculate token buffer size: twice the input text length, capped by MAX_TOKEN_BUF_SIZE
+        tokens_buf_size = min(len(text_bytes) * 2, MAX_TOKEN_BUF_SIZE)
         tokens_buf = (llama_cpp.llama_token * tokens_buf_size)()
 
         # Call the llama.cpp tokenization function
