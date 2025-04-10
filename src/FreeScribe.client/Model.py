@@ -106,11 +106,12 @@ class Model:
         max_tokens: int | None = None,
         temperature: float = 0.1,
         top_p: float = 0.95,
+        repeat_penalty: float = 1.1,
     ) -> str:
         """
         This method retains the original implementation of the generate_response method by setting best_of to 1
         """
-        return self.generate_best_of_response(prompt, max_tokens, temperature, top_p, repeat_penalty=1.1, best_of=1)
+        return self.generate_best_of_response(prompt, max_tokens, temperature, top_p, repeat_penalty=repeat_penalty)
 
     def generate_best_of_response(
         self,
@@ -146,6 +147,7 @@ class Model:
                 {"role": "user",
                 "content": prompt}
             ]
+            logger.debug(f"best_of: {_best_of} {type(_best_of)=}")
             if _best_of == 1:
                 response = self.model.create_chat_completion(
                     messages,
@@ -156,6 +158,7 @@ class Model:
                 )
                 result = response["choices"][0]["message"]["content"]
             else:
+                logger.debug(f"{self.model=}")
                 batched_llm = BatchedLLM(
                     model_or_path=self.model.model if self.model else self.config["model_path"],
                     n_ctx=self.config["context_size"],
@@ -174,7 +177,8 @@ class Model:
             return result
 
         except Exception as e:
-            logger.error(f"GPU inference error ({e.__class__.__name__}): {str(e)}")
+            logger.error(f"inference error ({e.__class__.__name__}): {str(e)}")
+            logger.exception('')
             return f"({e.__class__.__name__}): {str(e)}"
 
     def get_gpu_info(self) -> Dict[str, Any]:

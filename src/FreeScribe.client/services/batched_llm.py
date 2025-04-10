@@ -15,15 +15,13 @@ Key features:
 
 
 import ctypes
-import logging
 import multiprocessing
 import time
 from typing import List, Optional, Dict, Any, Tuple, Union
 import numpy as np
 
 import llama_cpp
-
-logger = logging.getLogger(__name__)
+from utils.log_config import logger
 
 
 class BatchedLLM:
@@ -58,7 +56,7 @@ class BatchedLLM:
         self,
         model_or_path: Union[str, ctypes.c_void_p],
         n_ctx: Optional[int] = None,
-        n_threads: int = multiprocessing.cpu_count(),
+        n_threads: Optional[int] = None,
         numa: bool = False,
         verbose: bool = False
     ):
@@ -133,7 +131,7 @@ class BatchedLLM:
             self.ctx_params.n_ctx = n_ctx
 
         # Set number of threads for parallel computation
-        self.ctx_params.n_threads = n_threads
+        self.ctx_params.n_threads = n_threads or multiprocessing.cpu_count()
 
         # Commented out line below shows an alternative parameter that might be used
         # in future versions of llama.cpp
@@ -169,7 +167,10 @@ class BatchedLLM:
 
         This method is automatically called when the object is garbage collected.
         """
-        self.cleanup()
+        # Use a flag to prevent recursive calls between __del__ and cleanup
+        if not hasattr(self, '_is_cleaning_up') or not self._is_cleaning_up:
+            self._is_cleaning_up = True
+            self.cleanup()
 
     def cleanup(self):
         """Clean up resources.
@@ -181,6 +182,12 @@ class BatchedLLM:
         The method is automatically called by __del__ when the object is garbage collected,
         but can also be called manually if early cleanup is desired.
         """
+        # Check if we're already in the process of cleaning up to prevent recursion
+        if hasattr(self, '_is_cleaning_up') and self._is_cleaning_up:
+            return
+
+        # Set the flag to indicate we're cleaning up
+        self._is_cleaning_up = True
         # Free the batch if it exists
         # The batch contains token data for processing and must be freed to prevent memory leaks
         if hasattr(self, 'batch') and self.batch is not None:
@@ -588,7 +595,7 @@ class BatchedLLM:
         Finalize the generation results and prepare statistics.
 
         This helper method handles the final processing of results:
-        1. Combines the prompt with each generated sequence
+        1. Returns only the newly generated text for each sequence (without the prompt)
         2. Calculates and prepares statistics
         3. Cleans up resources
 
@@ -607,7 +614,7 @@ class BatchedLLM:
         :return: A tuple containing the results and statistics
         :rtype: Tuple[List[str], Dict[str, Any]]
         """
-        # Combine the prompt with each generated sequence
+        # Return the prompt + generated text for each sequence
         results = [prompt + streams[i] for i in range(n_parallel)]
 
         # Calculate and prepare statistics
@@ -657,7 +664,7 @@ class BatchedLLM:
         7. Collect results and statistics
 
         The method returns three items:
-        - A list of generated sequences (prompt + continuation)
+        - A list of generated sequences (including the prompt + generated text)
         - Statistics about the generation process
         - Log probabilities for each generated token
 
